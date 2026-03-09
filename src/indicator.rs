@@ -5,6 +5,7 @@ use rust_decimal::Decimal;
 use time::OffsetDateTime;
 
 pub mod bollinger;
+pub mod cross;
 pub mod ma;
 pub mod macd;
 pub mod stddev;
