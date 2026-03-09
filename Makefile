@@ -6,3 +6,6 @@ fmt:
 
 test:
 	cargo test --release
+
+lint:
+	cargo clippy --all
