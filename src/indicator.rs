@@ -4,6 +4,7 @@ use rust_decimal::Decimal;
 use time::OffsetDateTime;
 
 pub mod ma;
+pub mod stddev;
 
 pub const MA_IDX_PRICE: usize = 0;
 pub const MA_IDX_QUNATITY: usize = 1;
