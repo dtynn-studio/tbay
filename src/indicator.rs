@@ -1,5 +1,6 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
+use crate::prelude::Error;
 use rust_decimal::Decimal;
 use time::OffsetDateTime;
 
@@ -10,6 +11,17 @@ pub const MA_IDX_PRICE: usize = 0;
 pub const MA_IDX_QUNATITY: usize = 1;
 
 #[derive(Clone, Copy)]
+pub struct KRaw {
+    pub time_begin: OffsetDateTime,
+    pub time_end: OffsetDateTime,
+    pub price_open: Decimal,
+    pub price_close: Decimal,
+    pub price_high: Decimal,
+    pub price_low: Decimal,
+    pub quantity: Decimal,
+}
+
+#[derive(Clone, Copy)]
 pub struct PriceBar {
     pub high: Decimal,
     pub low: Decimal,
@@ -17,11 +29,8 @@ pub struct PriceBar {
 }
 
 #[derive(Clone, Copy)]
-pub struct KBase {
-    pub t_begin: OffsetDateTime,
-    pub t_end: OffsetDateTime,
-    pub price_open: Decimal,
-    pub price_close: Decimal,
+pub struct KInfo {
+    pub raw: KRaw,
     pub body: PriceBar,
     pub full: PriceBar,
     pub quantity: Decimal,
@@ -29,15 +38,15 @@ pub struct KBase {
 
 #[derive(Clone)]
 pub struct KSummary {
-    pub base: KBase,
-    pub mas: [HashMap<usize, Decimal>; 2],
+    pub info: KInfo,
+    pub bases: [HashMap<String, Decimal>; 2],
 }
 
-pub trait MaIndicator {
-    fn idx(&self) -> usize;
-    fn key(&self) -> usize;
-    fn update(&mut self, next: &KSummary) -> Option<Decimal>;
-    fn calc(&self, next: &KSummary) -> Option<Decimal>;
+pub trait BaseIndicator:
+    Indicator<State = Decimal, Item = KInfo, Value = Decimal> + FromStr<Err = Error>
+{
+    fn kind(&self) -> usize;
+    fn key(&self) -> &str;
 }
 
 pub trait Indicator: Sized {
