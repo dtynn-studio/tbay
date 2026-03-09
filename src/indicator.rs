@@ -33,9 +33,9 @@ pub struct KSummary {
     pub mas: [HashMap<usize, Decimal>; 2],
 }
 
-pub trait BaseIndicator {
-    fn ma_idx(&self) -> usize;
-    fn ma_key(&self) -> usize;
+pub trait MaIndicator {
+    fn idx(&self) -> usize;
+    fn key(&self) -> usize;
     fn update(&mut self, next: &KSummary) -> Option<Decimal>;
     fn calc(&self, next: &KSummary) -> Option<Decimal>;
 }
