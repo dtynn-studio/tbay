@@ -4,7 +4,7 @@ use crate::prelude::Error;
 use rust_decimal::Decimal;
 use time::OffsetDateTime;
 
-pub mod bolling;
+pub mod bollinger;
 pub mod ma;
 pub mod stddev;
 
