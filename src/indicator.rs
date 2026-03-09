@@ -42,9 +42,10 @@ pub trait BaseIndicator {
 
 pub trait Indicator: Sized {
     type State: Clone;
-    type Item: Clone;
+    type Item;
+    type Value;
 
     fn state(&self) -> Option<&Self::State>;
-    fn update(&mut self, next: &KSummary) -> Option<Self::Item>;
-    fn calc(&self, next: &KSummary) -> Option<Self::Item>;
+    fn update(&mut self, next: &Self::Item) -> Option<Self::Value>;
+    fn calc(&self, next: &Self::Item) -> Option<Self::Value>;
 }

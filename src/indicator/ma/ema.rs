@@ -1,5 +1,5 @@
 use crate::{
-    prelude::{Decimal, Indicator, KSummary},
+    prelude::{Decimal, Indicator},
     util::RingBuffer,
 };
 
@@ -21,8 +21,9 @@ impl Ema {
 }
 
 impl Indicator for Ema {
-    type Item = Decimal;
     type State = Decimal;
+    type Item = Decimal;
+    type Value = Decimal;
 
     fn state(&self) -> Option<&Self::State> {
         if self.buffer.is_full() {
@@ -32,13 +33,13 @@ impl Indicator for Ema {
         }
     }
 
-    fn calc(&self, next: &KSummary) -> Option<Self::Item> {
+    fn calc(&self, next: &Self::Item) -> Option<Self::Value> {
         // 只有在buffer已满时才能计算EMA
         if !self.buffer.is_full() {
             return None;
         }
 
-        let next = next.base.price_close;
+        let next = *next;
 
         // 计算新的EMA值和差异
         let new_ema =
@@ -46,8 +47,8 @@ impl Indicator for Ema {
         Some(new_ema)
     }
 
-    fn update(&mut self, next: &KSummary) -> Option<Self::Item> {
-        let next = next.base.price_close;
+    fn update(&mut self, next: &Self::Item) -> Option<Self::Value> {
+        let next = *next;
 
         // 1. 对buffer进行填充
         let removed = self.buffer.update(next);

@@ -1,7 +1,7 @@
 use rust_decimal::MathematicalOps;
 
 use crate::{
-    prelude::{Decimal, Indicator, KSummary},
+    prelude::{Decimal, Indicator},
     util::RingBuffer,
 };
 
@@ -43,8 +43,9 @@ impl StdDev {
 }
 
 impl Indicator for StdDev {
-    type Item = Decimal;
     type State = Decimal;
+    type Item = Decimal;
+    type Value = Decimal;
 
     fn state(&self) -> Option<&Self::State> {
         if self.buffer.is_full() {
@@ -54,13 +55,11 @@ impl Indicator for StdDev {
         }
     }
 
-    fn calc(&self, next: &KSummary) -> Option<Self::Item> {
+    fn calc(&self, next: &Self::Item) -> Option<Self::Value> {
         // 只有在buffer已满时才能计算标准差
         if !self.buffer.is_full() {
             return None;
         }
-
-        let next = next.base.price_close;
 
         // 获取即将被替换的值（最老的值）
         let removed_value = self.buffer.get(0)?;
@@ -77,8 +76,8 @@ impl Indicator for StdDev {
         Some(new_std_dev)
     }
 
-    fn update(&mut self, next: &KSummary) -> Option<Self::Item> {
-        let next = next.base.price_close;
+    fn update(&mut self, next: &Self::Item) -> Option<Self::Value> {
+        let next = *next;
 
         // 更新buffer
         let removed = self.buffer.update(next);
