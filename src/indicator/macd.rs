@@ -1,6 +1,6 @@
 use crate::{
     indicator::ma::Ema,
-    prelude::{BaseKind, Decimal, Indicator, KSummary},
+    prelude::{Decimal, Indicator, KSummary},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -27,8 +27,8 @@ impl Indicator for Macd {
     }
 
     fn calc(&self, next: &Self::Item) -> Option<Self::Value> {
-        let fast_opt = next.get_base(BaseKind::Price, &self.fast_ma_key);
-        let slow_opt = next.get_base(BaseKind::Price, &self.slow_ma_key);
+        let fast_opt = next.get_base(&self.fast_ma_key);
+        let slow_opt = next.get_base(&self.slow_ma_key);
 
         let (fast, slow) = fast_opt.zip(slow_opt)?;
         let dif = fast - slow;
@@ -42,8 +42,8 @@ impl Indicator for Macd {
     }
 
     fn update(&mut self, next: &Self::Item) -> Option<Self::Value> {
-        let fast_opt = next.get_base(BaseKind::Price, &self.fast_ma_key);
-        let slow_opt = next.get_base(BaseKind::Price, &self.slow_ma_key);
+        let fast_opt = next.get_base(&self.fast_ma_key);
+        let slow_opt = next.get_base(&self.slow_ma_key);
 
         let (fast, slow) = fast_opt.zip(slow_opt)?;
         let dif = fast - slow;

@@ -38,28 +38,23 @@ pub struct KInfo {
     pub quantity: Decimal,
 }
 
-#[derive(Debug, Clone, Copy)]
-#[repr(u16)]
-pub enum BaseKind {
-    Price = 0,
-    Qty = 1,
-}
-
 #[derive(Clone)]
 pub struct KSummary {
     pub info: KInfo,
     // 基础类指标，以键值对的形式储存，供更高级别的指标使用，如：
     // {
-    //  "ema5": 1921.57,
-    //  "sma20": 1901.45,
-    //  "stddev20:": 1917.95
+    //  "close:ema5": 1921.57,
+    //  "close:sma20": 1901.45,
+    //  "close:stddev20:": 1917.95,
+    //  "qty:sam5:": 3156905.12,
+    //  "qty:sam20:": 356905.12,
     // }
-    pub bases: [HashMap<String, Decimal>; 2],
+    pub bases: HashMap<String, Decimal>,
 }
 
 impl KSummary {
-    pub fn get_base(&self, kind: BaseKind, key: &str) -> Option<Decimal> {
-        self.bases[kind as usize].get(key).cloned()
+    pub fn get_base(&self, key: &str) -> Option<Decimal> {
+        self.bases.get(key).cloned()
     }
 }
 
@@ -68,7 +63,6 @@ impl KSummary {
 pub trait BaseIndicator:
     Indicator<State = Decimal, Item = KInfo, Value = Decimal> + FromStr<Err = Error>
 {
-    fn kind(&self) -> BaseKind;
     fn key(&self) -> &str;
 }
 
