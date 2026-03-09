@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 rust_decimal = { version = "1.40.0", features = ["macros", "maths"] }
+snafu = "0.9.0"
