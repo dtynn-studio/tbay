@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use rust_decimal::Decimal;
 use time::OffsetDateTime;
 
@@ -17,4 +19,11 @@ pub struct KBase {
     pub body: PriceBar,
     pub full: PriceBar,
     pub quantity: Decimal,
+}
+
+#[derive(Clone)]
+pub struct KSummary {
+    pub base: KBase,
+    pub price_mas: HashMap<usize, Decimal>,
+    pub quantity_mas: HashMap<usize, Decimal>,
 }
