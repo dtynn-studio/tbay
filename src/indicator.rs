@@ -6,6 +6,7 @@ use time::OffsetDateTime;
 
 pub mod bollinger;
 pub mod ma;
+pub mod macd;
 pub mod stddev;
 
 pub const MA_IDX_PRICE: usize = 0;
