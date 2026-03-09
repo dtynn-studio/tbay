@@ -4,6 +4,7 @@ use crate::prelude::Error;
 use rust_decimal::Decimal;
 use time::OffsetDateTime;
 
+pub mod bolling;
 pub mod ma;
 pub mod stddev;
 
@@ -36,16 +37,29 @@ pub struct KInfo {
     pub quantity: Decimal,
 }
 
+#[derive(Debug, Clone, Copy)]
+#[repr(u16)]
+pub enum BaseKind {
+    Price = 0,
+    Qty = 1,
+}
+
 #[derive(Clone)]
 pub struct KSummary {
     pub info: KInfo,
     pub bases: [HashMap<String, Decimal>; 2],
 }
 
+impl KSummary {
+    pub fn get_base(&self, kind: BaseKind, key: &str) -> Option<Decimal> {
+        self.bases[kind as usize].get(key).cloned()
+    }
+}
+
 pub trait BaseIndicator:
     Indicator<State = Decimal, Item = KInfo, Value = Decimal> + FromStr<Err = Error>
 {
-    fn kind(&self) -> usize;
+    fn kind(&self) -> BaseKind;
     fn key(&self) -> &str;
 }
 
