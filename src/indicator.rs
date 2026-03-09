@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use rust_decimal::Decimal;
 use time::OffsetDateTime;
 
+pub mod ma;
+
 pub const MA_IDX_PRICE: usize = 0;
 pub const MA_IDX_QUNATITY: usize = 1;
 
