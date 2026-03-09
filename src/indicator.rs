@@ -3,6 +3,9 @@ use std::collections::HashMap;
 use rust_decimal::Decimal;
 use time::OffsetDateTime;
 
+pub const MA_IDX_PRICE: usize = 0;
+pub const MA_IDX_QUNATITY: usize = 1;
+
 #[derive(Clone, Copy)]
 pub struct PriceBar {
     pub high: Decimal,
@@ -24,6 +27,12 @@ pub struct KBase {
 #[derive(Clone)]
 pub struct KSummary {
     pub base: KBase,
-    pub price_mas: HashMap<usize, Decimal>,
-    pub quantity_mas: HashMap<usize, Decimal>,
+    pub mas: [HashMap<usize, Decimal>; 2],
+}
+
+pub trait BaseIndicator {
+    fn ma_idx(&self) -> usize;
+    fn ma_key(&self) -> usize;
+    fn update(&mut self) -> Decimal;
+    fn calc(&self) -> Decimal;
 }
