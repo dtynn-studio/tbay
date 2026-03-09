@@ -36,3 +36,12 @@ pub trait BaseIndicator {
     fn update(&mut self) -> Decimal;
     fn calc(&self) -> Decimal;
 }
+
+pub trait IntegratedIndicator: Sized {
+    type State: Clone;
+    type Item: Clone;
+
+    fn state(&self) -> &Self::State;
+    fn update(&mut self) -> Self::Item;
+    fn calc(&self) -> Self::Item;
+}
