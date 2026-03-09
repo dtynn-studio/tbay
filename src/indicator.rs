@@ -47,6 +47,12 @@ pub enum BaseKind {
 #[derive(Clone)]
 pub struct KSummary {
     pub info: KInfo,
+    // 基础类指标，以键值对的形式储存，供更高级别的指标使用，如：
+    // {
+    //  "ema5": 1921.57,
+    //  "sma20": 1901.45,
+    //  "stddev20:": 1917.95
+    // }
     pub bases: [HashMap<String, Decimal>; 2],
 }
 
@@ -56,6 +62,8 @@ impl KSummary {
     }
 }
 
+// 基础类指标，以数值简单数值计算为主，如 ma、stddev 等
+// 会在其他高级指标初始化时注册，以减少重复计算
 pub trait BaseIndicator:
     Indicator<State = Decimal, Item = KInfo, Value = Decimal> + FromStr<Err = Error>
 {
