@@ -35,15 +35,15 @@ pub struct KSummary {
 pub trait BaseIndicator {
     fn ma_idx(&self) -> usize;
     fn ma_key(&self) -> usize;
-    fn update(&mut self) -> Decimal;
-    fn calc(&self) -> Decimal;
+    fn update(&mut self, next: &KSummary) -> Option<Decimal>;
+    fn calc(&self, next: &KSummary) -> Option<Decimal>;
 }
 
-pub trait IntegratedIndicator: Sized {
+pub trait Indicator: Sized {
     type State: Clone;
     type Item: Clone;
 
-    fn state(&self) -> &Self::State;
-    fn update(&mut self) -> Self::Item;
-    fn calc(&self) -> Self::Item;
+    fn state(&self) -> Option<&Self::State>;
+    fn update(&mut self, next: &KSummary) -> Option<Self::Item>;
+    fn calc(&self, next: &KSummary) -> Option<Self::Item>;
 }
