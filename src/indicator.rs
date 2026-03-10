@@ -1,4 +1,4 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{cmp::Ordering, collections::HashMap, str::FromStr};
 
 use rust_decimal::Decimal;
 use time::OffsetDateTime;
@@ -14,6 +14,13 @@ pub mod stddev;
 
 pub const MA_IDX_PRICE: usize = 0;
 pub const MA_IDX_QUNATITY: usize = 1;
+
+#[derive(Debug, Clone, Copy)]
+pub enum RelativePosition {
+    Above,
+    Below,
+    At,
+}
 
 #[derive(Clone, Copy)]
 pub struct KRaw {
@@ -39,6 +46,22 @@ pub struct KInfo {
     pub body: PriceBar,
     pub full: PriceBar,
     pub quantity: Decimal,
+}
+
+impl KInfo {
+    pub fn relative_position(&self, base: Decimal) -> RelativePosition {
+        match self.body.mid.cmp(&base) {
+            Ordering::Greater => return RelativePosition::Above,
+            Ordering::Less => return RelativePosition::Below,
+            _ => {}
+        };
+
+        match self.full.mid.cmp(&base) {
+            Ordering::Greater => RelativePosition::Above,
+            Ordering::Less => RelativePosition::Below,
+            Ordering::Equal => RelativePosition::At,
+        }
+    }
 }
 
 #[derive(Clone)]
