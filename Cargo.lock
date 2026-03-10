@@ -397,6 +397,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
 
 [[package]]
+name = "scanf"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c85223942fb132c9367378fc82b287e26384c7ba898377af05c50a2aa3c412dc"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
+
+[[package]]
 name = "seahash"
 version = "4.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -504,6 +515,7 @@ name = "tbay"
 version = "0.1.0"
 dependencies = [
  "rust_decimal",
+ "scanf",
  "snafu",
  "time",
 ]
