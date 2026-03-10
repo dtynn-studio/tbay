@@ -79,11 +79,21 @@ impl<T: Ord + Clone + 'static> Indicator for Cross<T> {
     }
 
     fn update(&mut self, next: Self::Item<'_>) -> Option<Self::Value> {
-        let prev = self.prev.take()?;
+        let prev = match self.prev.take() {
+            Some(p) => {
+                self.prev.replace(next.clone());
+                p
+            }
+
+            None => {
+                self.prev.replace(next);
+                return None;
+            }
+        };
+
         let cross = calc_cross(&prev, &next);
         let value = CrossValue { prev, next, cross };
 
-        _ = self.state.replace(value.clone());
         Some(value)
     }
 }

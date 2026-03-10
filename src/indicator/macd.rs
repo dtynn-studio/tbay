@@ -1,6 +1,6 @@
 use crate::{
     indicator::{
-        cross::{Cross, CrossValue},
+        cross::{Cross, CrossItem, CrossValue},
         ma::Ema,
     },
     prelude::{Decimal, Indicator, KSummary},
@@ -11,7 +11,7 @@ pub struct MacdValue {
     pub dif: Decimal,
     pub dea: Decimal,
     pub macd: Decimal,
-    // pub cross: Option<CrossValue<Decimal>>,
+    pub cross: Option<CrossValue<Decimal>>,
 }
 
 pub struct Macd {
@@ -38,11 +38,13 @@ impl Indicator for Macd {
         let (fast, slow) = fast_opt.zip(slow_opt)?;
         let dif = fast - slow;
         let dea = self.dea.calc(dif)?;
+        let cross = self.cross.calc(CrossItem::new(dif, dea));
 
         Some(MacdValue {
             dif,
             dea,
             macd: dif - dea,
+            cross,
         })
     }
 
@@ -54,10 +56,13 @@ impl Indicator for Macd {
         let dif = fast - slow;
         let dea = self.dea.update(dif)?;
 
+        let cross = self.cross.update(CrossItem::new(dif, dea));
+
         self.current.replace(MacdValue {
             dif,
             dea,
             macd: dif - dea,
+            cross,
         });
 
         self.current.clone()
