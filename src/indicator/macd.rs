@@ -1,13 +1,17 @@
 use crate::{
-    indicator::ma::Ema,
+    indicator::{
+        cross::{Cross, CrossValue},
+        ma::Ema,
+    },
     prelude::{Decimal, Indicator, KSummary},
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone)]
 pub struct MacdValue {
     pub dif: Decimal,
     pub dea: Decimal,
     pub macd: Decimal,
+    // pub cross: Option<CrossValue<Decimal>>,
 }
 
 pub struct Macd {
@@ -15,6 +19,7 @@ pub struct Macd {
     slow_ma_key: String,
     dea: Ema,
     current: Option<MacdValue>,
+    cross: Cross<Decimal>,
 }
 
 impl Indicator for Macd {
@@ -55,6 +60,6 @@ impl Indicator for Macd {
             macd: dif - dea,
         });
 
-        self.current
+        self.current.clone()
     }
 }
