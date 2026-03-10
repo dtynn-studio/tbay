@@ -1,7 +1,9 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 use rust_decimal::Decimal;
 use time::OffsetDateTime;
+
+use crate::prelude::Error;
 
 pub mod bollinger;
 pub mod cross;
@@ -60,11 +62,12 @@ impl KSummary {
 
 // 基础类指标，以数值简单数值计算为主，如 ma、stddev 等
 // 会在其他高级指标初始化时注册，以减少重复计算
-// pub trait BaseIndicator:
-//     Indicator<State = Decimal, Item = KInfo, Value = Decimal> + FromStr<Err = Error>
-// {
-//     fn key(&self) -> &str;
-// }
+pub trait BaseIndicator<'a>:
+    Indicator<State = Decimal, Item<'a> = &'a KInfo, Value = Decimal>
+    + FromStr<Err = Error>
+{
+    fn key(&self) -> &str;
+}
 
 pub trait Indicator: Sized {
     type State: Clone;
