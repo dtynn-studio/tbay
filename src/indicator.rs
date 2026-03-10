@@ -15,7 +15,7 @@ pub mod stddev;
 pub const MA_IDX_PRICE: usize = 0;
 pub const MA_IDX_QUNATITY: usize = 1;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum RelativePosition {
     Above,
     Below,
@@ -40,6 +40,26 @@ pub struct PriceBar {
     pub mid: Decimal,
 }
 
+impl PriceBar {
+    pub fn center_relative_position(&self, base: Decimal) -> RelativePosition {
+        match self.mid.cmp(&base) {
+            Ordering::Greater => RelativePosition::Above,
+            Ordering::Less => RelativePosition::Below,
+            Ordering::Equal => RelativePosition::At,
+        }
+    }
+
+    pub fn full_relative_position(&self, base: Decimal) -> RelativePosition {
+        if self.high <= base {
+            RelativePosition::Below
+        } else if self.low >= base {
+            RelativePosition::Above
+        } else {
+            RelativePosition::At
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct KInfo {
     pub raw: KRaw,
@@ -50,17 +70,12 @@ pub struct KInfo {
 
 impl KInfo {
     pub fn relative_position(&self, base: Decimal) -> RelativePosition {
-        match self.body.mid.cmp(&base) {
-            Ordering::Greater => return RelativePosition::Above,
-            Ordering::Less => return RelativePosition::Below,
-            _ => {}
-        };
-
-        match self.full.mid.cmp(&base) {
-            Ordering::Greater => RelativePosition::Above,
-            Ordering::Less => RelativePosition::Below,
-            Ordering::Equal => RelativePosition::At,
+        let body_rel_pos = self.body.center_relative_position(base);
+        if body_rel_pos != RelativePosition::At {
+            return body_rel_pos;
         }
+
+        self.full.center_relative_position(base)
     }
 }
 
