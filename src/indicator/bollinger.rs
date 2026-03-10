@@ -18,14 +18,17 @@ pub struct BollingerBand {
 
 impl Indicator for BollingerBand {
     type State = BollingerBandValue;
-    type Item = KSummary;
+    type Item<'a>
+        = &'a KSummary
+    where
+        Self: 'a;
     type Value = BollingerBandValue;
 
     fn state(&self) -> Option<&Self::State> {
         self.current.as_ref()
     }
 
-    fn calc(&self, next: Self::Item) -> Option<Self::Value> {
+    fn calc(&self, next: Self::Item<'_>) -> Option<Self::Value> {
         let mid_opt = next.get_base(&self.mid_key);
         let dev_opt = next.get_base(&self.stddev_key);
         let (mid, dev) = mid_opt.zip(dev_opt)?;
@@ -40,7 +43,7 @@ impl Indicator for BollingerBand {
         })
     }
 
-    fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
+    fn update(&mut self, next: Self::Item<'_>) -> Option<Self::Value> {
         let val = self.calc(next)?;
         self.current.replace(val);
         self.current

@@ -57,16 +57,19 @@ pub struct Cross<T: Clone> {
     state: Option<CrossValue<T>>,
 }
 
-impl<T: Ord + Clone> Indicator for Cross<T> {
+impl<T: Ord + Clone + 'static> Indicator for Cross<T> {
     type State = CrossValue<T>;
-    type Item = CrossItem<T>;
+    type Item<'a>
+        = CrossItem<T>
+    where
+        Self: 'a;
     type Value = CrossValue<T>;
 
     fn state(&self) -> Option<&Self::State> {
         self.state.as_ref()
     }
 
-    fn calc(&self, next: Self::Item) -> Option<Self::Value> {
+    fn calc(&self, next: Self::Item<'_>) -> Option<Self::Value> {
         let prev = self.prev.as_ref()?;
 
         let cross = calc_cross(prev, &next);
@@ -78,7 +81,7 @@ impl<T: Ord + Clone> Indicator for Cross<T> {
         })
     }
 
-    fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
+    fn update(&mut self, next: Self::Item<'_>) -> Option<Self::Value> {
         let prev = self.prev.take()?;
         let cross = calc_cross(&prev, &next);
         let value = CrossValue { prev, next, cross };

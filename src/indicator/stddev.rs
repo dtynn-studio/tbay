@@ -44,7 +44,10 @@ impl StdDev {
 
 impl Indicator for StdDev {
     type State = Decimal;
-    type Item = Decimal;
+    type Item<'a>
+        = Decimal
+    where
+        Self: 'a;
     type Value = Decimal;
 
     fn state(&self) -> Option<&Self::State> {
@@ -55,7 +58,7 @@ impl Indicator for StdDev {
         }
     }
 
-    fn calc(&self, next: Self::Item) -> Option<Self::Value> {
+    fn calc(&self, next: Self::Item<'_>) -> Option<Self::Value> {
         // 只有在buffer已满时才能计算标准差
         if !self.buffer.is_full() {
             return None;
@@ -76,7 +79,7 @@ impl Indicator for StdDev {
         Some(new_std_dev)
     }
 
-    fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
+    fn update(&mut self, next: Self::Item<'_>) -> Option<Self::Value> {
         // 更新buffer
         let removed = self.buffer.update(next);
 

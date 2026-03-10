@@ -24,14 +24,17 @@ pub struct Macd {
 
 impl Indicator for Macd {
     type State = MacdValue;
-    type Item = KSummary;
+    type Item<'a>
+        = &'a KSummary
+    where
+        Self: 'a;
     type Value = MacdValue;
 
     fn state(&self) -> Option<&Self::State> {
         self.current.as_ref()
     }
 
-    fn calc(&self, next: Self::Item) -> Option<Self::Value> {
+    fn calc(&self, next: Self::Item<'_>) -> Option<Self::Value> {
         let fast_opt = next.get_base(&self.fast_ma_key);
         let slow_opt = next.get_base(&self.slow_ma_key);
 
@@ -46,7 +49,7 @@ impl Indicator for Macd {
         })
     }
 
-    fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
+    fn update(&mut self, next: Self::Item<'_>) -> Option<Self::Value> {
         let fast_opt = next.get_base(&self.fast_ma_key);
         let slow_opt = next.get_base(&self.slow_ma_key);
 
