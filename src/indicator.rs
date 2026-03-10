@@ -5,6 +5,7 @@ use time::OffsetDateTime;
 
 use crate::prelude::Error;
 
+pub mod base;
 pub mod bollinger;
 pub mod cross;
 pub mod ma;
