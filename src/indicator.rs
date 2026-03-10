@@ -40,7 +40,23 @@ pub struct PriceBar {
     pub mid: Decimal,
 }
 
+impl From<(Decimal, Decimal)> for PriceBar {
+    fn from((p1, p2): (Decimal, Decimal)) -> Self {
+        let (high, low) = if p1 > p2 { (p1, p2) } else { (p2, p1) };
+
+        PriceBar::new(high, low)
+    }
+}
+
 impl PriceBar {
+    pub fn new(high: Decimal, low: Decimal) -> Self {
+        Self {
+            high,
+            low,
+            mid: (high + low) / Decimal::TWO,
+        }
+    }
+
     pub fn center_relative_position(&self, base: Decimal) -> RelativePosition {
         match self.mid.cmp(&base) {
             Ordering::Greater => RelativePosition::Above,
@@ -61,11 +77,57 @@ impl PriceBar {
 }
 
 #[derive(Clone, Copy)]
+pub struct KShadow {
+    pub above: Decimal,
+    pub below: Decimal,
+}
+
+#[derive(Clone, Copy)]
 pub struct KInfo {
     pub raw: KRaw,
+    pub direction: Option<bool>,
     pub body: PriceBar,
     pub full: PriceBar,
-    pub quantity: Decimal,
+    pub shadow: KShadow,
+}
+
+impl From<KRaw> for KInfo {
+    fn from(value: KRaw) -> Self {
+        // body: 使用 open 和 close 计算
+        let gte = value.price_close >= value.price_open;
+        let (body, direction) = if gte {
+            (
+                PriceBar::new(value.price_close, value.price_open),
+                if value.price_close == value.price_open {
+                    None
+                } else {
+                    Some(gte)
+                },
+            )
+        } else {
+            (
+                PriceBar::new(value.price_open, value.price_close),
+                Some(false),
+            )
+        };
+
+        // full: 使用 high 和 low 计算
+        let full = PriceBar::new(value.price_high, value.price_low);
+
+        // shadow: 影线
+        let shadow = KShadow {
+            above: full.high - body.high,
+            below: body.low - full.low,
+        };
+
+        Self {
+            raw: value,
+            direction,
+            body,
+            full,
+            shadow,
+        }
+    }
 }
 
 impl KInfo {
