@@ -66,26 +66,22 @@ impl<T: Ord + Clone> Indicator for Cross<T> {
         self.state.as_ref()
     }
 
-    fn calc(&self, next: &Self::Item) -> Option<Self::Value> {
+    fn calc(&self, next: Self::Item) -> Option<Self::Value> {
         let prev = self.prev.as_ref()?;
 
-        let cross = calc_cross(prev, next);
+        let cross = calc_cross(prev, &next);
 
         Some(CrossValue {
             prev: prev.clone(),
-            next: next.clone(),
+            next,
             cross,
         })
     }
 
-    fn update(&mut self, next: &Self::Item) -> Option<Self::Value> {
+    fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
         let prev = self.prev.take()?;
-        let cross = calc_cross(&prev, next);
-        let value = CrossValue {
-            prev,
-            next: next.clone(),
-            cross,
-        };
+        let cross = calc_cross(&prev, &next);
+        let value = CrossValue { prev, next, cross };
 
         _ = self.state.replace(value.clone());
         Some(value)

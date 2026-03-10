@@ -33,13 +33,11 @@ impl Indicator for Ema {
         }
     }
 
-    fn calc(&self, next: &Self::Item) -> Option<Self::Value> {
+    fn calc(&self, next: Self::Item) -> Option<Self::Value> {
         // 只有在buffer已满时才能计算EMA
         if !self.buffer.is_full() {
             return None;
         }
-
-        let next = *next;
 
         // 计算新的EMA值和差异
         let new_ema =
@@ -47,9 +45,7 @@ impl Indicator for Ema {
         Some(new_ema)
     }
 
-    fn update(&mut self, next: &Self::Item) -> Option<Self::Value> {
-        let next = *next;
-
+    fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
         // 1. 对buffer进行填充
         let removed = self.buffer.update(next);
 

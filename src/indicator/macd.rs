@@ -31,13 +31,13 @@ impl Indicator for Macd {
         self.current.as_ref()
     }
 
-    fn calc(&self, next: &Self::Item) -> Option<Self::Value> {
+    fn calc(&self, next: Self::Item) -> Option<Self::Value> {
         let fast_opt = next.get_base(&self.fast_ma_key);
         let slow_opt = next.get_base(&self.slow_ma_key);
 
         let (fast, slow) = fast_opt.zip(slow_opt)?;
         let dif = fast - slow;
-        let dea = self.dea.calc(&dif)?;
+        let dea = self.dea.calc(dif)?;
 
         Some(MacdValue {
             dif,
@@ -46,13 +46,13 @@ impl Indicator for Macd {
         })
     }
 
-    fn update(&mut self, next: &Self::Item) -> Option<Self::Value> {
+    fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
         let fast_opt = next.get_base(&self.fast_ma_key);
         let slow_opt = next.get_base(&self.slow_ma_key);
 
         let (fast, slow) = fast_opt.zip(slow_opt)?;
         let dif = fast - slow;
-        let dea = self.dea.update(&dif)?;
+        let dea = self.dea.update(dif)?;
 
         self.current.replace(MacdValue {
             dif,

@@ -32,13 +32,11 @@ impl Indicator for Sma {
         }
     }
 
-    fn calc(&self, next: &Self::Item) -> Option<Self::Value> {
+    fn calc(&self, next: Self::Item) -> Option<Self::Value> {
         // 只有在buffer已满时才能计算SMA
         if !self.buffer.is_full() {
             return None;
         }
-
-        let next = *next;
 
         // 获取即将被替换的值（最老的值）
         // 在满的RingBuffer中，最老的元素是索引为0的元素，且必定存在
@@ -50,9 +48,7 @@ impl Indicator for Sma {
         Some(new_sma)
     }
 
-    fn update(&mut self, next: &Self::Item) -> Option<Self::Value> {
-        let next = *next;
-
+    fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
         // 1. 对buffer进行填充
         let removed = self.buffer.update(next);
 
