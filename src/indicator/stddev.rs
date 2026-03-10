@@ -44,10 +44,7 @@ impl StdDev {
 
 impl Indicator for StdDev {
     type State = Decimal;
-    type Item<'a>
-        = Decimal
-    where
-        Self: 'a;
+    type Item<'a> = Decimal;
     type Value = Decimal;
 
     fn state(&self) -> Option<&Self::State> {

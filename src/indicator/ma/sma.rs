@@ -21,10 +21,7 @@ impl Sma {
 
 impl Indicator for Sma {
     type State = Decimal;
-    type Item<'a>
-        = Decimal
-    where
-        Self: 'a;
+    type Item<'a> = Decimal;
     type Value = Decimal;
 
     fn state(&self) -> Option<&Self::State> {

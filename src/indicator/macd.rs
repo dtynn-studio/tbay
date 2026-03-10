@@ -24,10 +24,7 @@ pub struct Macd {
 
 impl Indicator for Macd {
     type State = MacdValue;
-    type Item<'a>
-        = &'a KSummary
-    where
-        Self: 'a;
+    type Item<'a> = &'a KSummary;
     type Value = MacdValue;
 
     fn state(&self) -> Option<&Self::State> {

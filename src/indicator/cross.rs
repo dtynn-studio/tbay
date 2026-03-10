@@ -59,10 +59,7 @@ pub struct Cross<T: Clone> {
 
 impl<T: Ord + Clone + 'static> Indicator for Cross<T> {
     type State = CrossValue<T>;
-    type Item<'a>
-        = CrossItem<T>
-    where
-        Self: 'a;
+    type Item<'a> = CrossItem<T>;
     type Value = CrossValue<T>;
 
     fn state(&self) -> Option<&Self::State> {

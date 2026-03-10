@@ -18,10 +18,7 @@ pub struct BollingerBand {
 
 impl Indicator for BollingerBand {
     type State = BollingerBandValue;
-    type Item<'a>
-        = &'a KSummary
-    where
-        Self: 'a;
+    type Item<'a> = &'a KSummary;
     type Value = BollingerBandValue;
 
     fn state(&self) -> Option<&Self::State> {
