@@ -14,29 +14,34 @@ fn close_extractor(info: &KInfo) -> Decimal {
     info.raw.price_close
 }
 
-pub struct PriceMa {
+fn qty_extractor(info: &KInfo) -> Decimal {
+    info.raw.quantity
+}
+
+pub struct BaseExtractMa {
     key: String,
     ma: Ma,
     extractor: fn(&KInfo) -> Decimal,
 }
 
-impl FromStr for PriceMa {
+impl FromStr for BaseExtractMa {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut period: usize = 0;
-        let mut price_kind: String = String::new();
+        let mut extract_kind: String = String::new();
         let mut ma_kind: String = String::new();
 
-        sscanf!(s, "{price_kind}:{ma_kind}:{period}").with_context(|_| {
+        sscanf!(s, "{extract_kind}:{ma_kind}:{period}").with_context(|_| {
             ParseCtx {
                 raw: s.to_owned(),
                 usage: Cow::from("parse PriceMa"),
             }
         })?;
 
-        let extractor = match price_kind.as_str() {
+        let extractor = match extract_kind.as_str() {
             "close" => close_extractor,
-            other => return Err(other.unexpected("price kind")),
+            "qty" => qty_extractor,
+            other => return Err(other.unexpected("extract kind")),
         };
 
         if period == 0 {
@@ -57,7 +62,7 @@ impl FromStr for PriceMa {
     }
 }
 
-impl Indicator for PriceMa {
+impl Indicator for BaseExtractMa {
     type State = Decimal;
     type Item<'a> = &'a KInfo;
     type Value = Decimal;
@@ -77,7 +82,7 @@ impl Indicator for PriceMa {
     }
 }
 
-impl<'a> BaseIndicator<'a> for PriceMa {
+impl<'a> BaseIndicator<'a> for BaseExtractMa {
     fn key(&self) -> &str {
         &self.key
     }
