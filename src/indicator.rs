@@ -10,6 +10,7 @@ pub mod bollinger;
 pub mod cross;
 pub mod ma;
 pub mod macd;
+pub mod position;
 pub mod stddev;
 
 pub const MA_IDX_PRICE: usize = 0;
@@ -73,6 +74,10 @@ impl PriceBar {
         } else {
             RelativePosition::At
         }
+    }
+
+    pub fn extremum(&self, position: bool) -> Decimal {
+        if position { self.high } else { self.low }
     }
 }
 
@@ -138,6 +143,10 @@ impl KInfo {
         }
 
         self.full.center_relative_position(base)
+    }
+
+    pub fn is_not_below(&self, base: Decimal) -> bool {
+        matches!(self.relative_position(base), RelativePosition::Below)
     }
 }
 
