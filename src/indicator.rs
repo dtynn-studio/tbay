@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::HashMap, str::FromStr};
+use std::{cmp::Ordering, collections::HashMap, str::FromStr, sync::Arc};
 
 use rust_decimal::Decimal;
 use time::OffsetDateTime;
@@ -173,8 +173,8 @@ impl KSummary {
 
 // 基础类指标，以数值简单数值计算为主，如 ma、stddev 等
 // 会在其他高级指标初始化时注册，以减少重复计算
-pub trait BaseIndicator<'a>:
-    Indicator<State = Decimal, Item<'a> = &'a KInfo, Value = Decimal>
+pub trait BaseIndicator:
+    Indicator<State = Decimal, Item = Arc<KInfo>, Value = Decimal>
     + FromStr<Err = Error>
 {
     fn key(&self) -> &str;
@@ -182,10 +182,10 @@ pub trait BaseIndicator<'a>:
 
 pub trait Indicator: Sized {
     type State: Clone;
-    type Item<'a>;
+    type Item;
     type Value;
 
     fn state(&self) -> Option<&Self::State>;
-    fn update<'a>(&mut self, next: Self::Item<'a>) -> Option<Self::Value>;
-    fn calc<'a>(&self, next: Self::Item<'a>) -> Option<Self::Value>;
+    fn update(&mut self, next: Self::Item) -> Option<Self::Value>;
+    fn calc(&self, next: Self::Item) -> Option<Self::Value>;
 }

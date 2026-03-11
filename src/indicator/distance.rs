@@ -1,4 +1,4 @@
-use crate::prelude::{Decimal, Indicator, KSummary};
+use crate::prelude::{Arc, Decimal, Indicator, KSummary};
 
 pub struct Distance {
     key1: String,
@@ -8,21 +8,22 @@ pub struct Distance {
 
 impl Indicator for Distance {
     type State = Decimal;
-    type Item<'a> = &'a KSummary;
+    type Item = Arc<KSummary>;
     type Value = Decimal;
 
     fn state(&self) -> Option<&Self::State> {
         self.current.as_ref()
     }
 
-    fn calc<'a>(&self, next: Self::Item<'a>) -> Option<Self::Value> {
+    fn calc(&self, next: Self::Item) -> Option<Self::Value> {
+        let next = next.as_ref();
         let val1 = next.get_base(&self.key1)?;
         let val2 = next.get_base(&self.key2)?;
 
         Some((val1 - val2).abs())
     }
 
-    fn update<'a>(&mut self, next: Self::Item<'a>) -> Option<Self::Value> {
+    fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
         let calculated = self.calc(next)?;
         self.current.replace(calculated);
         Some(calculated)

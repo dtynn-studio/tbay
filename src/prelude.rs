@@ -3,3 +3,4 @@ pub use crate::{
     res::prelude::*,
 };
 pub use rust_decimal::Decimal;
+pub use std::sync::Arc;

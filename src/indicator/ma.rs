@@ -13,7 +13,7 @@ pub enum Ma {
 
 impl Indicator for Ma {
     type State = Decimal;
-    type Item<'a> = Decimal;
+    type Item = Decimal;
     type Value = Decimal;
 
     fn state(&self) -> Option<&Self::State> {
@@ -23,14 +23,14 @@ impl Indicator for Ma {
         }
     }
 
-    fn calc<'a>(&self, next: Self::Item<'a>) -> Option<Self::Value> {
+    fn calc(&self, next: Self::Item) -> Option<Self::Value> {
         match self {
             Self::Sma(m) => m.calc(next),
             Self::Ema(m) => m.calc(next),
         }
     }
 
-    fn update<'a>(&mut self, next: Self::Item<'a>) -> Option<Self::Value> {
+    fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
         match self {
             Self::Sma(m) => m.update(next),
             Self::Ema(m) => m.update(next),

@@ -1,4 +1,4 @@
-use std::{borrow::Cow, str::FromStr};
+use std::{borrow::Cow, str::FromStr, sync::Arc};
 
 use scanf::sscanf;
 use snafu::ResultExt;
@@ -64,25 +64,25 @@ impl FromStr for BaseExtractMa {
 
 impl Indicator for BaseExtractMa {
     type State = Decimal;
-    type Item<'a> = &'a KInfo;
+    type Item = Arc<KInfo>;
     type Value = Decimal;
 
     fn state(&self) -> Option<&Self::State> {
         self.ma.state()
     }
 
-    fn calc<'a>(&self, next: Self::Item<'a>) -> Option<Self::Value> {
-        let next = (self.extractor)(next);
+    fn calc(&self, next: Self::Item) -> Option<Self::Value> {
+        let next = (self.extractor)(next.as_ref());
         self.ma.calc(next)
     }
 
-    fn update<'a>(&mut self, next: Self::Item<'a>) -> Option<Self::Value> {
-        let next = (self.extractor)(next);
+    fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
+        let next = (self.extractor)(next.as_ref());
         self.ma.update(next)
     }
 }
 
-impl<'a> BaseIndicator<'a> for BaseExtractMa {
+impl BaseIndicator for BaseExtractMa {
     fn key(&self) -> &str {
         &self.key
     }

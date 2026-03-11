@@ -1,4 +1,4 @@
-use crate::prelude::{Decimal, Indicator, KSummary};
+use crate::prelude::{Arc, Decimal, Indicator, KSummary};
 
 #[derive(Clone, Copy)]
 pub struct PositionValue {
@@ -57,14 +57,15 @@ impl Position {
 
 impl Indicator for Position {
     type State = PositionState;
-    type Item<'a> = &'a KSummary;
+    type Item = Arc<KSummary>;
     type Value = PositionValue;
 
     fn state(&self) -> Option<&Self::State> {
         self.state.as_ref()
     }
 
-    fn calc(&self, next: &KSummary) -> Option<PositionValue> {
+    fn calc(&self, next: Self::Item) -> Option<PositionValue> {
+        let next = next.as_ref();
         // 1. 获取基线值
         let base = next.get_base(&self.base_key)?;
         let Some(mut state) = self.state else {
@@ -80,7 +81,7 @@ impl Indicator for Position {
         Some(PositionValue { state, flip })
     }
 
-    fn update(&mut self, next: &KSummary) -> Option<PositionValue> {
+    fn update(&mut self, next: Self::Item) -> Option<PositionValue> {
         // 第一次更新：初始化状态
         // 只有 base 为 None 的情况才会值为 None
         let calculated = self.calc(next)?;

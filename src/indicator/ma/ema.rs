@@ -22,7 +22,7 @@ impl Ema {
 
 impl Indicator for Ema {
     type State = Decimal;
-    type Item<'a> = Decimal;
+    type Item = Decimal;
     type Value = Decimal;
 
     fn state(&self) -> Option<&Self::State> {
@@ -33,7 +33,7 @@ impl Indicator for Ema {
         }
     }
 
-    fn calc(&self, next: Self::Item<'_>) -> Option<Self::Value> {
+    fn calc(&self, next: Self::Item) -> Option<Self::Value> {
         // 只有在buffer已满时才能计算EMA
         if !self.buffer.is_full() {
             return None;
@@ -45,7 +45,7 @@ impl Indicator for Ema {
         Some(new_ema)
     }
 
-    fn update(&mut self, next: Self::Item<'_>) -> Option<Self::Value> {
+    fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
         // 1. 对buffer进行填充
         let removed = self.buffer.update(next);
 
