@@ -8,6 +8,7 @@ use crate::prelude::Error;
 pub mod base;
 pub mod bollinger;
 pub mod cross;
+pub mod distance;
 pub mod ma;
 pub mod macd;
 pub mod position;
