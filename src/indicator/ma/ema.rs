@@ -68,4 +68,8 @@ impl Indicator for Ema {
             None
         }
     }
+
+    fn deps(&self) -> Vec<String> {
+        vec![]
+    }
 }

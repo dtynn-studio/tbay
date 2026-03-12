@@ -80,6 +80,10 @@ impl Indicator for BaseExtractMa {
         let next = (self.extractor)(next.as_ref());
         self.ma.update(next)
     }
+
+    fn deps(&self) -> Vec<String> {
+        vec![]
+    }
 }
 
 impl BaseIndicator for BaseExtractMa {

@@ -102,4 +102,8 @@ impl Indicator for StdDev {
             None
         }
     }
+
+    fn deps(&self) -> Vec<String> {
+        vec![]
+    }
 }

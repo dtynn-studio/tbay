@@ -96,4 +96,8 @@ impl<T: Ord + Clone + 'static> Indicator for Cross<T> {
 
         Some(value)
     }
+
+    fn deps(&self) -> Vec<String> {
+        vec![]
+    }
 }

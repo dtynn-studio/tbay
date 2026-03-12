@@ -70,4 +70,8 @@ impl Indicator for Sma {
             None
         }
     }
+
+    fn deps(&self) -> Vec<String> {
+        vec![]
+    }
 }

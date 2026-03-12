@@ -36,4 +36,11 @@ impl Indicator for Ma {
             Self::Ema(m) => m.update(next),
         }
     }
+
+    fn deps(&self) -> Vec<String> {
+        match self {
+            Self::Sma(m) => m.deps(),
+            Self::Ema(m) => m.deps(),
+        }
+    }
 }

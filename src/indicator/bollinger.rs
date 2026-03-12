@@ -46,4 +46,8 @@ impl Indicator for BollingerBand {
         self.current.replace(val);
         self.current
     }
+
+    fn deps(&self) -> Vec<String> {
+        vec![self.mid_key.clone(), self.stddev_key.clone()]
+    }
 }

@@ -69,4 +69,8 @@ impl Indicator for Macd {
 
         self.current.clone()
     }
+
+    fn deps(&self) -> Vec<String> {
+        vec![self.fast_ma_key.clone(), self.slow_ma_key.clone()]
+    }
 }

@@ -28,4 +28,8 @@ impl Indicator for Distance {
         self.current.replace(calculated);
         Some(calculated)
     }
+
+    fn deps(&self) -> Vec<String> {
+        vec![self.key1.clone(), self.key2.clone()]
+    }
 }

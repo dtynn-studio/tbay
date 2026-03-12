@@ -88,4 +88,8 @@ impl Indicator for Position {
         self.state.replace(calculated.state);
         Some(calculated)
     }
+
+    fn deps(&self) -> Vec<String> {
+        vec![self.base_key.clone()]
+    }
 }
