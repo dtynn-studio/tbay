@@ -1,7 +1,5 @@
 use std::cmp::Ordering;
 
-use crate::prelude::Indicator2;
-
 #[derive(Clone)]
 pub struct CrossItem<T> {
     pub fast: T,
@@ -53,25 +51,11 @@ fn calc_cross<T: Ord>(
 
 #[derive(Clone)]
 pub struct Cross<T: Clone> {
-    key: String,
     prev: Option<CrossItem<T>>,
-    state: Option<CrossValue<T>>,
 }
 
-impl<T: Ord + Clone + 'static> Indicator2 for Cross<T> {
-    type State = CrossValue<T>;
-    type Item = CrossItem<T>;
-    type Value = CrossValue<T>;
-
-    fn key(&self) -> &str {
-        &self.key
-    }
-
-    fn state(&self) -> Option<&Self::State> {
-        self.state.as_ref()
-    }
-
-    fn calc(&self, next: Self::Item) -> Option<Self::Value> {
+impl<T: Ord + Clone + 'static> Cross<T> {
+    pub fn calc(&self, next: CrossItem<T>) -> Option<CrossValue<T>> {
         let prev = self.prev.as_ref()?;
 
         let cross = calc_cross(prev, &next);
@@ -83,7 +67,7 @@ impl<T: Ord + Clone + 'static> Indicator2 for Cross<T> {
         })
     }
 
-    fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
+    pub fn update(&mut self, next: CrossItem<T>) -> Option<CrossValue<T>> {
         let prev = match self.prev.take() {
             Some(p) => {
                 self.prev.replace(next.clone());
@@ -100,9 +84,5 @@ impl<T: Ord + Clone + 'static> Indicator2 for Cross<T> {
         let value = CrossValue { prev, next, cross };
 
         Some(value)
-    }
-
-    fn deps(&self) -> Vec<String> {
-        vec![]
     }
 }

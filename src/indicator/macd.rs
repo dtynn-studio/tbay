@@ -1,8 +1,8 @@
 use crate::{
     indicator::{
+        Calculator, Indicator,
         cross::{Cross, CrossItem, CrossValue},
         ma::Ema,
-        Calculator, Indicator, Indicator2,
     },
     prelude::{Decimal, KCtx},
 };
