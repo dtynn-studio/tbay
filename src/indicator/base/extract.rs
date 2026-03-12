@@ -4,7 +4,7 @@ use scanf::sscanf;
 use snafu::ResultExt;
 
 use crate::{
-    indicator::{ma::Ma, Calculator},
+    indicator::{base::BaseCalculator, Calculator},
     prelude::{
         BaseIndicator, Decimal, Error, Indicator, KInfo, ParseCtx, Unexpected,
     },
@@ -20,7 +20,7 @@ fn qty_extractor(info: &KInfo) -> Decimal {
 
 pub struct BaseExtractMa {
     key: String,
-    ma: Ma,
+    calculator: BaseCalculator,
     extractor: fn(&KInfo) -> Decimal,
 }
 
@@ -41,17 +41,13 @@ impl FromStr for BaseExtractMa {
             other => return Err(other.unexpected("extract kind")),
         };
 
-        let ma = if let Ok(sma) = sub.parse().map(Ma::Sma) {
-            sma
-        } else if let Ok(ema) = sub.parse().map(Ma::Ema) {
-            ema
-        } else {
-            return Err(sub.unexpected("ma kind"));
-        };
+        let calculator: BaseCalculator = sub.parse().map_err(|_| {
+            sub.unexpected("calculator kind")
+        })?;
 
         Ok(Self {
             key: s.to_owned(),
-            ma,
+            calculator,
             extractor,
         })
     }
@@ -72,12 +68,12 @@ impl Indicator for BaseExtractMa {
 
     fn calc(&self, next: Self::Item) -> Option<Self::Value> {
         let next = (self.extractor)(next.as_ref());
-        self.ma.calc(next)
+        self.calculator.calc(next)
     }
 
     fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
         let next = (self.extractor)(next.as_ref());
-        self.ma.update(next)
+        self.calculator.update(next)
     }
 
     fn deps(&self) -> Vec<String> {
