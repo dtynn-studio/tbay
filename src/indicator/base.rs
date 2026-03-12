@@ -10,7 +10,9 @@ use crate::{
     res::Unexpected,
 };
 
-pub mod extract;
+mod extract;
+
+pub use extract::BaseExtractor;
 
 pub enum BaseCalculator {
     Sma(Sma),

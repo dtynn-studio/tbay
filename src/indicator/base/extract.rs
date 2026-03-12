@@ -1,11 +1,11 @@
-use std::{borrow::Cow, str::FromStr, sync::Arc};
+use std::{borrow::Cow, str::FromStr};
 
 use scanf::sscanf;
 use snafu::ResultExt;
 
 use crate::{
-    indicator::{BaseIndicator2, Calculator, Indicator2, base::BaseCalculator},
-    prelude::{Decimal, Error, KInfo, ParseCtx, Unexpected},
+    indicator::{Calculator, Indicator, base::BaseCalculator},
+    prelude::{Decimal, Error, KCtx, KInfo, ParseCtx, Unexpected},
 };
 
 fn close_extractor(info: &KInfo) -> Decimal {
@@ -16,13 +16,13 @@ fn qty_extractor(info: &KInfo) -> Decimal {
     info.raw.quantity
 }
 
-pub struct BaseExtractMa {
+pub struct BaseExtractor {
     key: String,
     calculator: BaseCalculator,
     extractor: fn(&KInfo) -> Decimal,
 }
 
-impl FromStr for BaseExtractMa {
+impl FromStr for BaseExtractor {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut extract_kind: String = String::new();
@@ -50,36 +50,24 @@ impl FromStr for BaseExtractMa {
     }
 }
 
-impl Indicator2 for BaseExtractMa {
-    type State = Decimal;
-    type Item = Arc<KInfo>;
-    type Value = Decimal;
+impl Indicator for BaseExtractor {
+    type Output = Decimal;
 
     fn key(&self) -> &str {
         &self.key
     }
 
-    fn state(&self) -> Option<&Self::State> {
-        None
-    }
-
-    fn calc(&self, next: Self::Item) -> Option<Self::Value> {
-        let next = (self.extractor)(next.as_ref());
-        self.calculator.calc(next)
-    }
-
-    fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
-        let next = (self.extractor)(next.as_ref());
-        self.calculator.update(next)
-    }
-
-    fn deps(&self) -> Vec<String> {
+    fn deps(&self) -> Vec<&str> {
         vec![]
     }
-}
 
-impl BaseIndicator2 for BaseExtractMa {
-    fn key(&self) -> &str {
-        &self.key
+    fn calc(&self, next: &KCtx) -> Option<Self::Output> {
+        let value = (self.extractor)(&next.info);
+        self.calculator.calc(value)
+    }
+
+    fn update(&mut self, next: &KCtx) -> Option<Self::Output> {
+        let value = (self.extractor)(&next.info);
+        self.calculator.update(value)
     }
 }
