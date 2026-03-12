@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::HashMap, sync::Arc};
+use std::{any::Any, cmp::Ordering, collections::HashMap, sync::Arc};
 
 use rust_decimal::Decimal;
 use time::OffsetDateTime;
@@ -146,6 +146,21 @@ impl KInfo {
 
     pub fn is_not_below(&self, base: Decimal) -> bool {
         matches!(self.relative_position(base), RelativePosition::Below)
+    }
+}
+
+pub struct KCtx {
+    pub info: KInfo,
+    vals: HashMap<String, Box<dyn Any>>,
+}
+
+impl KCtx {
+    pub fn get_val<T: 'static>(&self, key: &str) -> Option<&T> {
+        self.vals.get(key).and_then(|o| o.downcast_ref())
+    }
+
+    pub fn set_val<T: 'static>(&mut self, key: &str, val: T) -> bool {
+        self.vals.insert(key.to_owned(), Box::new(val)).is_some()
     }
 }
 
