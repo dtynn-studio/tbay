@@ -53,6 +53,7 @@ fn calc_cross<T: Ord>(
 
 #[derive(Clone)]
 pub struct Cross<T: Clone> {
+    key: String,
     prev: Option<CrossItem<T>>,
     state: Option<CrossValue<T>>,
 }
@@ -61,6 +62,10 @@ impl<T: Ord + Clone + 'static> Indicator for Cross<T> {
     type State = CrossValue<T>;
     type Item = CrossItem<T>;
     type Value = CrossValue<T>;
+
+    fn key(&self) -> &str {
+        &self.key
+    }
 
     fn state(&self) -> Option<&Self::State> {
         self.state.as_ref()

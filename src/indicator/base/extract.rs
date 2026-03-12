@@ -4,7 +4,7 @@ use scanf::sscanf;
 use snafu::ResultExt;
 
 use crate::{
-    indicator::ma::{Ema, Ma, Sma},
+    indicator::ma::Ma,
     prelude::{
         BaseIndicator, Decimal, Error, Indicator, KInfo, ParseCtx, Unexpected,
     },
@@ -27,15 +27,12 @@ pub struct BaseExtractMa {
 impl FromStr for BaseExtractMa {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut period: usize = 0;
         let mut extract_kind: String = String::new();
-        let mut ma_kind: String = String::new();
+        let mut sub: String = String::new();
 
-        sscanf!(s, "{extract_kind}:{ma_kind}:{period}").with_context(|_| {
-            ParseCtx {
-                raw: s.to_owned(),
-                usage: Cow::from("parse PriceMa"),
-            }
+        sscanf!(s, "{extract_kind}:{sub}").with_context(|_| ParseCtx {
+            raw: s.to_owned(),
+            usage: Cow::from("parse PriceMa"),
         })?;
 
         let extractor = match extract_kind.as_str() {
@@ -44,14 +41,12 @@ impl FromStr for BaseExtractMa {
             other => return Err(other.unexpected("extract kind")),
         };
 
-        if period == 0 {
-            return Err(period.unexpected("ma period"));
-        }
-
-        let ma = match ma_kind.as_str() {
-            "ema" => Ma::Ema(Ema::new(period)),
-            "sma" => Ma::Sma(Sma::new(period)),
-            other => return Err(other.unexpected("ma kind")),
+        let ma = if let Ok(sma) = sub.parse().map(Ma::Sma) {
+            sma
+        } else if let Ok(ema) = sub.parse().map(Ma::Ema) {
+            ema
+        } else {
+            return Err(sub.unexpected("ma kind"));
         };
 
         Ok(Self {
@@ -66,6 +61,10 @@ impl Indicator for BaseExtractMa {
     type State = Decimal;
     type Item = Arc<KInfo>;
     type Value = Decimal;
+
+    fn key(&self) -> &str {
+        &self.key
+    }
 
     fn state(&self) -> Option<&Self::State> {
         self.ma.state()

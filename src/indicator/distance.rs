@@ -1,6 +1,7 @@
 use crate::prelude::{Arc, Decimal, Indicator, KSummary};
 
 pub struct Distance {
+    key: String,
     key1: String,
     key2: String,
     current: Option<Decimal>,
@@ -10,6 +11,10 @@ impl Indicator for Distance {
     type State = Decimal;
     type Item = Arc<KSummary>;
     type Value = Decimal;
+
+    fn key(&self) -> &str {
+        &self.key
+    }
 
     fn state(&self) -> Option<&Self::State> {
         self.current.as_ref()

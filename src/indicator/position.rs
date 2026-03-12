@@ -42,13 +42,15 @@ impl PositionState {
 }
 
 pub struct Position {
+    key: String,
     base_key: String,
     state: Option<PositionState>,
 }
 
 impl Position {
-    pub fn new(base_key: &str) -> Self {
+    pub fn new(key: &str, base_key: &str) -> Self {
         Self {
+            key: key.to_string(),
             base_key: base_key.to_string(),
             state: None,
         }
@@ -59,6 +61,10 @@ impl Indicator for Position {
     type State = PositionState;
     type Item = Arc<KSummary>;
     type Value = PositionValue;
+
+    fn key(&self) -> &str {
+        &self.key
+    }
 
     fn state(&self) -> Option<&Self::State> {
         self.state.as_ref()

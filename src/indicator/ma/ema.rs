@@ -1,18 +1,50 @@
+use std::{borrow::Cow, str::FromStr};
+
+use scanf::sscanf;
+use snafu::ResultExt;
+
 use crate::{
-    prelude::{Decimal, Indicator},
+    prelude::{Decimal, Error, Indicator},
+    res::{ParseCtx, Unexpected},
     util::RingBuffer,
 };
 
 pub struct Ema {
+    key: String,
     buffer: RingBuffer<Decimal>,
     current: Decimal,
     alpha: Decimal,
+}
+
+impl FromStr for Ema {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut kind = String::new();
+        let mut period = 0usize;
+
+        sscanf!(s, "{kind}:{period}").with_context(|_| ParseCtx {
+            raw: s.to_owned(),
+            usage: Cow::from("parse Ema"),
+        })?;
+
+        if kind != "ema" {
+            return Err(kind.unexpected("ema kind"));
+        }
+
+        if period == 0 {
+            return Err(period.unexpected("ema period"));
+        }
+
+        Ok(Self::new(period))
+    }
 }
 
 impl Ema {
     pub fn new(period: usize) -> Self {
         let alpha = Decimal::TWO / (Decimal::from(period) + Decimal::ONE);
         Self {
+            key: format!("ema:{period}"),
             buffer: RingBuffer::new(period),
             current: Decimal::ZERO,
             alpha,
@@ -24,6 +56,10 @@ impl Indicator for Ema {
     type State = Decimal;
     type Item = Decimal;
     type Value = Decimal;
+
+    fn key(&self) -> &str {
+        &self.key
+    }
 
     fn state(&self) -> Option<&Self::State> {
         if self.buffer.is_full() {

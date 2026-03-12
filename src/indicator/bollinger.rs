@@ -10,6 +10,7 @@ pub struct BollingerBandValue {
 }
 
 pub struct BollingerBand {
+    key: String,
     mid_key: String,
     stddev_key: String,
     width: Decimal,
@@ -20,6 +21,10 @@ impl Indicator for BollingerBand {
     type State = BollingerBandValue;
     type Item = Arc<KSummary>;
     type Value = BollingerBandValue;
+
+    fn key(&self) -> &str {
+        &self.key
+    }
 
     fn state(&self) -> Option<&Self::State> {
         self.current.as_ref()

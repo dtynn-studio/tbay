@@ -16,6 +16,13 @@ impl Indicator for Ma {
     type Item = Decimal;
     type Value = Decimal;
 
+    fn key(&self) -> &str {
+        match self {
+            Self::Sma(m) => m.key(),
+            Self::Ema(m) => m.key(),
+        }
+    }
+
     fn state(&self) -> Option<&Self::State> {
         match self {
             Self::Sma(m) => m.state(),

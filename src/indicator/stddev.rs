@@ -23,6 +23,7 @@ fn compute_std_dev(
 }
 
 pub struct StdDev {
+    key: String,
     buffer: RingBuffer<Decimal>,
     sum: Decimal,
     sum_squares: Decimal,
@@ -31,8 +32,9 @@ pub struct StdDev {
 }
 
 impl StdDev {
-    pub fn new(period: usize) -> Self {
+    pub fn new(key: &str, period: usize) -> Self {
         Self {
+            key: key.to_string(),
             buffer: RingBuffer::new(period),
             sum: Decimal::ZERO,
             sum_squares: Decimal::ZERO,
@@ -46,6 +48,10 @@ impl Indicator for StdDev {
     type State = Decimal;
     type Item = Decimal;
     type Value = Decimal;
+
+    fn key(&self) -> &str {
+        &self.key
+    }
 
     fn state(&self) -> Option<&Self::State> {
         if self.buffer.is_full() {

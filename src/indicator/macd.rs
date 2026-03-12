@@ -15,6 +15,7 @@ pub struct MacdValue {
 }
 
 pub struct Macd {
+    key: String,
     fast_ma_key: String,
     slow_ma_key: String,
     dea: Ema,
@@ -26,6 +27,10 @@ impl Indicator for Macd {
     type State = MacdValue;
     type Item = Arc<KSummary>;
     type Value = MacdValue;
+
+    fn key(&self) -> &str {
+        &self.key
+    }
 
     fn state(&self) -> Option<&Self::State> {
         self.current.as_ref()

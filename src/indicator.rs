@@ -182,6 +182,7 @@ pub trait Indicator: Sized {
     type Item;
     type Value;
 
+    fn key(&self) -> &str;
     fn state(&self) -> Option<&Self::State>;
     fn update(&mut self, next: Self::Item) -> Option<Self::Value>;
     fn calc(&self, next: Self::Item) -> Option<Self::Value>;
