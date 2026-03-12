@@ -1,4 +1,7 @@
-use crate::prelude::{Arc, Decimal, Indicator2, KSummary};
+use crate::{
+    indicator::Indicator,
+    prelude::{Decimal, KCtx, KInfo},
+};
 
 #[derive(Clone, Copy)]
 pub struct PositionValue {
@@ -14,18 +17,18 @@ pub struct PositionState {
 }
 
 impl PositionState {
-    fn new(k: &KSummary, base: Decimal) -> Self {
-        let position = k.info.is_not_below(base);
+    fn new(k: &KInfo, base: Decimal) -> Self {
+        let position = k.is_not_below(base);
         Self {
             position,
             duration: 1,
-            extremum: k.info.full.extremum(position),
+            extremum: k.full.extremum(position),
         }
     }
 
-    pub fn update(&mut self, next: &KSummary, base: Decimal) -> bool {
-        let position = next.info.is_not_below(base);
-        let maybe = next.info.full.extremum(position);
+    pub fn update(&mut self, next: &KInfo, base: Decimal) -> bool {
+        let position = next.is_not_below(base);
+        let maybe = next.full.extremum(position);
         if position == self.position {
             self.duration += 1;
             if (maybe > self.extremum) == position {
@@ -57,45 +60,34 @@ impl Position {
     }
 }
 
-impl Indicator2 for Position {
-    type State = PositionState;
-    type Item = Arc<KSummary>;
-    type Value = PositionValue;
+impl Indicator for Position {
+    type Output = PositionValue;
 
     fn key(&self) -> &str {
         &self.key
     }
 
-    fn state(&self) -> Option<&Self::State> {
-        self.state.as_ref()
+    fn deps(&self) -> Vec<&str> {
+        vec![&self.base_key]
     }
 
-    fn calc(&self, next: Self::Item) -> Option<PositionValue> {
-        let next = next.as_ref();
-        // 1. 获取基线值
-        let base = next.get_base(&self.base_key)?;
+    fn calc(&self, next: &KCtx) -> Option<Self::Output> {
+        let base = *next.get_val::<Decimal>(&self.base_key)?;
         let Some(mut state) = self.state else {
             return Some(PositionValue {
-                state: PositionState::new(next, base),
+                state: PositionState::new(&next.info, base),
                 flip: false,
             });
         };
 
-        // 2. 获取当前K线的相对位置
-        let flip = state.update(next, base);
+        let flip = state.update(&next.info, base);
 
         Some(PositionValue { state, flip })
     }
 
-    fn update(&mut self, next: Self::Item) -> Option<PositionValue> {
-        // 第一次更新：初始化状态
-        // 只有 base 为 None 的情况才会值为 None
+    fn update(&mut self, next: &KCtx) -> Option<Self::Output> {
         let calculated = self.calc(next)?;
         self.state.replace(calculated.state);
         Some(calculated)
-    }
-
-    fn deps(&self) -> Vec<String> {
-        vec![self.base_key.clone()]
     }
 }

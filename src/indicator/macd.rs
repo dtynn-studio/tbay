@@ -2,9 +2,9 @@ use crate::{
     indicator::{
         cross::{Cross, CrossItem, CrossValue},
         ma::Ema,
-        Calculator,
+        Calculator, Indicator, Indicator2,
     },
-    prelude::{Arc, Decimal, Indicator2, KSummary},
+    prelude::{Decimal, KCtx},
 };
 
 #[derive(Clone)]
@@ -24,25 +24,20 @@ pub struct Macd {
     cross: Cross<Decimal>,
 }
 
-impl Indicator2 for Macd {
-    type State = MacdValue;
-    type Item = Arc<KSummary>;
-    type Value = MacdValue;
+impl Indicator for Macd {
+    type Output = MacdValue;
 
     fn key(&self) -> &str {
         &self.key
     }
 
-    fn state(&self) -> Option<&Self::State> {
-        self.current.as_ref()
+    fn deps(&self) -> Vec<&str> {
+        vec![&self.fast_ma_key, &self.slow_ma_key]
     }
 
-    fn calc(&self, next: Self::Item) -> Option<Self::Value> {
-        let next = next.as_ref();
-        let fast_opt = next.get_base(&self.fast_ma_key);
-        let slow_opt = next.get_base(&self.slow_ma_key);
-
-        let (fast, slow) = fast_opt.zip(slow_opt)?;
+    fn calc(&self, next: &KCtx) -> Option<Self::Output> {
+        let fast = *next.get_val::<Decimal>(&self.fast_ma_key)?;
+        let slow = *next.get_val::<Decimal>(&self.slow_ma_key)?;
         let dif = fast - slow;
         let dea = self.dea.calc(dif)?;
         let cross = self.cross.calc(CrossItem::new(dif, dea));
@@ -55,28 +50,22 @@ impl Indicator2 for Macd {
         })
     }
 
-    fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
-        let next = next.as_ref();
-        let fast_opt = next.get_base(&self.fast_ma_key);
-        let slow_opt = next.get_base(&self.slow_ma_key);
-
-        let (fast, slow) = fast_opt.zip(slow_opt)?;
+    fn update(&mut self, next: &KCtx) -> Option<Self::Output> {
+        let fast = *next.get_val::<Decimal>(&self.fast_ma_key)?;
+        let slow = *next.get_val::<Decimal>(&self.slow_ma_key)?;
         let dif = fast - slow;
         let dea = self.dea.update(dif)?;
 
         let cross = self.cross.update(CrossItem::new(dif, dea));
 
-        self.current.replace(MacdValue {
+        let value = MacdValue {
             dif,
             dea,
             macd: dif - dea,
             cross,
-        });
+        };
 
-        self.current.clone()
-    }
-
-    fn deps(&self) -> Vec<String> {
-        vec![self.fast_ma_key.clone(), self.slow_ma_key.clone()]
+        self.current.replace(value.clone());
+        Some(value)
     }
 }

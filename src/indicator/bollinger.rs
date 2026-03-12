@@ -1,4 +1,7 @@
-use crate::prelude::{Arc, Decimal, Indicator2, KSummary};
+use crate::{
+    indicator::Indicator,
+    prelude::{Decimal, KCtx},
+};
 
 #[derive(Clone, Copy)]
 pub struct BollingerBandValue {
@@ -17,24 +20,20 @@ pub struct BollingerBand {
     current: Option<BollingerBandValue>,
 }
 
-impl Indicator2 for BollingerBand {
-    type State = BollingerBandValue;
-    type Item = Arc<KSummary>;
-    type Value = BollingerBandValue;
+impl Indicator for BollingerBand {
+    type Output = BollingerBandValue;
 
     fn key(&self) -> &str {
         &self.key
     }
 
-    fn state(&self) -> Option<&Self::State> {
-        self.current.as_ref()
+    fn deps(&self) -> Vec<&str> {
+        vec![&self.mid_key, &self.stddev_key]
     }
 
-    fn calc(&self, next: Self::Item) -> Option<Self::Value> {
-        let next = next.as_ref();
-        let mid_opt = next.get_base(&self.mid_key);
-        let dev_opt = next.get_base(&self.stddev_key);
-        let (mid, dev) = mid_opt.zip(dev_opt)?;
+    fn calc(&self, next: &KCtx) -> Option<Self::Output> {
+        let mid = *next.get_val::<Decimal>(&self.mid_key)?;
+        let dev = *next.get_val::<Decimal>(&self.stddev_key)?;
         let bandwidth = dev * self.width;
 
         Some(BollingerBandValue {
@@ -46,13 +45,9 @@ impl Indicator2 for BollingerBand {
         })
     }
 
-    fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
-        let val = self.calc(next)?;
-        self.current.replace(val);
-        self.current
-    }
-
-    fn deps(&self) -> Vec<String> {
-        vec![self.mid_key.clone(), self.stddev_key.clone()]
+    fn update(&mut self, next: &KCtx) -> Option<Self::Output> {
+        let value = self.calc(next)?;
+        self.current.replace(value);
+        Some(value)
     }
 }

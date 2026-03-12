@@ -1,4 +1,7 @@
-use crate::prelude::{Arc, Decimal, Indicator2, KSummary};
+use crate::{
+    indicator::Indicator,
+    prelude::{Decimal, KCtx},
+};
 
 pub struct Distance {
     key: String,
@@ -7,34 +10,27 @@ pub struct Distance {
     current: Option<Decimal>,
 }
 
-impl Indicator2 for Distance {
-    type State = Decimal;
-    type Item = Arc<KSummary>;
-    type Value = Decimal;
+impl Indicator for Distance {
+    type Output = Decimal;
 
     fn key(&self) -> &str {
         &self.key
     }
 
-    fn state(&self) -> Option<&Self::State> {
-        self.current.as_ref()
+    fn deps(&self) -> Vec<&str> {
+        vec![&self.key1, &self.key2]
     }
 
-    fn calc(&self, next: Self::Item) -> Option<Self::Value> {
-        let next = next.as_ref();
-        let val1 = next.get_base(&self.key1)?;
-        let val2 = next.get_base(&self.key2)?;
+    fn calc(&self, next: &KCtx) -> Option<Self::Output> {
+        let val1 = *next.get_val::<Decimal>(&self.key1)?;
+        let val2 = *next.get_val::<Decimal>(&self.key2)?;
 
         Some((val1 - val2).abs())
     }
 
-    fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
+    fn update(&mut self, next: &KCtx) -> Option<Self::Output> {
         let calculated = self.calc(next)?;
         self.current.replace(calculated);
         Some(calculated)
-    }
-
-    fn deps(&self) -> Vec<String> {
-        vec![self.key1.clone(), self.key2.clone()]
     }
 }
