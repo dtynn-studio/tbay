@@ -4,13 +4,13 @@ use scanf::sscanf;
 use snafu::ResultExt;
 
 use crate::{
-    prelude::{Decimal, Error, Indicator},
+    indicator::Calculator,
+    prelude::{Decimal, Error},
     res::{ParseCtx, Unexpected},
     util::RingBuffer,
 };
 
 pub struct Sma {
-    key: String,
     buffer: RingBuffer<Decimal>,
     current: Decimal,
     period: Decimal,
@@ -43,7 +43,6 @@ impl FromStr for Sma {
 impl Sma {
     pub fn new(period: usize) -> Self {
         Self {
-            key: format!("sma:{period}"),
             buffer: RingBuffer::new(period),
             current: Decimal::ZERO,
             period: Decimal::from(period),
@@ -51,24 +50,8 @@ impl Sma {
     }
 }
 
-impl Indicator for Sma {
-    type State = Decimal;
-    type Item = Decimal;
-    type Value = Decimal;
-
-    fn key(&self) -> &str {
-        &self.key
-    }
-
-    fn state(&self) -> Option<&Self::State> {
-        if self.buffer.is_full() {
-            Some(&self.current)
-        } else {
-            None
-        }
-    }
-
-    fn calc(&self, next: Self::Item) -> Option<Self::Value> {
+impl Calculator for Sma {
+    fn calc(&self, next: Decimal) -> Option<Decimal> {
         // 只有在buffer已满时才能计算SMA
         if !self.buffer.is_full() {
             return None;
@@ -84,7 +67,7 @@ impl Indicator for Sma {
         Some(new_sma)
     }
 
-    fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
+    fn update(&mut self, next: Decimal) -> Option<Decimal> {
         // 1. 对buffer进行填充
         let removed = self.buffer.update(next);
 
@@ -105,9 +88,5 @@ impl Indicator for Sma {
             // buffer不满时不返回任何值
             None
         }
-    }
-
-    fn deps(&self) -> Vec<String> {
-        vec![]
     }
 }

@@ -2,6 +2,7 @@ use crate::{
     indicator::{
         cross::{Cross, CrossItem, CrossValue},
         ma::Ema,
+        Calculator,
     },
     prelude::{Arc, Decimal, Indicator, KSummary},
 };

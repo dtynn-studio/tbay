@@ -4,7 +4,7 @@ use scanf::sscanf;
 use snafu::ResultExt;
 
 use crate::{
-    indicator::ma::Ma,
+    indicator::{ma::Ma, Calculator},
     prelude::{
         BaseIndicator, Decimal, Error, Indicator, KInfo, ParseCtx, Unexpected,
     },
@@ -67,7 +67,7 @@ impl Indicator for BaseExtractMa {
     }
 
     fn state(&self) -> Option<&Self::State> {
-        self.ma.state()
+        None
     }
 
     fn calc(&self, next: Self::Item) -> Option<Self::Value> {

@@ -1,7 +1,13 @@
+use std::{borrow::Cow, str::FromStr};
+
 use rust_decimal::MathematicalOps;
+use scanf::sscanf;
+use snafu::ResultExt;
 
 use crate::{
-    prelude::{Decimal, Indicator},
+    indicator::Calculator,
+    prelude::{Decimal, Error},
+    res::{ParseCtx, Unexpected},
     util::RingBuffer,
 };
 
@@ -23,7 +29,6 @@ fn compute_std_dev(
 }
 
 pub struct StdDev {
-    key: String,
     buffer: RingBuffer<Decimal>,
     sum: Decimal,
     sum_squares: Decimal,
@@ -32,9 +37,8 @@ pub struct StdDev {
 }
 
 impl StdDev {
-    pub fn new(key: &str, period: usize) -> Self {
+    pub fn new(period: usize) -> Self {
         Self {
-            key: key.to_string(),
             buffer: RingBuffer::new(period),
             sum: Decimal::ZERO,
             sum_squares: Decimal::ZERO,
@@ -44,24 +48,32 @@ impl StdDev {
     }
 }
 
-impl Indicator for StdDev {
-    type State = Decimal;
-    type Item = Decimal;
-    type Value = Decimal;
+impl FromStr for StdDev {
+    type Err = Error;
 
-    fn key(&self) -> &str {
-        &self.key
-    }
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut kind = String::new();
+        let mut period = 0usize;
 
-    fn state(&self) -> Option<&Self::State> {
-        if self.buffer.is_full() {
-            Some(&self.current)
-        } else {
-            None
+        sscanf!(s, "{kind}:{period}").with_context(|_| ParseCtx {
+            raw: s.to_owned(),
+            usage: Cow::from("parse StdDev"),
+        })?;
+
+        if kind != "stddev" {
+            return Err(kind.unexpected("stddev kind"));
         }
-    }
 
-    fn calc(&self, next: Self::Item) -> Option<Self::Value> {
+        if period == 0 {
+            return Err(period.unexpected("stddev period"));
+        }
+
+        Ok(Self::new(period))
+    }
+}
+
+impl Calculator for StdDev {
+    fn calc(&self, next: Decimal) -> Option<Decimal> {
         // 只有在buffer已满时才能计算标准差
         if !self.buffer.is_full() {
             return None;
@@ -82,7 +94,7 @@ impl Indicator for StdDev {
         Some(new_std_dev)
     }
 
-    fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
+    fn update(&mut self, next: Decimal) -> Option<Decimal> {
         // 更新buffer
         let removed = self.buffer.update(next);
 
@@ -107,9 +119,5 @@ impl Indicator for StdDev {
             // buffer不满时不返回任何值
             None
         }
-    }
-
-    fn deps(&self) -> Vec<String> {
-        vec![]
     }
 }

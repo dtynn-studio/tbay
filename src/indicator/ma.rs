@@ -4,50 +4,46 @@ mod sma;
 pub use ema::Ema;
 pub use sma::Sma;
 
-use crate::prelude::{Decimal, Indicator};
+use std::str::FromStr;
+
+use crate::{
+    indicator::Calculator,
+    prelude::{Decimal, Error},
+};
 
 pub enum Ma {
     Sma(Sma),
     Ema(Ema),
 }
 
-impl Indicator for Ma {
-    type State = Decimal;
-    type Item = Decimal;
-    type Value = Decimal;
+impl FromStr for Ma {
+    type Err = Error;
 
-    fn key(&self) -> &str {
-        match self {
-            Self::Sma(m) => m.key(),
-            Self::Ema(m) => m.key(),
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Ok(sma) = s.parse().map(Ma::Sma) {
+            Ok(sma)
+        } else if let Ok(ema) = s.parse().map(Ma::Ema) {
+            Ok(ema)
+        } else {
+            Err(Error::Msg {
+                reason: format!("invalid ma: {}", s).into(),
+            })
         }
     }
+}
 
-    fn state(&self) -> Option<&Self::State> {
-        match self {
-            Self::Sma(m) => m.state(),
-            Self::Ema(m) => m.state(),
-        }
-    }
-
-    fn calc(&self, next: Self::Item) -> Option<Self::Value> {
+impl Calculator for Ma {
+    fn calc(&self, next: Decimal) -> Option<Decimal> {
         match self {
             Self::Sma(m) => m.calc(next),
             Self::Ema(m) => m.calc(next),
         }
     }
 
-    fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
+    fn update(&mut self, next: Decimal) -> Option<Decimal> {
         match self {
             Self::Sma(m) => m.update(next),
             Self::Ema(m) => m.update(next),
-        }
-    }
-
-    fn deps(&self) -> Vec<String> {
-        match self {
-            Self::Sma(m) => m.deps(),
-            Self::Ema(m) => m.deps(),
         }
     }
 }

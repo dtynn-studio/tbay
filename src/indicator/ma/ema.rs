@@ -4,13 +4,13 @@ use scanf::sscanf;
 use snafu::ResultExt;
 
 use crate::{
-    prelude::{Decimal, Error, Indicator},
+    indicator::Calculator,
+    prelude::{Decimal, Error},
     res::{ParseCtx, Unexpected},
     util::RingBuffer,
 };
 
 pub struct Ema {
-    key: String,
     buffer: RingBuffer<Decimal>,
     current: Decimal,
     alpha: Decimal,
@@ -44,7 +44,6 @@ impl Ema {
     pub fn new(period: usize) -> Self {
         let alpha = Decimal::TWO / (Decimal::from(period) + Decimal::ONE);
         Self {
-            key: format!("ema:{period}"),
             buffer: RingBuffer::new(period),
             current: Decimal::ZERO,
             alpha,
@@ -52,24 +51,8 @@ impl Ema {
     }
 }
 
-impl Indicator for Ema {
-    type State = Decimal;
-    type Item = Decimal;
-    type Value = Decimal;
-
-    fn key(&self) -> &str {
-        &self.key
-    }
-
-    fn state(&self) -> Option<&Self::State> {
-        if self.buffer.is_full() {
-            Some(&self.current)
-        } else {
-            None
-        }
-    }
-
-    fn calc(&self, next: Self::Item) -> Option<Self::Value> {
+impl Calculator for Ema {
+    fn calc(&self, next: Decimal) -> Option<Decimal> {
         // 只有在buffer已满时才能计算EMA
         if !self.buffer.is_full() {
             return None;
@@ -81,7 +64,7 @@ impl Indicator for Ema {
         Some(new_ema)
     }
 
-    fn update(&mut self, next: Self::Item) -> Option<Self::Value> {
+    fn update(&mut self, next: Decimal) -> Option<Decimal> {
         // 1. 对buffer进行填充
         let removed = self.buffer.update(next);
 
@@ -103,9 +86,5 @@ impl Indicator for Ema {
             // buffer不满时不返回任何值
             None
         }
-    }
-
-    fn deps(&self) -> Vec<String> {
-        vec![]
     }
 }
