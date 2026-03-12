@@ -1,4 +1,4 @@
-use crate::prelude::{Arc, Decimal, Indicator, KSummary};
+use crate::prelude::{Arc, Decimal, Indicator2, KSummary};
 
 #[derive(Clone, Copy)]
 pub struct PositionValue {
@@ -57,7 +57,7 @@ impl Position {
     }
 }
 
-impl Indicator for Position {
+impl Indicator2 for Position {
     type State = PositionState;
     type Item = Arc<KSummary>;
     type Value = PositionValue;

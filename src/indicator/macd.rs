@@ -4,7 +4,7 @@ use crate::{
         ma::Ema,
         Calculator,
     },
-    prelude::{Arc, Decimal, Indicator, KSummary},
+    prelude::{Arc, Decimal, Indicator2, KSummary},
 };
 
 #[derive(Clone)]
@@ -24,7 +24,7 @@ pub struct Macd {
     cross: Cross<Decimal>,
 }
 
-impl Indicator for Macd {
+impl Indicator2 for Macd {
     type State = MacdValue;
     type Item = Arc<KSummary>;
     type Value = MacdValue;

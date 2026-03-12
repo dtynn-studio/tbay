@@ -1,4 +1,4 @@
-use crate::prelude::{Arc, Decimal, Indicator, KSummary};
+use crate::prelude::{Arc, Decimal, Indicator2, KSummary};
 
 #[derive(Clone, Copy)]
 pub struct BollingerBandValue {
@@ -17,7 +17,7 @@ pub struct BollingerBand {
     current: Option<BollingerBandValue>,
 }
 
-impl Indicator for BollingerBand {
+impl Indicator2 for BollingerBand {
     type State = BollingerBandValue;
     type Item = Arc<KSummary>;
     type Value = BollingerBandValue;

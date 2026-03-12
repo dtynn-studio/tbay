@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use crate::prelude::Indicator;
+use crate::prelude::Indicator2;
 
 #[derive(Clone)]
 pub struct CrossItem<T> {
@@ -58,7 +58,7 @@ pub struct Cross<T: Clone> {
     state: Option<CrossValue<T>>,
 }
 
-impl<T: Ord + Clone + 'static> Indicator for Cross<T> {
+impl<T: Ord + Clone + 'static> Indicator2 for Cross<T> {
     type State = CrossValue<T>;
     type Item = CrossItem<T>;
     type Value = CrossValue<T>;

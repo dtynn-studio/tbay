@@ -1,4 +1,4 @@
-use crate::prelude::{Arc, Decimal, Indicator, KSummary};
+use crate::prelude::{Arc, Decimal, Indicator2, KSummary};
 
 pub struct Distance {
     key: String,
@@ -7,7 +7,7 @@ pub struct Distance {
     current: Option<Decimal>,
 }
 
-impl Indicator for Distance {
+impl Indicator2 for Distance {
     type State = Decimal;
     type Item = Arc<KSummary>;
     type Value = Decimal;

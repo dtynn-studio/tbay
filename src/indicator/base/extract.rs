@@ -4,9 +4,9 @@ use scanf::sscanf;
 use snafu::ResultExt;
 
 use crate::{
-    indicator::{base::BaseCalculator, Calculator},
+    indicator::{base::BaseCalculator, Calculator, Indicator2},
     prelude::{
-        BaseIndicator, Decimal, Error, Indicator, KInfo, ParseCtx, Unexpected,
+        BaseIndicator, Decimal, Error, KInfo, ParseCtx, Unexpected,
     },
 };
 
@@ -53,7 +53,7 @@ impl FromStr for BaseExtractMa {
     }
 }
 
-impl Indicator for BaseExtractMa {
+impl Indicator2 for BaseExtractMa {
     type State = Decimal;
     type Item = Arc<KInfo>;
     type Value = Decimal;
