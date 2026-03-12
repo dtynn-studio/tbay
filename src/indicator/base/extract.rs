@@ -4,10 +4,8 @@ use scanf::sscanf;
 use snafu::ResultExt;
 
 use crate::{
-    indicator::{base::BaseCalculator, Calculator, Indicator2},
-    prelude::{
-        BaseIndicator, Decimal, Error, KInfo, ParseCtx, Unexpected,
-    },
+    indicator::{BaseIndicator2, Calculator, Indicator2, base::BaseCalculator},
+    prelude::{Decimal, Error, KInfo, ParseCtx, Unexpected},
 };
 
 fn close_extractor(info: &KInfo) -> Decimal {
@@ -41,9 +39,8 @@ impl FromStr for BaseExtractMa {
             other => return Err(other.unexpected("extract kind")),
         };
 
-        let calculator: BaseCalculator = sub.parse().map_err(|_| {
-            sub.unexpected("calculator kind")
-        })?;
+        let calculator: BaseCalculator =
+            sub.parse().map_err(|_| sub.unexpected("calculator kind"))?;
 
         Ok(Self {
             key: s.to_owned(),
@@ -81,7 +78,7 @@ impl Indicator2 for BaseExtractMa {
     }
 }
 
-impl BaseIndicator for BaseExtractMa {
+impl BaseIndicator2 for BaseExtractMa {
     fn key(&self) -> &str {
         &self.key
     }

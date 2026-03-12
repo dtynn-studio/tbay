@@ -190,10 +190,19 @@ impl KSummary {
 
 // 基础类指标，以数值简单数值计算为主，如 ma、stddev 等
 // 会在其他高级指标初始化时注册，以减少重复计算
-pub trait BaseIndicator:
+pub trait BaseIndicator2:
     Indicator2<State = Decimal, Item = Arc<KInfo>, Value = Decimal>
 {
     fn key(&self) -> &str;
+}
+
+pub trait Indicator {
+    type Output;
+
+    fn key(&self) -> &str;
+    fn deps(&self) -> Vec<&str>;
+    fn calc(&self, next: &KCtx) -> Option<Self::Output>;
+    fn update(&mut self, next: &KCtx) -> Option<Self::Output>;
 }
 
 pub trait Indicator2: Sized {
