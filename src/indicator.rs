@@ -1,7 +1,11 @@
-use std::{any::Any, cmp::Ordering, collections::HashMap, sync::Arc};
+use std::{
+    any::Any, cmp::Ordering, collections::HashMap, str::FromStr, sync::Arc,
+};
 
 use rust_decimal::Decimal;
 use time::OffsetDateTime;
+
+use crate::prelude::Error;
 
 pub mod base;
 pub mod bollinger;
@@ -202,4 +206,9 @@ pub trait Indicator: Sized {
     fn update(&mut self, next: Self::Item) -> Option<Self::Value>;
     fn calc(&self, next: Self::Item) -> Option<Self::Value>;
     fn deps(&self) -> Vec<String>;
+}
+
+pub trait Calculator: FromStr<Err = Error> {
+    fn calc(&self, next: Decimal) -> Option<Decimal>;
+    fn update(&mut self, next: Decimal) -> Option<Decimal>;
 }
