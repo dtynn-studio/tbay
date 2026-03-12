@@ -195,7 +195,43 @@ pub trait Indicator {
     fn update(&mut self, next: &KCtx) -> Option<Self::Output>;
 }
 
+pub trait IndicatorExt: Indicator + Sized + 'static {
+    fn wrap_as_any(self) -> Box<dyn Indicator<Output = Box<dyn Any>>> {
+        let inner = IndicatorAny(self);
+        Box::new(inner)
+    }
+}
+
+impl<I: Indicator + Sized + 'static> IndicatorExt for I {}
+
 pub trait Calculator: FromStr<Err = Error> {
     fn calc(&self, next: Decimal) -> Option<Decimal>;
     fn update(&mut self, next: Decimal) -> Option<Decimal>;
+}
+
+pub struct IndicatorAny<I: Indicator>(I);
+
+impl<I: Indicator> Indicator for IndicatorAny<I>
+where
+    I::Output: 'static,
+{
+    type Output = Box<dyn Any>;
+
+    fn key(&self) -> &str {
+        self.0.key()
+    }
+
+    fn deps(&self) -> Vec<&str> {
+        self.0.deps()
+    }
+
+    fn calc(&self, next: &KCtx) -> Option<Self::Output> {
+        let raw = self.0.calc(next)?;
+        Some(Box::new(raw))
+    }
+
+    fn update(&mut self, next: &KCtx) -> Option<Self::Output> {
+        let raw = self.0.update(next)?;
+        Some(Box::new(raw))
+    }
 }
