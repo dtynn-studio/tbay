@@ -12,7 +12,7 @@ use crate::{
 
 mod extract;
 
-pub use extract::BaseExtractor;
+pub use extract::{BaseExtractor, BaseExtractorBuilder, CalcKind, ExtractKind};
 
 pub enum BaseCalculator {
     Sma(Sma),
