@@ -1,15 +1,6 @@
-use std::{borrow::Cow, str::FromStr};
-
 use rust_decimal::MathematicalOps;
-use scanf::sscanf;
-use snafu::ResultExt;
 
-use crate::{
-    indicator::Calculator,
-    prelude::{Decimal, Error},
-    res::{ParseCtx, Unexpected},
-    util::RingBuffer,
-};
+use crate::{indicator::Calculator, prelude::Decimal, util::RingBuffer};
 
 /// 根据给定的总和、平方和和周期计算标准差
 fn compute_std_dev(
@@ -45,30 +36,6 @@ impl StdDev {
             period: Decimal::from(period),
             current: Decimal::ZERO,
         }
-    }
-}
-
-impl FromStr for StdDev {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut kind = String::new();
-        let mut period = 0usize;
-
-        sscanf!(s, "{kind}:{period}").with_context(|_| ParseCtx {
-            raw: s.to_owned(),
-            usage: Cow::from("parse StdDev"),
-        })?;
-
-        if kind != "stddev" {
-            return Err(kind.unexpected("stddev kind"));
-        }
-
-        if period == 0 {
-            return Err(period.unexpected("stddev period"));
-        }
-
-        Ok(Self::new(period))
     }
 }
 

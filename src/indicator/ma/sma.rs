@@ -1,43 +1,9 @@
-use std::{borrow::Cow, str::FromStr};
-
-use scanf::sscanf;
-use snafu::ResultExt;
-
-use crate::{
-    indicator::Calculator,
-    prelude::{Decimal, Error},
-    res::{ParseCtx, Unexpected},
-    util::RingBuffer,
-};
+use crate::{indicator::Calculator, prelude::Decimal, util::RingBuffer};
 
 pub struct Sma {
     buffer: RingBuffer<Decimal>,
     current: Decimal,
     period: Decimal,
-}
-
-impl FromStr for Sma {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut kind = String::new();
-        let mut period = 0usize;
-
-        sscanf!(s, "{kind}:{period}").with_context(|_| ParseCtx {
-            raw: s.to_owned(),
-            usage: Cow::from("parse Sma"),
-        })?;
-
-        if kind != "sma" {
-            return Err(kind.unexpected("sma kind"));
-        }
-
-        if period == 0 {
-            return Err(period.unexpected("sma period"));
-        }
-
-        Ok(Self::new(period))
-    }
 }
 
 impl Sma {

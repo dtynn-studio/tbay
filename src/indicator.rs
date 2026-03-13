@@ -204,7 +204,7 @@ pub trait IndicatorExt: Indicator + Sized + 'static {
 
 impl<I: Indicator + Sized + 'static> IndicatorExt for I {}
 
-pub trait Calculator: FromStr<Err = Error> {
+pub trait Calculator {
     fn calc(&self, next: Decimal) -> Option<Decimal>;
     fn update(&mut self, next: Decimal) -> Option<Decimal>;
 }
