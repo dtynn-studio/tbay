@@ -3,7 +3,7 @@ use std::{any::Any, cmp::Ordering, collections::HashMap, str::FromStr};
 use rust_decimal::Decimal;
 use time::OffsetDateTime;
 
-use crate::prelude::Error;
+use crate::prelude::{Error, Result};
 
 pub mod base;
 pub mod bollinger;
@@ -234,4 +234,15 @@ where
         let raw = self.0.update(next)?;
         Some(Box::new(raw))
     }
+}
+
+pub trait Builder: Clone + FromStr<Err = Error> {
+    type Args;
+    type Target: Indicator;
+
+    fn new(args: Self::Args) -> Self;
+
+    fn key(&self) -> String;
+
+    fn build(self) -> Result<Self::Target>;
 }
