@@ -1,11 +1,16 @@
 use crate::{
     indicator::{
         Calculator, Indicator,
+        base::{BaseExtractorBuilder, CalcKind, ExtractKind},
         cross::{Cross, CrossItem, CrossValue},
         ma::Ema,
     },
-    prelude::{Decimal, KCtx},
+    prelude::{
+        Builder, Decimal, Error, FromStr, KCtx, ParseCtx, Result, Unexpected,
+    },
 };
+use snafu::ResultExt;
+use std::borrow::Cow;
 
 #[derive(Clone)]
 pub struct MacdValue {
@@ -22,6 +27,94 @@ pub struct Macd {
     dea: Ema,
     current: Option<MacdValue>,
     cross: Cross<Decimal>,
+}
+
+#[derive(Clone, Copy)]
+pub struct MacdBuilder {
+    fast: usize,
+    slow: usize,
+    dea_period: usize,
+}
+
+impl FromStr for MacdBuilder {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut fast = 0usize;
+        let mut slow = 0usize;
+        let mut dea_period = 0usize;
+
+        scanf::sscanf!(s, "macd:{fast},{slow},{dea_period}").with_context(
+            |_| ParseCtx {
+                raw: s.to_owned(),
+                usage: Cow::from("parse Macd"),
+            },
+        )?;
+
+        if fast == 0 {
+            return Err(fast.unexpected("macd fast period"));
+        }
+
+        if slow == 0 {
+            return Err(slow.unexpected("macd slow period"));
+        }
+
+        if dea_period == 0 {
+            return Err(dea_period.unexpected("macd dea period"));
+        }
+
+        Ok(Self {
+            fast,
+            slow,
+            dea_period,
+        })
+    }
+}
+
+impl Builder for MacdBuilder {
+    type Args = (usize, usize, usize);
+    type Target = Macd;
+
+    fn new(args: Self::Args) -> Self {
+        Self {
+            fast: args.0,
+            slow: args.1,
+            dea_period: args.2,
+        }
+    }
+
+    fn key(&self) -> String {
+        format!("macd:{},{},{}", self.fast, self.slow, self.dea_period)
+    }
+
+    fn build(self) -> Result<Self::Target> {
+        let key = self.key();
+
+        let fast_ma_key = BaseExtractorBuilder::new((
+            ExtractKind::PriceClose,
+            CalcKind::Ema,
+            self.fast,
+        ))
+        .key();
+
+        let slow_ma_key = BaseExtractorBuilder::new((
+            ExtractKind::PriceClose,
+            CalcKind::Ema,
+            self.slow,
+        ))
+        .key();
+
+        let dea = Ema::new(self.dea_period);
+
+        Ok(Macd {
+            key,
+            fast_ma_key,
+            slow_ma_key,
+            dea,
+            current: None,
+            cross: Cross::default(),
+        })
+    }
 }
 
 impl Indicator for Macd {

@@ -49,7 +49,7 @@ fn calc_cross<T: Ord>(
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Cross<T: Clone> {
     prev: Option<CrossItem<T>>,
 }
