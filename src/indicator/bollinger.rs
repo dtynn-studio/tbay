@@ -3,9 +3,13 @@ use crate::{
         Indicator,
         base::{BaseExtractorBuilder, CalcKind, ExtractKind},
     },
-    prelude::{Builder, Decimal, FromPrimitive, KCtx, Result},
-    res::Unexpected,
+    prelude::{
+        Builder, Decimal, Error, FromPrimitive, FromStr, KCtx, ParseCtx,
+        Result, Unexpected,
+    },
 };
+use snafu::ResultExt;
+use std::borrow::Cow;
 
 #[derive(Clone, Copy)]
 pub struct BollingerBandValue {
@@ -24,27 +28,74 @@ pub struct BollingerBand {
     current: Option<BollingerBandValue>,
 }
 
-impl BollingerBand {
-    pub fn new(period: usize, width: usize) -> Result<Self> {
-        let key = format!("bb:{period},{width}");
+#[derive(Clone, Copy)]
+pub struct BollingerBandBuilder {
+    period: usize,
+    width: usize,
+}
+
+impl FromStr for BollingerBandBuilder {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut period = 0usize;
+        let mut width = 0usize;
+
+        scanf::sscanf!(s, "bb:{period},{width}").with_context(|_| {
+            ParseCtx {
+                raw: s.to_owned(),
+                usage: Cow::from("parse BollingerBand"),
+            }
+        })?;
+
+        if period == 0 {
+            return Err(period.unexpected("bollinger band period"));
+        }
+
+        if width == 0 {
+            return Err(width.unexpected("bollinger band width"));
+        }
+
+        Ok(Self { period, width })
+    }
+}
+
+impl Builder for BollingerBandBuilder {
+    type Args = (usize, usize);
+    type Target = BollingerBand;
+
+    fn new(args: Self::Args) -> Self {
+        Self {
+            period: args.0,
+            width: args.1,
+        }
+    }
+
+    fn key(&self) -> String {
+        format!("bb:{},{}", self.period, self.width)
+    }
+
+    fn build(self) -> Result<Self::Target> {
+        let key = self.key();
+
         let mid_key = BaseExtractorBuilder::new((
             ExtractKind::PriceClose,
             CalcKind::Ema,
-            period,
+            self.period,
         ))
         .key();
 
         let stddev_key = BaseExtractorBuilder::new((
             ExtractKind::PriceClose,
             CalcKind::StdDev,
-            period,
+            self.period,
         ))
         .key();
 
-        let width = Decimal::from_usize(width)
-            .ok_or_else(|| width.unexpected("bollinger band width"))?;
+        let width = Decimal::from_usize(self.width)
+            .ok_or_else(|| self.width.unexpected("bollinger band width"))?;
 
-        Ok(Self {
+        Ok(BollingerBand {
             key,
             mid_key,
             stddev_key,
