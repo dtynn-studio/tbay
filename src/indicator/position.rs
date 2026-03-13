@@ -1,7 +1,15 @@
 use crate::{
-    indicator::Indicator,
-    prelude::{Decimal, KCtx, KInfo},
+    indicator::{
+        Indicator,
+        base::{BaseExtractorBuilder, CalcKind, ExtractKind},
+    },
+    prelude::{
+        Builder, Decimal, Error, FromStr, KCtx, KInfo, ParseCtx, Result,
+        Unexpected,
+    },
 };
+use snafu::ResultExt;
+use std::borrow::Cow;
 
 #[derive(Clone, Copy)]
 pub struct PositionValue {
@@ -46,6 +54,7 @@ impl PositionState {
 
 pub struct Position {
     key: String,
+    // close:ema:{base}
     base_key: String,
     state: Option<PositionState>,
 }
@@ -89,5 +98,69 @@ impl Indicator for Position {
         let calculated = self.calc(next)?;
         self.state.replace(calculated.state);
         Some(calculated)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct PositionBuilder {
+    kind: CalcKind,
+    base: usize,
+}
+
+impl FromStr for PositionBuilder {
+    type Err = Error;
+
+    // key format: position:ema,20
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut kind_str = String::new();
+        let mut base = 0usize;
+
+        scanf::sscanf!(s, "position:{kind_str},{base}").with_context(|_| {
+            ParseCtx {
+                raw: s.to_owned(),
+                usage: Cow::from("parse Position"),
+            }
+        })?;
+
+        let kind = match kind_str.as_str() {
+            "sma" => CalcKind::Sma,
+            "ema" => CalcKind::Ema,
+            other => return Err(other.unexpected("position kind")),
+        };
+
+        if base == 0 {
+            return Err(base.unexpected("position base period"));
+        }
+
+        Ok(Self { kind, base })
+    }
+}
+
+impl Builder for PositionBuilder {
+    type Args = (CalcKind, usize);
+    type Target = Position;
+
+    fn new(args: Self::Args) -> Self {
+        Self {
+            kind: args.0,
+            base: args.1,
+        }
+    }
+
+    fn key(&self) -> String {
+        format!("position:{},{}", self.kind.as_str(), self.base)
+    }
+
+    fn build(self) -> Result<Self::Target> {
+        let key = self.key();
+
+        let base_key = BaseExtractorBuilder::new((
+            ExtractKind::PriceClose,
+            self.kind,
+            self.base,
+        ))
+        .key();
+
+        Ok(Position::new(&key, &base_key))
     }
 }
