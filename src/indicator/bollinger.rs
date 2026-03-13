@@ -1,6 +1,10 @@
 use crate::{
-    indicator::Indicator,
-    prelude::{Decimal, KCtx},
+    indicator::{
+        Indicator,
+        base::{BaseExtractorBuilder, CalcKind, ExtractKind},
+    },
+    prelude::{Builder, Decimal, FromPrimitive, KCtx, Result},
+    res::Unexpected,
 };
 
 #[derive(Clone, Copy)]
@@ -18,6 +22,36 @@ pub struct BollingerBand {
     stddev_key: String,
     width: Decimal,
     current: Option<BollingerBandValue>,
+}
+
+impl BollingerBand {
+    pub fn new(period: usize, width: usize) -> Result<Self> {
+        let key = format!("bb:{period},{width}");
+        let mid_key = BaseExtractorBuilder::new((
+            ExtractKind::PriceClose,
+            CalcKind::Ema,
+            period,
+        ))
+        .key();
+
+        let stddev_key = BaseExtractorBuilder::new((
+            ExtractKind::PriceClose,
+            CalcKind::StdDev,
+            period,
+        ))
+        .key();
+
+        let width = Decimal::from_usize(width)
+            .ok_or_else(|| width.unexpected("bollinger band width"))?;
+
+        Ok(Self {
+            key,
+            mid_key,
+            stddev_key,
+            width,
+            current: None,
+        })
+    }
 }
 
 impl Indicator for BollingerBand {
