@@ -9,6 +9,11 @@ use rust_decimal::Decimal;
 use time::OffsetDateTime;
 
 use crate::{
+    indicator::{
+        base::BaseExtractorBuilder, bollinger::BollingerBandBuilder,
+        cross::MaCrossBuilder, distance::DistanceBuilder, macd::MacdBuilder,
+        position::PositionBuilder,
+    },
     prelude::{Error, Result},
     res::Unexpected,
 };
@@ -283,10 +288,27 @@ pub type HubIndicator = Box<dyn Indicator<Output = Box<dyn Any>>>;
 
 pub type HubBuilder = Box<dyn Builder<Target = HubIndicator>>;
 
-#[derive(Default)]
 pub struct Hub {
     builders: HashMap<TypeId, HubBuilder>,
     indicators: HashMap<String, HubIndicator>,
+}
+
+impl Default for Hub {
+    fn default() -> Self {
+        let mut hub = Hub {
+            builders: Default::default(),
+            indicators: Default::default(),
+        };
+
+        hub.register_builder(BaseExtractorBuilder);
+        hub.register_builder(BollingerBandBuilder);
+        hub.register_builder(MacdBuilder);
+        hub.register_builder(MaCrossBuilder);
+        hub.register_builder(DistanceBuilder);
+        hub.register_builder(PositionBuilder);
+
+        hub
+    }
 }
 
 impl Hub {

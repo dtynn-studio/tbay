@@ -9,7 +9,10 @@ use crate::{
 
 mod extract;
 
-pub use extract::{BaseExtractor, BaseExtractorArgs, CalcKind, ExtractKind};
+pub use extract::{
+    BaseExtractor, BaseExtractorArgs, BaseExtractorBuilder, CalcKind,
+    ExtractKind,
+};
 
 pub enum BaseCalculator {
     Sma(Sma),

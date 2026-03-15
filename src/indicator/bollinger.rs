@@ -1,6 +1,6 @@
 use crate::{
     indicator::{
-        Indicator,
+        Builder, Indicator,
         base::{BaseExtractorArgs, CalcKind, ExtractKind},
     },
     prelude::{
@@ -32,6 +32,18 @@ pub struct BollingerBand {
 pub struct BollingerBandArgs {
     period: usize,
     width: usize,
+}
+
+#[derive(Debug, Default, Copy, Clone)]
+pub struct BollingerBandBuilder;
+
+impl Builder for BollingerBandBuilder {
+    type Target = BollingerBand;
+
+    fn build(&self, s: &str) -> Result<Self::Target> {
+        let args = BollingerBandArgs::from_str(s)?;
+        args.build()
+    }
 }
 
 impl FromStr for BollingerBandArgs {

@@ -1,6 +1,6 @@
 use crate::{
     indicator::{
-        Indicator,
+        Builder, Indicator,
         base::{BaseExtractorArgs, CalcKind, ExtractKind},
     },
     prelude::{
@@ -105,6 +105,18 @@ impl Indicator for Position {
 pub struct PositionArgs {
     kind: CalcKind,
     base: usize,
+}
+
+#[derive(Debug, Default, Copy, Clone)]
+pub struct PositionBuilder;
+
+impl Builder for PositionBuilder {
+    type Target = Position;
+
+    fn build(&self, s: &str) -> Result<Self::Target> {
+        let args = PositionArgs::from_str(s)?;
+        args.build()
+    }
 }
 
 impl FromStr for PositionArgs {

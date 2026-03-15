@@ -1,6 +1,6 @@
 use crate::{
     indicator::{
-        Indicator,
+        Builder, Indicator,
         base::{BaseExtractorArgs, CalcKind, ExtractKind},
     },
     prelude::{
@@ -49,6 +49,18 @@ pub struct DistanceArgs {
     kind: CalcKind,
     ma1: usize,
     ma2: usize,
+}
+
+#[derive(Debug, Default, Copy, Clone)]
+pub struct DistanceBuilder;
+
+impl Builder for DistanceBuilder {
+    type Target = Distance;
+
+    fn build(&self, s: &str) -> Result<Self::Target> {
+        let args = DistanceArgs::from_str(s)?;
+        args.build()
+    }
 }
 
 impl FromStr for DistanceArgs {

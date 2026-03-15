@@ -1,7 +1,10 @@
 use std::{borrow::Cow, cmp::Ordering};
 
 use crate::{
-    indicator::base::{BaseExtractorArgs, CalcKind, ExtractKind},
+    indicator::{
+        Builder,
+        base::{BaseExtractorArgs, CalcKind, ExtractKind},
+    },
     prelude::{
         Args, Decimal, Error, FromStr, Indicator, KCtx, ParseCtx, Result,
         Unexpected,
@@ -140,6 +143,18 @@ pub struct MaCrossArgs {
     kind: CalcKind,
     fast: usize,
     slow: usize,
+}
+
+#[derive(Debug, Default, Copy, Clone)]
+pub struct MaCrossBuilder;
+
+impl Builder for MaCrossBuilder {
+    type Target = MaCross;
+
+    fn build(&self, s: &str) -> Result<Self::Target> {
+        let args = MaCrossArgs::from_str(s)?;
+        args.build()
+    }
 }
 
 impl FromStr for MaCrossArgs {

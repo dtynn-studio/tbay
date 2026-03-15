@@ -1,6 +1,6 @@
 use crate::{
     indicator::{
-        Calculator, Indicator,
+        Builder, Calculator, Indicator,
         base::{BaseExtractorArgs, CalcKind, ExtractKind},
         cross::{Cross, CrossItem, CrossValue},
         ma::Ema,
@@ -34,6 +34,18 @@ pub struct MacdArgs {
     fast: usize,
     slow: usize,
     dea_period: usize,
+}
+
+#[derive(Debug, Default, Copy, Clone)]
+pub struct MacdBuilder;
+
+impl Builder for MacdBuilder {
+    type Target = Macd;
+
+    fn build(&self, s: &str) -> Result<Self::Target> {
+        let args = MacdArgs::from_str(s)?;
+        args.build()
+    }
 }
 
 impl FromStr for MacdArgs {

@@ -91,6 +91,18 @@ pub struct BaseExtractorArgs {
     period: usize,
 }
 
+#[derive(Debug, Default, Copy, Clone)]
+pub struct BaseExtractorBuilder;
+
+impl crate::indicator::Builder for BaseExtractorBuilder {
+    type Target = BaseExtractor;
+
+    fn build(&self, s: &str) -> Result<Self::Target> {
+        let args = BaseExtractorArgs::from_str(s)?;
+        args.build()
+    }
+}
+
 impl FromStr for BaseExtractorArgs {
     type Err = Error;
 
