@@ -1,9 +1,9 @@
 use std::{borrow::Cow, cmp::Ordering};
 
 use crate::{
-    indicator::base::{BaseExtractorBuilder, CalcKind, ExtractKind},
+    indicator::base::{BaseExtractorArgs, CalcKind, ExtractKind},
     prelude::{
-        Builder, Decimal, Error, FromStr, Indicator, KCtx, ParseCtx, Result,
+        Args, Decimal, Error, FromStr, Indicator, KCtx, ParseCtx, Result,
         Unexpected,
     },
 };
@@ -136,13 +136,13 @@ impl Indicator for MaCross {
 }
 
 #[derive(Clone)]
-pub struct MaCrossBuilder {
+pub struct MaCrossArgs {
     kind: CalcKind,
     fast: usize,
     slow: usize,
 }
 
-impl FromStr for MaCrossBuilder {
+impl FromStr for MaCrossArgs {
     type Err = Error;
 
     // format: cross:ema,5,20
@@ -177,11 +177,11 @@ impl FromStr for MaCrossBuilder {
     }
 }
 
-impl Builder for MaCrossBuilder {
-    type Args = (CalcKind, usize, usize);
+impl Args for MaCrossArgs {
+    type Type = (CalcKind, usize, usize);
     type Target = MaCross;
 
-    fn new(args: Self::Args) -> Self {
+    fn new(args: Self::Type) -> Self {
         Self {
             kind: args.0,
             fast: args.1,
@@ -196,14 +196,14 @@ impl Builder for MaCrossBuilder {
     fn build(self) -> Result<Self::Target> {
         let key = self.key();
 
-        let fast_key = BaseExtractorBuilder::new((
+        let fast_key = BaseExtractorArgs::new((
             ExtractKind::PriceClose,
             self.kind,
             self.fast,
         ))
         .key();
 
-        let slow_key = BaseExtractorBuilder::new((
+        let slow_key = BaseExtractorArgs::new((
             ExtractKind::PriceClose,
             self.kind,
             self.slow,

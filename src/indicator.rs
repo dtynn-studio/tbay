@@ -236,11 +236,11 @@ where
     }
 }
 
-pub trait Builder: Clone + FromStr<Err = Error> {
-    type Args;
+pub trait Args: Clone + FromStr<Err = Error> {
+    type Type;
     type Target: Indicator;
 
-    fn new(args: Self::Args) -> Self;
+    fn new(args: Self::Type) -> Self;
 
     fn key(&self) -> String;
 

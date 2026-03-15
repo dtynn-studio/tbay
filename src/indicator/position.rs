@@ -1,10 +1,10 @@
 use crate::{
     indicator::{
         Indicator,
-        base::{BaseExtractorBuilder, CalcKind, ExtractKind},
+        base::{BaseExtractorArgs, CalcKind, ExtractKind},
     },
     prelude::{
-        Builder, Decimal, Error, FromStr, KCtx, KInfo, ParseCtx, Result,
+        Args, Decimal, Error, FromStr, KCtx, KInfo, ParseCtx, Result,
         Unexpected,
     },
 };
@@ -102,12 +102,12 @@ impl Indicator for Position {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct PositionBuilder {
+pub struct PositionArgs {
     kind: CalcKind,
     base: usize,
 }
 
-impl FromStr for PositionBuilder {
+impl FromStr for PositionArgs {
     type Err = Error;
 
     // key format: position:ema,20
@@ -136,11 +136,11 @@ impl FromStr for PositionBuilder {
     }
 }
 
-impl Builder for PositionBuilder {
-    type Args = (CalcKind, usize);
+impl Args for PositionArgs {
+    type Type = (CalcKind, usize);
     type Target = Position;
 
-    fn new(args: Self::Args) -> Self {
+    fn new(args: Self::Type) -> Self {
         Self {
             kind: args.0,
             base: args.1,
@@ -154,7 +154,7 @@ impl Builder for PositionBuilder {
     fn build(self) -> Result<Self::Target> {
         let key = self.key();
 
-        let base_key = BaseExtractorBuilder::new((
+        let base_key = BaseExtractorArgs::new((
             ExtractKind::PriceClose,
             self.kind,
             self.base,

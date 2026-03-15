@@ -11,7 +11,7 @@ use crate::{
         stddev::StdDev,
     },
     prelude::{
-        Builder, Decimal, Error, Indicator, KCtx, KInfo, ParseCtx, Result,
+        Args, Decimal, Error, Indicator, KCtx, KInfo, ParseCtx, Result,
         Unexpected,
     },
 };
@@ -85,13 +85,13 @@ impl CalcKind {
 }
 
 #[derive(Clone)]
-pub struct BaseExtractorBuilder {
+pub struct BaseExtractorArgs {
     extract: ExtractKind,
     calc: CalcKind,
     period: usize,
 }
 
-impl FromStr for BaseExtractorBuilder {
+impl FromStr for BaseExtractorArgs {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -131,11 +131,11 @@ impl FromStr for BaseExtractorBuilder {
     }
 }
 
-impl Builder for BaseExtractorBuilder {
-    type Args = (ExtractKind, CalcKind, usize);
+impl Args for BaseExtractorArgs {
+    type Type = (ExtractKind, CalcKind, usize);
     type Target = BaseExtractor;
 
-    fn new(args: Self::Args) -> Self {
+    fn new(args: Self::Type) -> Self {
         Self {
             extract: args.0,
             calc: args.1,

@@ -1,11 +1,11 @@
 use crate::{
     indicator::{
         Indicator,
-        base::{BaseExtractorBuilder, CalcKind, ExtractKind},
+        base::{BaseExtractorArgs, CalcKind, ExtractKind},
     },
     prelude::{
-        Builder, Decimal, Error, FromPrimitive, FromStr, KCtx, ParseCtx,
-        Result, Unexpected,
+        Args, Decimal, Error, FromPrimitive, FromStr, KCtx, ParseCtx, Result,
+        Unexpected,
     },
 };
 use snafu::ResultExt;
@@ -29,12 +29,12 @@ pub struct BollingerBand {
 }
 
 #[derive(Clone, Copy)]
-pub struct BollingerBandBuilder {
+pub struct BollingerBandArgs {
     period: usize,
     width: usize,
 }
 
-impl FromStr for BollingerBandBuilder {
+impl FromStr for BollingerBandArgs {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -60,11 +60,11 @@ impl FromStr for BollingerBandBuilder {
     }
 }
 
-impl Builder for BollingerBandBuilder {
-    type Args = (usize, usize);
+impl Args for BollingerBandArgs {
+    type Type = (usize, usize);
     type Target = BollingerBand;
 
-    fn new(args: Self::Args) -> Self {
+    fn new(args: Self::Type) -> Self {
         Self {
             period: args.0,
             width: args.1,
@@ -78,14 +78,14 @@ impl Builder for BollingerBandBuilder {
     fn build(self) -> Result<Self::Target> {
         let key = self.key();
 
-        let mid_key = BaseExtractorBuilder::new((
+        let mid_key = BaseExtractorArgs::new((
             ExtractKind::PriceClose,
             CalcKind::Ema,
             self.period,
         ))
         .key();
 
-        let stddev_key = BaseExtractorBuilder::new((
+        let stddev_key = BaseExtractorArgs::new((
             ExtractKind::PriceClose,
             CalcKind::StdDev,
             self.period,

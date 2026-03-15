@@ -1,10 +1,10 @@
 use crate::{
     indicator::{
         Indicator,
-        base::{BaseExtractorBuilder, CalcKind, ExtractKind},
+        base::{BaseExtractorArgs, CalcKind, ExtractKind},
     },
     prelude::{
-        Builder, Decimal, Error, FromStr, KCtx, ParseCtx, Result, Unexpected,
+        Args, Decimal, Error, FromStr, KCtx, ParseCtx, Result, Unexpected,
     },
 };
 use snafu::ResultExt;
@@ -45,13 +45,13 @@ impl Indicator for Distance {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct DistanceBuilder {
+pub struct DistanceArgs {
     kind: CalcKind,
     ma1: usize,
     ma2: usize,
 }
 
-impl FromStr for DistanceBuilder {
+impl FromStr for DistanceArgs {
     type Err = Error;
 
     // key format: distance:sma,5,20
@@ -85,11 +85,11 @@ impl FromStr for DistanceBuilder {
     }
 }
 
-impl Builder for DistanceBuilder {
-    type Args = (CalcKind, usize, usize);
+impl Args for DistanceArgs {
+    type Type = (CalcKind, usize, usize);
     type Target = Distance;
 
-    fn new(args: Self::Args) -> Self {
+    fn new(args: Self::Type) -> Self {
         Self {
             kind: args.0,
             ma1: args.1,
@@ -104,14 +104,14 @@ impl Builder for DistanceBuilder {
     fn build(self) -> Result<Self::Target> {
         let key = self.key();
 
-        let key1 = BaseExtractorBuilder::new((
+        let key1 = BaseExtractorArgs::new((
             ExtractKind::PriceClose,
             self.kind,
             self.ma1,
         ))
         .key();
 
-        let key2 = BaseExtractorBuilder::new((
+        let key2 = BaseExtractorArgs::new((
             ExtractKind::PriceClose,
             self.kind,
             self.ma2,

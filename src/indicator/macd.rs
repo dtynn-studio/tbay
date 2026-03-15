@@ -1,12 +1,12 @@
 use crate::{
     indicator::{
         Calculator, Indicator,
-        base::{BaseExtractorBuilder, CalcKind, ExtractKind},
+        base::{BaseExtractorArgs, CalcKind, ExtractKind},
         cross::{Cross, CrossItem, CrossValue},
         ma::Ema,
     },
     prelude::{
-        Builder, Decimal, Error, FromStr, KCtx, ParseCtx, Result, Unexpected,
+        Args, Decimal, Error, FromStr, KCtx, ParseCtx, Result, Unexpected,
     },
 };
 use snafu::ResultExt;
@@ -30,13 +30,13 @@ pub struct Macd {
 }
 
 #[derive(Clone, Copy)]
-pub struct MacdBuilder {
+pub struct MacdArgs {
     fast: usize,
     slow: usize,
     dea_period: usize,
 }
 
-impl FromStr for MacdBuilder {
+impl FromStr for MacdArgs {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -71,11 +71,11 @@ impl FromStr for MacdBuilder {
     }
 }
 
-impl Builder for MacdBuilder {
-    type Args = (usize, usize, usize);
+impl Args for MacdArgs {
+    type Type = (usize, usize, usize);
     type Target = Macd;
 
-    fn new(args: Self::Args) -> Self {
+    fn new(args: Self::Type) -> Self {
         Self {
             fast: args.0,
             slow: args.1,
@@ -90,14 +90,14 @@ impl Builder for MacdBuilder {
     fn build(self) -> Result<Self::Target> {
         let key = self.key();
 
-        let fast_ma_key = BaseExtractorBuilder::new((
+        let fast_ma_key = BaseExtractorArgs::new((
             ExtractKind::PriceClose,
             CalcKind::Ema,
             self.fast,
         ))
         .key();
 
-        let slow_ma_key = BaseExtractorBuilder::new((
+        let slow_ma_key = BaseExtractorArgs::new((
             ExtractKind::PriceClose,
             CalcKind::Ema,
             self.slow,
