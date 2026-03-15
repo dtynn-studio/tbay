@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 binance = "0.21.2"
+crossbeam-channel = "0.5.15"
 rust_decimal = { version = "1.40.0", features = ["macros", "maths"] }
 scanf = "2.0.0"
 snafu = "0.9.0"
