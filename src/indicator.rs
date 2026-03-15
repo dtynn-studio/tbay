@@ -286,13 +286,21 @@ impl<B: Builder<Target: Indicator> + 'static> Builder for BuilderAny<B> {
     }
 }
 
-pub type HubIndicator = Box<dyn Indicator<Output = Box<dyn Any>>>;
+pub trait Monitor {
+    fn key(&self) -> &str;
+    fn deps(&self) -> Vec<&str>;
+    fn calc(&self);
+    fn update(&mut self) -> bool;
+}
 
+pub type HubIndicator = Box<dyn Indicator<Output = Box<dyn Any>>>;
 pub type HubBuilder = Box<dyn Builder<Target = HubIndicator>>;
+pub type HubMonitor = Box<dyn Monitor>;
 
 pub struct Hub {
     builders: HashMap<TypeId, HubBuilder>,
     indicators: HashMap<String, HubIndicator>,
+    monitors: HashMap<String, HubMonitor>,
 }
 
 impl Default for Hub {
@@ -300,6 +308,7 @@ impl Default for Hub {
         let mut hub = Hub {
             builders: Default::default(),
             indicators: Default::default(),
+            monitors: Default::default(),
         };
 
         hub.register_builder(BaseExtractorBuilder);
@@ -323,7 +332,7 @@ impl Hub {
         self.builders.insert(id, Box::new(b));
     }
 
-    pub fn add_indicator(&mut self, key: &str) -> Result<bool> {
+    pub fn register_indicator(&mut self, key: &str) -> Result<bool> {
         if self.indicators.contains_key(key) {
             return Ok(false);
         }
@@ -341,11 +350,26 @@ impl Hub {
 
         let deps = indicator.deps();
         for dep in deps {
-            self.add_indicator(dep)?;
+            self.register_indicator(dep)?;
         }
 
         self.indicators.insert(key.to_owned(), indicator);
 
+        Ok(true)
+    }
+
+    pub fn register_monitor(&mut self, monitor: HubMonitor) -> Result<bool> {
+        let key = monitor.key();
+        if self.monitors.contains_key(key) {
+            return Ok(false);
+        }
+
+        let deps = monitor.deps();
+        for dep in deps {
+            self.register_indicator(dep)?;
+        }
+
+        self.monitors.insert(key.to_lowercase(), monitor);
         Ok(true)
     }
 }
