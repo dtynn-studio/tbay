@@ -1,9 +1,17 @@
-use std::{any::Any, cmp::Ordering, collections::HashMap, str::FromStr};
+use std::{
+    any::{Any, TypeId},
+    cmp::Ordering,
+    collections::HashMap,
+    str::FromStr,
+};
 
 use rust_decimal::Decimal;
 use time::OffsetDateTime;
 
-use crate::prelude::{Error, Result};
+use crate::{
+    prelude::{Error, Result},
+    res::Unexpected,
+};
 
 pub mod base;
 pub mod bollinger;
@@ -186,6 +194,11 @@ impl KSummary {
     }
 }
 
+pub trait Calculator {
+    fn calc(&self, next: Decimal) -> Option<Decimal>;
+    fn update(&mut self, next: Decimal) -> Option<Decimal>;
+}
+
 pub trait Indicator {
     type Output;
 
@@ -203,11 +216,6 @@ pub trait IndicatorExt: Indicator + Sized + 'static {
 }
 
 impl<I: Indicator + Sized + 'static> IndicatorExt for I {}
-
-pub trait Calculator {
-    fn calc(&self, next: Decimal) -> Option<Decimal>;
-    fn update(&mut self, next: Decimal) -> Option<Decimal>;
-}
 
 pub struct IndicatorAny<I: Indicator>(I);
 
@@ -245,4 +253,75 @@ pub trait Args: Clone + FromStr<Err = Error> {
     fn key(&self) -> String;
 
     fn build(self) -> Result<Self::Target>;
+}
+
+pub trait Builder {
+    type Target;
+    fn build(&self, s: &str) -> Result<Self::Target>;
+}
+
+pub struct BuilderAny<B: Builder> {
+    inner: B,
+}
+
+impl<B: Builder> BuilderAny<B> {
+    pub fn wrap(inner: B) -> Self {
+        Self { inner }
+    }
+}
+
+impl<B: Builder<Target: Indicator> + 'static> Builder for BuilderAny<B> {
+    type Target = Box<dyn Indicator<Output = Box<dyn Any>>>;
+
+    fn build(&self, s: &str) -> Result<Self::Target> {
+        let raw = self.inner.build(s)?;
+        Ok(raw.wrap_as_any())
+    }
+}
+
+pub type HubIndicator = Box<dyn Indicator<Output = Box<dyn Any>>>;
+
+pub type HubBuilder = Box<dyn Builder<Target = HubIndicator>>;
+
+#[derive(Default)]
+pub struct Hub {
+    builders: HashMap<TypeId, HubBuilder>,
+    indicators: HashMap<String, HubIndicator>,
+}
+
+impl Hub {
+    pub fn register_builder<B: Builder<Target: Indicator> + 'static>(
+        &mut self,
+        builder: B,
+    ) {
+        let id = TypeId::of::<B>();
+        let b = BuilderAny::wrap(builder);
+        self.builders.insert(id, Box::new(b));
+    }
+
+    pub fn add_indicator(&mut self, key: &str) -> Result<bool> {
+        if self.indicators.contains_key(key) {
+            return Ok(false);
+        }
+
+        let mut indicator = None;
+        for builder in self.builders.values() {
+            if let Ok(instance) = builder.build(key) {
+                indicator.replace(instance);
+                break;
+            }
+        }
+
+        let indicator =
+            indicator.ok_or_else(|| key.unexpected("indicator key"))?;
+
+        let deps = indicator.deps();
+        for dep in deps {
+            self.add_indicator(dep)?;
+        }
+
+        self.indicators.insert(key.to_owned(), indicator);
+
+        Ok(true)
+    }
 }
