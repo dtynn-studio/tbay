@@ -17,6 +17,26 @@ pub enum Error {
 
     #[snafu(display("{reason}"))]
     Msg { reason: Cow<'static, str> },
+
+    #[snafu(display("datetime {field}: {source}"))]
+    Datetime {
+        field: &'static str,
+        source: time::error::ComponentRange,
+    },
+
+    #[snafu(display("decimal {field}: {source}"))]
+    Decimal {
+        field: &'static str,
+        source: rust_decimal::Error,
+    },
+}
+
+impl From<binance::errors::Error> for Error {
+    fn from(value: binance::errors::Error) -> Self {
+        Error::Msg {
+            reason: format!("binance: {value}").into(),
+        }
+    }
 }
 
 pub trait Unexpected<T> {

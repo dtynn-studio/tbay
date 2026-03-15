@@ -46,7 +46,8 @@ pub struct KRaw {
     pub price_high: Decimal,
     pub price_low: Decimal,
     pub quantity: Decimal,
-    pub determined: bool,
+    pub trades: i64,
+    pub finalized: bool,
 }
 
 #[derive(Clone, Copy)]
