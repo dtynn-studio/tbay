@@ -2,7 +2,7 @@ use std::{any::Any, str::FromStr};
 
 use rust_decimal::Decimal;
 
-use crate::prelude::{Error, KCtx, Result};
+use crate::prelude::{Builder, Error, KCtx, Result};
 
 pub mod base;
 pub mod bollinger;
@@ -72,11 +72,6 @@ pub trait Args: Clone + FromStr<Err = Error> {
     fn key(&self) -> String;
 
     fn build(self) -> Result<Self::Target>;
-}
-
-pub trait Builder {
-    type Target;
-    fn build(&self, s: &str) -> Result<Self::Target>;
 }
 
 pub struct BuilderAny<B: Builder> {

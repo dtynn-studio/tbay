@@ -6,11 +6,11 @@ use std::{
 use crate::{indicator, prelude::*};
 
 pub type HubIndicator = Box<dyn Indicator<Output = Box<dyn Any>>>;
-pub type HubBuilder = Box<dyn IndicatorBuilder<Target = HubIndicator>>;
+pub type HubIndicatorBuilder = Box<dyn Builder<Target = HubIndicator>>;
 pub type HubMonitor = Box<dyn Monitor>;
 
 pub struct Hub {
-    indicator_builders: HashMap<TypeId, HubBuilder>,
+    indicator_builders: HashMap<TypeId, HubIndicatorBuilder>,
     indicators: HashMap<String, HubIndicator>,
     monitors: HashMap<String, HubMonitor>,
 }
@@ -38,7 +38,7 @@ impl Default for Hub {
 
 impl Hub {
     pub fn register_indicator_builder<
-        B: IndicatorBuilder<Target: Indicator> + 'static,
+        B: Builder<Target: Indicator> + 'static,
     >(
         &mut self,
         builder: B,
