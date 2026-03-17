@@ -1,6 +1,8 @@
 use crate::prelude::*;
 
 pub mod cross;
+pub mod hold;
+pub mod touch;
 
 pub trait Monitor {
     fn key(&self) -> &str;
