@@ -138,12 +138,12 @@ impl Indicator for MaCross {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct MaCrossArgs {
-    val_kind: ExtractKind,
-    calc_kind: CalcKind,
-    fast: usize,
-    slow: usize,
+    pub val_kind: ExtractKind,
+    pub calc_kind: CalcKind,
+    pub fast: usize,
+    pub slow: usize,
 }
 
 #[derive(Debug, Default, Copy, Clone)]

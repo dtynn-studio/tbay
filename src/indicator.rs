@@ -1,8 +1,8 @@
-use std::{any::Any, str::FromStr};
+use std::any::Any;
 
 use rust_decimal::Decimal;
 
-use crate::prelude::{Builder, Error, KCtx, Result};
+use crate::prelude::{Builder, KCtx, Result};
 
 pub mod base;
 pub mod bollinger;
