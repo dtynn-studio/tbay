@@ -1,14 +1,16 @@
+use std::borrow::Cow;
+
 use crate::{
+    impl_builder,
     indicator::{
         Builder, Indicator,
         base::{BaseExtractorArgs, CalcKind, ExtractKind},
     },
     prelude::{
-        Args, Decimal, Error, FromStr, KCtx, ParseCtx, Result, Unexpected,
+        Args, Decimal, Error, FromStr, KCtx, ParseCtx, Result, ResultExt,
+        Unexpected,
     },
 };
-use snafu::ResultExt;
-use std::borrow::Cow;
 
 pub struct Distance {
     key: String,
@@ -49,18 +51,6 @@ pub struct DistanceArgs {
     kind: CalcKind,
     ma1: usize,
     ma2: usize,
-}
-
-#[derive(Debug, Default, Copy, Clone)]
-pub struct DistanceBuilder;
-
-impl Builder for DistanceBuilder {
-    type Target = Distance;
-
-    fn build(&self, s: &str) -> Result<Self::Target> {
-        let args = DistanceArgs::from_str(s)?;
-        args.build()
-    }
 }
 
 impl FromStr for DistanceArgs {
@@ -134,3 +124,5 @@ impl Args for DistanceArgs {
         })
     }
 }
+
+impl_builder!(DistanceBuilder: DistanceArgs => Distance);

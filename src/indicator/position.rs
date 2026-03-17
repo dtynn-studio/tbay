@@ -1,15 +1,16 @@
+use std::borrow::Cow;
+
 use crate::{
+    impl_builder,
     indicator::{
         Builder, Indicator,
         base::{BaseExtractorArgs, CalcKind, ExtractKind},
     },
     prelude::{
         Args, Decimal, Error, FromStr, KCtx, KInfo, ParseCtx, Result,
-        Unexpected,
+        ResultExt, Unexpected,
     },
 };
-use snafu::ResultExt;
-use std::borrow::Cow;
 
 #[derive(Clone, Copy)]
 pub struct PositionValue {
@@ -107,18 +108,6 @@ pub struct PositionArgs {
     base: usize,
 }
 
-#[derive(Debug, Default, Copy, Clone)]
-pub struct PositionBuilder;
-
-impl Builder for PositionBuilder {
-    type Target = Position;
-
-    fn build(&self, s: &str) -> Result<Self::Target> {
-        let args = PositionArgs::from_str(s)?;
-        args.build()
-    }
-}
-
 impl FromStr for PositionArgs {
     type Err = Error;
 
@@ -172,3 +161,5 @@ impl Args for PositionArgs {
         Ok(Position::new(&key, &base_key))
     }
 }
+
+impl_builder!(PositionBuilder: PositionArgs => Position);

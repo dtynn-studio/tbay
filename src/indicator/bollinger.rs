@@ -1,15 +1,16 @@
+use std::borrow::Cow;
+
 use crate::{
+    impl_builder,
     indicator::{
         Builder, Indicator,
         base::{BaseExtractorArgs, CalcKind, ExtractKind},
     },
     prelude::{
         Args, Decimal, Error, FromPrimitive, FromStr, KCtx, ParseCtx, Result,
-        Unexpected,
+        ResultExt, Unexpected,
     },
 };
-use snafu::ResultExt;
-use std::borrow::Cow;
 
 #[derive(Clone, Copy)]
 pub struct BollingerBandValue {
@@ -32,18 +33,6 @@ pub struct BollingerBand {
 pub struct BollingerBandArgs {
     period: usize,
     width: usize,
-}
-
-#[derive(Debug, Default, Copy, Clone)]
-pub struct BollingerBandBuilder;
-
-impl Builder for BollingerBandBuilder {
-    type Target = BollingerBand;
-
-    fn build(&self, s: &str) -> Result<Self::Target> {
-        let args = BollingerBandArgs::from_str(s)?;
-        args.build()
-    }
 }
 
 impl FromStr for BollingerBandArgs {
@@ -116,6 +105,8 @@ impl Args for BollingerBandArgs {
         })
     }
 }
+
+impl_builder!(BollingerBandBuilder: BollingerBandArgs => BollingerBand);
 
 impl Indicator for BollingerBand {
     type Output = BollingerBandValue;

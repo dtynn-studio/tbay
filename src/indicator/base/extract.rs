@@ -1,9 +1,9 @@
 use std::{borrow::Cow, str::FromStr};
 
 use scanf::sscanf;
-use snafu::ResultExt;
 
 use crate::{
+    impl_builder,
     indicator::{
         Calculator,
         base::BaseCalculator,
@@ -12,7 +12,7 @@ use crate::{
     },
     prelude::{
         Args, Builder, Decimal, Error, Indicator, KCtx, KInfo, ParseCtx,
-        Result, Unexpected,
+        Result, ResultExt, Unexpected,
     },
 };
 
@@ -123,18 +123,6 @@ pub struct BaseExtractorArgs {
     period: usize,
 }
 
-#[derive(Debug, Default, Copy, Clone)]
-pub struct BaseExtractorBuilder;
-
-impl Builder for BaseExtractorBuilder {
-    type Target = BaseExtractor;
-
-    fn build(&self, s: &str) -> Result<Self::Target> {
-        let args = BaseExtractorArgs::from_str(s)?;
-        args.build()
-    }
-}
-
 impl FromStr for BaseExtractorArgs {
     type Err = Error;
 
@@ -210,3 +198,5 @@ impl Args for BaseExtractorArgs {
         })
     }
 }
+
+impl_builder!(BaseExtractorBuilder: BaseExtractorArgs => BaseExtractor);

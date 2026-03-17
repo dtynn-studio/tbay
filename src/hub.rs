@@ -26,7 +26,7 @@ impl Default for Hub {
             monitor_builders: Default::default(),
         };
 
-        // indicators
+        // indicator builders
         hub.register_indicator_builder(indicator::base::BaseExtractorBuilder);
         hub.register_indicator_builder(
             indicator::bollinger::BollingerBandBuilder,
@@ -36,6 +36,7 @@ impl Default for Hub {
         hub.register_indicator_builder(indicator::distance::DistanceBuilder);
         hub.register_indicator_builder(indicator::position::PositionBuilder);
 
+        // monitor builders
         hub.register_monitor_builder(monitor::cross::CrossBuilder);
         hub.register_monitor_builder(monitor::touch::TouchBuilder);
 

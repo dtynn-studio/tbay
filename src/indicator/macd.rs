@@ -1,4 +1,7 @@
+use std::borrow::Cow;
+
 use crate::{
+    impl_builder,
     indicator::{
         Builder, Calculator, Indicator,
         base::{BaseExtractorArgs, CalcKind, ExtractKind},
@@ -6,11 +9,10 @@ use crate::{
         ma::Ema,
     },
     prelude::{
-        Args, Decimal, Error, FromStr, KCtx, ParseCtx, Result, Unexpected,
+        Args, Decimal, Error, FromStr, KCtx, ParseCtx, Result, ResultExt,
+        Unexpected,
     },
 };
-use snafu::ResultExt;
-use std::borrow::Cow;
 
 #[derive(Clone)]
 pub struct MacdValue {
@@ -34,18 +36,6 @@ pub struct MacdArgs {
     fast: usize,
     slow: usize,
     dea_period: usize,
-}
-
-#[derive(Debug, Default, Copy, Clone)]
-pub struct MacdBuilder;
-
-impl Builder for MacdBuilder {
-    type Target = Macd;
-
-    fn build(&self, s: &str) -> Result<Self::Target> {
-        let args = MacdArgs::from_str(s)?;
-        args.build()
-    }
 }
 
 impl FromStr for MacdArgs {
@@ -128,6 +118,8 @@ impl Args for MacdArgs {
         })
     }
 }
+
+impl_builder!(MacdBuilder: MacdArgs => Macd);
 
 impl Indicator for Macd {
     type Output = MacdValue;
