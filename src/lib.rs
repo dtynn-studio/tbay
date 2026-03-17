@@ -26,3 +26,21 @@ pub trait Args: Clone + FromStr<Err = Error> {
 
     fn build(self) -> Result<Self::Target>;
 }
+
+macro_rules! impl_builder {
+    ($name:ident: $args:ident => $target:ident) => {
+        #[derive(Debug, Clone, Copy)]
+        pub struct $name;
+
+        impl Builder for $name {
+            type Target = $target;
+
+            fn build(&self, s: &str) -> Result<Self::Target> {
+                let args: $args = s.parse()?;
+                args.build()
+            }
+        }
+    };
+}
+
+use impl_builder;
