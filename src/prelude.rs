@@ -7,6 +7,6 @@ pub use crate::{
     Args, Builder,
     indicator::{BuilderAny as IndicatorBuilderAny, Indicator},
     k::{KCtx, KInfo, KRaw, PriceBar},
-    monitor::Monitor,
+    monitor::{BuilderAny as MonitorBuilderAny, Monitor},
     res::prelude::*,
 };

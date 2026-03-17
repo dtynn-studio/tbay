@@ -8,11 +8,13 @@ use crate::{indicator, prelude::*};
 pub type HubIndicator = Box<dyn Indicator<Output = Box<dyn Any>>>;
 pub type HubIndicatorBuilder = Box<dyn Builder<Target = HubIndicator>>;
 pub type HubMonitor = Box<dyn Monitor>;
+pub type HubMonitorBuilder = Box<dyn Builder<Target = HubMonitor>>;
 
 pub struct Hub {
     indicator_builders: HashMap<TypeId, HubIndicatorBuilder>,
     indicators: HashMap<String, HubIndicator>,
     monitors: HashMap<String, HubMonitor>,
+    monitor_builders: HashMap<TypeId, HubMonitorBuilder>,
 }
 
 impl Default for Hub {
@@ -21,6 +23,7 @@ impl Default for Hub {
             indicator_builders: Default::default(),
             indicators: Default::default(),
             monitors: Default::default(),
+            monitor_builders: Default::default(),
         };
 
         hub.register_indicator_builder(indicator::base::BaseExtractorBuilder);
@@ -74,18 +77,37 @@ impl Hub {
         Ok(true)
     }
 
-    pub fn register_monitor(&mut self, monitor: HubMonitor) -> Result<bool> {
-        let key = monitor.key();
+    pub fn register_monitor_builder<B: Builder<Target: Monitor> + 'static>(
+        &mut self,
+        builder: B,
+    ) {
+        let id = TypeId::of::<B>();
+        let b = MonitorBuilderAny::wrap(builder);
+        self.monitor_builders.insert(id, Box::new(b));
+    }
+
+    pub fn register_monitor(&mut self, key: &str) -> Result<bool> {
         if self.monitors.contains_key(key) {
             return Ok(false);
         }
+
+        let mut monitor = None;
+        for builder in self.monitor_builders.values() {
+            if let Ok(instance) = builder.build(key) {
+                monitor.replace(instance);
+                break;
+            }
+        }
+
+        let monitor = monitor.ok_or_else(|| key.unexpected("monitor key"))?;
 
         let deps = monitor.deps();
         for dep in deps {
             self.register_indicator(dep)?;
         }
 
-        self.monitors.insert(key.to_lowercase(), monitor);
+        self.monitors.insert(key.to_owned(), monitor);
+
         Ok(true)
     }
 }
