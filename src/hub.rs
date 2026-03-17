@@ -12,9 +12,9 @@ pub type HubMonitorBuilder = Box<dyn Builder<Target = HubMonitor>>;
 
 pub struct Hub {
     indicator_builders: HashMap<TypeId, HubIndicatorBuilder>,
-    indicators: HashMap<String, HubIndicator>,
-    monitors: HashMap<String, HubMonitor>,
+    indicators: Vec<HubIndicator>,
     monitor_builders: HashMap<TypeId, HubMonitorBuilder>,
+    monitors: Vec<HubMonitor>,
 }
 
 impl Default for Hub {
@@ -58,7 +58,7 @@ impl Hub {
     }
 
     pub fn register_indicator(&mut self, key: &str) -> Result<bool> {
-        if self.indicators.contains_key(key) {
+        if self.indicators.iter().any(|m| m.key() == key) {
             return Ok(false);
         }
 
@@ -78,7 +78,7 @@ impl Hub {
             self.register_indicator(dep)?;
         }
 
-        self.indicators.insert(key.to_owned(), indicator);
+        self.indicators.push(indicator);
 
         Ok(true)
     }
@@ -93,7 +93,7 @@ impl Hub {
     }
 
     pub fn register_monitor(&mut self, key: &str) -> Result<bool> {
-        if self.monitors.contains_key(key) {
+        if self.monitors.iter().any(|m| m.key() == key) {
             return Ok(false);
         }
 
@@ -112,7 +112,7 @@ impl Hub {
             self.register_indicator(dep)?;
         }
 
-        self.monitors.insert(key.to_owned(), monitor);
+        self.monitors.push(monitor);
 
         Ok(true)
     }
