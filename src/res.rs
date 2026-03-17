@@ -1,4 +1,4 @@
-use std::{borrow::Cow, fmt::Display};
+use std::{borrow::Cow, fmt::Display, path::PathBuf};
 
 use snafu::Snafu;
 
@@ -16,7 +16,9 @@ pub enum Error {
     },
 
     #[snafu(display("{reason}"))]
-    Msg { reason: Cow<'static, str> },
+    Msg {
+        reason: Cow<'static, str>,
+    },
 
     #[snafu(display("datetime {field}: {source}"))]
     Datetime {
@@ -29,6 +31,16 @@ pub enum Error {
         field: &'static str,
         source: rust_decimal::Error,
     },
+
+    #[snafu(display("file {path:?}: {source}"))]
+    File {
+        path: PathBuf,
+        source: std::io::Error,
+    },
+
+    TomlDe {
+        source: toml::de::Error,
+    },
 }
 
 impl From<binance::errors::Error> for Error {
@@ -36,6 +48,12 @@ impl From<binance::errors::Error> for Error {
         Error::Msg {
             reason: format!("binance: {value}").into(),
         }
+    }
+}
+
+impl From<toml::de::Error> for Error {
+    fn from(value: toml::de::Error) -> Self {
+        Error::TomlDe { source: value }
     }
 }
 
