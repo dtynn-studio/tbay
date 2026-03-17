@@ -3,7 +3,7 @@ use std::{
     collections::HashMap,
 };
 
-use crate::{indicator, prelude::*};
+use crate::{indicator, monitor, prelude::*};
 
 pub type HubIndicator = Box<dyn Indicator<Output = Box<dyn Any>>>;
 pub type HubIndicatorBuilder = Box<dyn Builder<Target = HubIndicator>>;
@@ -26,6 +26,7 @@ impl Default for Hub {
             monitor_builders: Default::default(),
         };
 
+        // indicators
         hub.register_indicator_builder(indicator::base::BaseExtractorBuilder);
         hub.register_indicator_builder(
             indicator::bollinger::BollingerBandBuilder,
@@ -34,6 +35,9 @@ impl Default for Hub {
         hub.register_indicator_builder(indicator::cross::MaCrossBuilder);
         hub.register_indicator_builder(indicator::distance::DistanceBuilder);
         hub.register_indicator_builder(indicator::position::PositionBuilder);
+
+        hub.register_monitor_builder(monitor::cross::CrossBuilder);
+        hub.register_monitor_builder(monitor::touch::TouchBuilder);
 
         hub
     }

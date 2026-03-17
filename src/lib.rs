@@ -29,7 +29,7 @@ pub trait Args: Clone + FromStr<Err = Error> {
 
 macro_rules! impl_builder {
     ($name:ident: $args:ident => $target:ident) => {
-        #[derive(Debug, Clone, Copy)]
+        #[derive(Debug, Clone, Copy, Default)]
         pub struct $name;
 
         impl Builder for $name {

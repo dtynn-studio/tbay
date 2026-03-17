@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use crate::{
+    impl_builder,
     indicator::cross::{CrossValue, MaCrossArgs},
     prelude::{Args, Builder, Decimal, Error, KCtx, Monitor, Result},
 };
@@ -71,17 +72,7 @@ impl Cross {
     }
 }
 
-#[derive(Debug, Default)]
-pub struct CrossBuilder {}
-
-impl Builder for CrossBuilder {
-    type Target = Cross;
-
-    fn build(&self, s: &str) -> Result<Self::Target> {
-        let args: CrossArgs = s.parse()?;
-        args.build()
-    }
-}
+impl_builder!(CrossBuilder: CrossArgs => Cross);
 
 impl Monitor for Cross {
     fn key(&self) -> &str {
