@@ -39,6 +39,7 @@ impl Default for Hub {
         // monitor builders
         hub.register_monitor_builder(monitor::cross::CrossBuilder);
         hub.register_monitor_builder(monitor::touch::TouchBuilder);
+        hub.register_monitor_builder(monitor::hold::HoldBuilder);
 
         hub
     }
