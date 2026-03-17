@@ -140,7 +140,8 @@ impl Indicator for MaCross {
 
 #[derive(Clone)]
 pub struct MaCrossArgs {
-    kind: CalcKind,
+    val_kind: ExtractKind,
+    calc_kind: CalcKind,
     fast: usize,
     slow: usize,
 }
@@ -160,25 +161,23 @@ impl Builder for MaCrossBuilder {
 impl FromStr for MaCrossArgs {
     type Err = Error;
 
-    // format: cross:ema,5,20
-    // format: cross:sma,20,60
+    // format: cross:close,ema,5,20
+    // format: cross:qty,sma,20,60
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut kind_str = String::new();
+        let mut val_kind_str = String::new();
+        let mut calc_kind_str = String::new();
         let mut fast = 0usize;
         let mut slow = 0usize;
 
-        scanf::sscanf!(s, "cross:{kind_str},{fast},{slow}").with_context(
-            |_| ParseCtx {
+        scanf::sscanf!(s, "cross:{val_kind_str},{calc_kind_str},{fast},{slow}")
+            .with_context(|_| ParseCtx {
                 raw: s.to_owned(),
                 usage: Cow::from("parse MaCross"),
-            },
-        )?;
+            })?;
 
-        let kind = match kind_str.as_str() {
-            "sma" => CalcKind::Sma,
-            "ema" => CalcKind::Ema,
-            other => return Err(other.unexpected("ma cross kind")),
-        };
+        let val_kind = val_kind_str.parse()?;
+
+        let calc_kind = calc_kind_str.parse()?;
 
         if fast == 0 {
             return Err(fast.unexpected("ma cross fast period"));
@@ -188,42 +187,48 @@ impl FromStr for MaCrossArgs {
             return Err(slow.unexpected("ma cross slow period"));
         }
 
-        Ok(Self { kind, fast, slow })
+        Ok(Self {
+            val_kind,
+            calc_kind,
+            fast,
+            slow,
+        })
     }
 }
 
 impl Args for MaCrossArgs {
-    type Type = (CalcKind, usize, usize);
+    type Type = (ExtractKind, CalcKind, usize, usize);
     type Target = MaCross;
 
     fn new(args: Self::Type) -> Self {
         Self {
-            kind: args.0,
-            fast: args.1,
-            slow: args.2,
+            val_kind: args.0,
+            calc_kind: args.1,
+            fast: args.2,
+            slow: args.3,
         }
     }
 
     fn key(&self) -> String {
-        format!("cross:{},{},{}", self.kind.as_str(), self.fast, self.slow)
+        format!(
+            "cross:{},{},{},{}",
+            self.val_kind.as_str(),
+            self.calc_kind.as_str(),
+            self.fast,
+            self.slow
+        )
     }
 
     fn build(self) -> Result<Self::Target> {
         let key = self.key();
 
-        let fast_key = BaseExtractorArgs::new((
-            ExtractKind::PriceClose,
-            self.kind,
-            self.fast,
-        ))
-        .key();
+        let fast_key =
+            BaseExtractorArgs::new((self.val_kind, self.calc_kind, self.fast))
+                .key();
 
-        let slow_key = BaseExtractorArgs::new((
-            ExtractKind::PriceClose,
-            self.kind,
-            self.slow,
-        ))
-        .key();
+        let slow_key =
+            BaseExtractorArgs::new((self.val_kind, self.calc_kind, self.slow))
+                .key();
 
         Ok(MaCross {
             key,

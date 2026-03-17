@@ -11,8 +11,8 @@ use crate::{
         stddev::StdDev,
     },
     prelude::{
-        Args, Decimal, Error, Indicator, KCtx, KInfo, ParseCtx, Result,
-        Unexpected,
+        Args, Builder, Decimal, Error, Indicator, KCtx, KInfo, ParseCtx,
+        Result, Unexpected,
     },
 };
 
@@ -59,10 +59,25 @@ pub enum ExtractKind {
 }
 
 impl ExtractKind {
+    pub const PRICE_CLOSE_STR: &str = "close";
+    pub const QTY_STR: &str = "qty";
+
     pub const fn as_str(&self) -> &'static str {
         match self {
-            Self::PriceClose => "close",
-            Self::Qty => "qty",
+            Self::PriceClose => Self::PRICE_CLOSE_STR,
+            Self::Qty => Self::QTY_STR,
+        }
+    }
+}
+
+impl FromStr for ExtractKind {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            Self::PRICE_CLOSE_STR => Ok(Self::PriceClose),
+            Self::QTY_STR => Ok(Self::Qty),
+            other => Err(other.unexpected("parse extract kind")),
         }
     }
 }
@@ -75,11 +90,28 @@ pub enum CalcKind {
 }
 
 impl CalcKind {
+    pub const SMA_STR: &str = "sma";
+    pub const EMA_STR: &str = "ema";
+    pub const STD_DEV_STR: &str = "stddev";
+
     pub const fn as_str(&self) -> &'static str {
         match self {
-            Self::Sma => "sma",
-            Self::Ema => "ema",
-            Self::StdDev => "stddev",
+            Self::Sma => Self::SMA_STR,
+            Self::Ema => Self::EMA_STR,
+            Self::StdDev => Self::STD_DEV_STR,
+        }
+    }
+}
+
+impl FromStr for CalcKind {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            Self::SMA_STR => Ok(Self::Sma),
+            Self::EMA_STR => Ok(Self::Ema),
+            Self::STD_DEV_STR => Ok(Self::StdDev),
+            other => Err(other.unexpected("parse calc kind")),
         }
     }
 }
@@ -94,7 +126,7 @@ pub struct BaseExtractorArgs {
 #[derive(Debug, Default, Copy, Clone)]
 pub struct BaseExtractorBuilder;
 
-impl crate::indicator::Builder for BaseExtractorBuilder {
+impl Builder for BaseExtractorBuilder {
     type Target = BaseExtractor;
 
     fn build(&self, s: &str) -> Result<Self::Target> {
@@ -118,18 +150,9 @@ impl FromStr for BaseExtractorArgs {
             },
         )?;
 
-        let extract = match extract_kind.as_str() {
-            "close" => ExtractKind::PriceClose,
-            "qty" => ExtractKind::Qty,
-            other => return Err(other.unexpected("extract kind")),
-        };
+        let extract = extract_kind.parse()?;
 
-        let calc = match calc_kind.as_str() {
-            "sma" => CalcKind::Sma,
-            "ema" => CalcKind::Ema,
-            "stddev" => CalcKind::StdDev,
-            other => return Err(other.unexpected("calc kind")),
-        };
+        let calc = calc_kind.parse()?;
 
         if period == 0 {
             return Err(period.unexpected("period"));

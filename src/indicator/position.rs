@@ -134,11 +134,7 @@ impl FromStr for PositionArgs {
             }
         })?;
 
-        let kind = match kind_str.as_str() {
-            "sma" => CalcKind::Sma,
-            "ema" => CalcKind::Ema,
-            other => return Err(other.unexpected("position kind")),
-        };
+        let kind = kind_str.parse()?;
 
         if base == 0 {
             return Err(base.unexpected("position base period"));

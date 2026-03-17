@@ -79,11 +79,7 @@ impl FromStr for DistanceArgs {
             },
         )?;
 
-        let kind = match kind_str.as_str() {
-            "sma" => CalcKind::Sma,
-            "ema" => CalcKind::Ema,
-            other => return Err(other.unexpected("distance kind")),
-        };
+        let kind = kind_str.parse()?;
 
         if ma1 == 0 {
             return Err(ma1.unexpected("distance ma1 period"));

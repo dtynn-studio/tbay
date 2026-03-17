@@ -63,17 +63,6 @@ where
     }
 }
 
-pub trait Args: Clone + FromStr<Err = Error> {
-    type Type;
-    type Target: Indicator;
-
-    fn new(args: Self::Type) -> Self;
-
-    fn key(&self) -> String;
-
-    fn build(self) -> Result<Self::Target>;
-}
-
 pub struct BuilderAny<B: Builder> {
     inner: B,
 }
