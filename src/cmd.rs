@@ -1,13 +1,18 @@
 use clap::{Parser, Subcommand};
 
 mod simple;
+mod watch;
 
 pub use simple::SimpleArgs;
+pub use watch::WatchArgs;
 
 #[derive(Subcommand)]
 pub enum Cmds {
     #[command(name = "simple")]
     Simple(SimpleArgs),
+
+    #[command(name = "watch")]
+    Watch(WatchArgs),
 }
 
 #[derive(Parser)]

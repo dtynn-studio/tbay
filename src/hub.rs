@@ -1,7 +1,10 @@
 use std::{
     any::{Any, TypeId},
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
+    time::Duration,
 };
+
+use tracing::{debug, warn_span};
 
 use crate::{indicator, monitor, prelude::*};
 
@@ -10,20 +13,24 @@ pub type HubIndicatorBuilder = Box<dyn Builder<Target = HubIndicator>>;
 pub type HubMonitor = Box<dyn Monitor>;
 pub type HubMonitorBuilder = Box<dyn Builder<Target = HubMonitor>>;
 
+pub struct HubItem {
+    pub symbol: String,
+    pub indicators: BTreeMap<Duration, Vec<HubIndicator>>,
+    pub monitors: BTreeMap<Duration, Vec<HubMonitor>>,
+}
+
 pub struct Hub {
     indicator_builders: HashMap<TypeId, HubIndicatorBuilder>,
-    indicators: Vec<HubIndicator>,
     monitor_builders: HashMap<TypeId, HubMonitorBuilder>,
-    monitors: Vec<HubMonitor>,
+    items: Vec<HubItem>,
 }
 
 impl Default for Hub {
     fn default() -> Self {
         let mut hub = Hub {
             indicator_builders: Default::default(),
-            indicators: Default::default(),
-            monitors: Default::default(),
             monitor_builders: Default::default(),
+            items: Default::default(),
         };
 
         // indicator builders
@@ -46,6 +53,37 @@ impl Default for Hub {
 }
 
 impl Hub {
+    fn has_indicator(
+        &self,
+        symbol: &str,
+        interval: Duration,
+        key: &str,
+    ) -> bool {
+        let Some(item) = self.items.iter().find(|item| item.symbol == symbol)
+        else {
+            return false;
+        };
+
+        let Some(indicators) = item.indicators.get(&interval) else {
+            return false;
+        };
+
+        indicators.iter().any(|i| i.key() == key)
+    }
+
+    fn has_monitor(&self, symbol: &str, interval: Duration, key: &str) -> bool {
+        let Some(item) = self.items.iter().find(|item| item.symbol == symbol)
+        else {
+            return false;
+        };
+
+        let Some(monitors) = item.monitors.get(&interval) else {
+            return false;
+        };
+
+        monitors.iter().any(|i| i.key() == key)
+    }
+
     pub fn register_indicator_builder<
         B: Builder<Target: Indicator> + 'static,
     >(
@@ -57,8 +95,15 @@ impl Hub {
         self.indicator_builders.insert(id, Box::new(b));
     }
 
-    pub fn register_indicator(&mut self, key: &str) -> Result<bool> {
-        if self.indicators.iter().any(|m| m.key() == key) {
+    pub fn register_indicator(
+        &mut self,
+        symbol: &str,
+        interval: Duration,
+        key: &str,
+    ) -> Result<bool> {
+        let _span = warn_span!("indicator", symbol, ?interval, key).entered();
+        if self.has_indicator(symbol, interval, key) {
+            debug!("exists");
             return Ok(false);
         }
 
@@ -75,10 +120,26 @@ impl Hub {
 
         let deps = indicator.deps();
         for dep in deps {
-            self.register_indicator(dep)?;
+            self.register_indicator(symbol, interval, dep)?;
         }
 
-        self.indicators.push(indicator);
+        let slots =
+            match self.items.iter_mut().find(|item| item.symbol == symbol) {
+                Some(i) => i,
+                None => self.items.push_mut(HubItem {
+                    symbol: symbol.to_owned(),
+                    indicators: Default::default(),
+                    monitors: Default::default(),
+                }),
+            };
+
+        slots
+            .indicators
+            .entry(interval)
+            .or_default()
+            .push(indicator);
+
+        debug!("added");
 
         Ok(true)
     }
@@ -92,8 +153,16 @@ impl Hub {
         self.monitor_builders.insert(id, Box::new(b));
     }
 
-    pub fn register_monitor(&mut self, key: &str) -> Result<bool> {
-        if self.monitors.iter().any(|m| m.key() == key) {
+    pub fn register_monitor(
+        &mut self,
+        symbol: &str,
+        interval: Duration,
+        key: &str,
+    ) -> Result<bool> {
+        let _span = warn_span!("monitor", symbol, ?interval, key).entered();
+
+        if self.has_monitor(symbol, interval, key) {
+            debug!("exists");
             return Ok(false);
         }
 
@@ -109,10 +178,22 @@ impl Hub {
 
         let deps = monitor.deps();
         for dep in deps {
-            self.register_indicator(dep)?;
+            self.register_indicator(symbol, interval, dep)?;
         }
 
-        self.monitors.push(monitor);
+        let slots =
+            match self.items.iter_mut().find(|item| item.symbol == symbol) {
+                Some(i) => i,
+                None => self.items.push_mut(HubItem {
+                    symbol: symbol.to_owned(),
+                    indicators: Default::default(),
+                    monitors: Default::default(),
+                }),
+            };
+
+        slots.monitors.entry(interval).or_default().push(monitor);
+
+        debug!("added");
 
         Ok(true)
     }

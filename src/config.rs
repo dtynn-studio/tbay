@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{path::Path, time::Duration};
 
 use serde::Deserialize;
 
@@ -12,7 +12,13 @@ pub struct Config {
 #[derive(Deserialize)]
 pub struct Symbol {
     pub name: String,
-    pub interval: String,
+    pub intervals: Vec<Interval>,
+}
+
+#[derive(Deserialize)]
+pub struct Interval {
+    #[serde(with = "humantime_serde")]
+    pub name: Duration,
     pub monitors: Vec<String>,
 }
 

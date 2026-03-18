@@ -11,5 +11,6 @@ pub fn main() -> Result<()> {
     let args = Args::parse();
     match args.cmds {
         Cmds::Simple(simple) => simple.run(),
+        Cmds::Watch(watch) => watch.run(),
     }
 }
