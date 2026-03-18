@@ -6,11 +6,11 @@ use crate::prelude::*;
 
 #[derive(Deserialize)]
 pub struct Config {
-    pub pairs: Vec<Pair>,
+    pub symbols: Vec<Symbol>,
 }
 
 #[derive(Deserialize)]
-pub struct Pair {
+pub struct Symbol {
     pub name: String,
     pub interval: String,
     pub monitors: Vec<String>,

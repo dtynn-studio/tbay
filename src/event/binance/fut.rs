@@ -179,6 +179,8 @@ impl DataSource for BinanceDataSource {
             _ = res_tx.send(Ok(()));
 
             _ = socket.event_loop(&running);
+
+            _ = socket.disconnect();
         });
 
         res_rx.recv().map_err(|_e| Error::Msg {
