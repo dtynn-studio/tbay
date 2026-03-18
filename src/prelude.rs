@@ -6,6 +6,7 @@ pub use time::OffsetDateTime;
 
 pub use crate::{
     common::{Args, Builder},
+    event::{DataSource, Event, SubscribeStopper, Target},
     indicator::{BuilderAny as IndicatorBuilderAny, Indicator},
     k::{KCtx, KInfo, KRaw, PriceBar},
     monitor::{BuilderAny as MonitorBuilderAny, Monitor},

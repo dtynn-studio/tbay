@@ -9,7 +9,7 @@ pub enum RelativePosition {
     At,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct KRaw {
     pub time_begin: OffsetDateTime,
     pub time_end: OffsetDateTime,
@@ -22,7 +22,7 @@ pub struct KRaw {
     pub finalized: bool,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct PriceBar {
     pub high: Decimal,
     pub low: Decimal,
@@ -69,13 +69,13 @@ impl PriceBar {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct KShadow {
     pub above: Decimal,
     pub below: Decimal,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct KInfo {
     pub raw: KRaw,
     pub direction: Option<bool>,

@@ -1,5 +1,7 @@
 #![allow(clippy::result_large_err)]
 
+use tracing::debug;
+
 use std::{
     sync::{
         Arc,
@@ -125,10 +127,7 @@ impl DataSource for BinanceDataSource {
         Self { event_tx }
     }
 
-    fn subscribe(
-        &mut self,
-        targets: &[Target],
-    ) -> Result<impl SubscribeStopper> {
+    fn start(self, targets: Vec<Target>) -> Result<impl SubscribeStopper> {
         let (res_tx, res_rx) = bounded(1);
         let running = Arc::new(AtomicBool::new(true));
         let streams = targets
@@ -146,6 +145,7 @@ impl DataSource for BinanceDataSource {
             let streams = streams;
             let event_tx = event_tx.clone();
 
+            debug!("socket new");
             let mut socket = FuturesWebSockets::new(move |event| {
                 match event {
                     FuturesWebsocketEvent::Kline(evt) => {
@@ -166,6 +166,7 @@ impl DataSource for BinanceDataSource {
                 Ok(())
             });
 
+            debug!("socket connect");
             match socket
                 .connect_multiple_streams(&FuturesMarket::USDM, &streams)
             {
@@ -176,8 +177,10 @@ impl DataSource for BinanceDataSource {
                 }
             }
 
+            debug!("socket stablized");
             _ = res_tx.send(Ok(()));
 
+            debug!("event loop start");
             _ = socket.event_loop(&running);
 
             _ = socket.disconnect();

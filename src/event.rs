@@ -4,12 +4,14 @@ use crate::prelude::{KRaw, Result};
 
 pub mod binance;
 
+#[derive(Debug)]
 pub struct K {
     pub symbol: String,
     pub interval: String,
     pub raw: KRaw,
 }
 
+#[derive(Debug)]
 pub enum Event {
     K(K),
 }
@@ -24,10 +26,7 @@ pub struct Target {
 pub trait DataSource {
     fn new(event_tx: EventChanTx) -> Self;
 
-    fn subscribe(
-        &mut self,
-        targets: &[Target],
-    ) -> Result<impl SubscribeStopper>;
+    fn start(self, targets: Vec<Target>) -> Result<impl SubscribeStopper>;
 }
 
 pub trait SubscribeStopper {

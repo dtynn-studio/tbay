@@ -41,6 +41,10 @@ pub enum Error {
     TomlDe {
         source: toml::de::Error,
     },
+
+    Signal {
+        source: ctrlc::Error,
+    },
 }
 
 impl From<binance::errors::Error> for Error {
