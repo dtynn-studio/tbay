@@ -1,6 +1,5 @@
-use std::time::Duration;
-
 use crossbeam_channel::Sender;
+use humantime::Duration;
 
 use crate::prelude::{KRaw, Result};
 
@@ -23,7 +22,7 @@ pub type EventChanTx = Sender<Event>;
 
 pub struct Target {
     pub symbol: String,
-    pub interval: String,
+    pub interval: Duration,
 }
 
 pub trait DataSource {

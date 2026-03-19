@@ -1,5 +1,6 @@
 use clap::Parser;
 use crossbeam_channel::unbounded;
+use humantime::Duration;
 use tracing::info;
 
 use crate::{event::binance::fut::BinanceDataSource, prelude::*};
@@ -10,12 +11,12 @@ pub struct SimpleArgs {
     pub pair: String,
 
     #[arg(long)]
-    pub interval: String,
+    pub interval: Duration,
 }
 
 impl SimpleArgs {
     pub fn run(self) -> Result<()> {
-        info!(pair = self.pair, interval = self.interval, "simple runs");
+        info!(pair = self.pair, interval = %self.interval, "simple runs");
 
         let target = Target {
             symbol: self.pair,

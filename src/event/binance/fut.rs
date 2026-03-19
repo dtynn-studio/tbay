@@ -65,7 +65,8 @@ fn kline_event_to_k(event: KlineEvent) -> Result<K> {
     Ok(K {
         symbol: event.kline.symbol.to_lowercase(),
         interval: parse_duration(&event.kline.interval)
-            .context(ParseDurationCtx)?,
+            .context(ParseDurationCtx)?
+            .into(),
         source: "k",
         raw: kraw,
     })
@@ -112,7 +113,8 @@ fn continuous_kline_event_to_k(event: ContinuousKlineEvent) -> Result<K> {
     Ok(K {
         symbol: event.pair.to_lowercase(),
         interval: parse_duration(&event.kline.interval)
-            .context(ParseDurationCtx)?,
+            .context(ParseDurationCtx)?
+            .into(),
         source: "ck",
         raw: kraw,
     })

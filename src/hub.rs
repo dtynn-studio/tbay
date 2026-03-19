@@ -1,9 +1,9 @@
 use std::{
     any::{Any, TypeId},
     collections::{BTreeMap, HashMap},
-    time::Duration,
 };
 
+use humantime::Duration;
 use tracing::{debug, warn_span};
 
 use crate::{
@@ -291,7 +291,9 @@ impl Hub {
         let mut for_all_intervals = None;
         let mut all_intervals = vec![];
         for interval_cfg in cfg.intervals.iter() {
-            let Some(interval) = interval_cfg.name.as_ref().copied() else {
+            let Some(interval) =
+                interval_cfg.name.as_ref().copied().map(Duration::from)
+            else {
                 for_all_intervals.replace(interval_cfg);
                 continue;
             };
