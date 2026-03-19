@@ -134,9 +134,7 @@ impl DataSource for BinanceDataSource {
         let running = Arc::new(AtomicBool::new(true));
         let streams = targets
             .iter()
-            .map(|t| {
-                format!("{}_perpetual@continuousKline_{}", t.symbol, t.interval)
-            })
+            .map(|t| t.bn_futures_perpetual_key())
             .collect::<Vec<_>>();
 
         let running_spawned = running.clone();

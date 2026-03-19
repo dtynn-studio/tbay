@@ -1,6 +1,6 @@
 use std::{
     any::{Any, TypeId},
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, HashMap, HashSet},
 };
 
 use humantime::Duration;
@@ -58,6 +58,27 @@ impl Default for Hub {
 }
 
 impl Hub {
+    pub fn targets(&self) -> Vec<Target> {
+        let mut target_set = HashSet::new();
+
+        for item in self.items.iter() {
+            let durations = item
+                .indicators
+                .keys()
+                .chain(item.monitors.keys())
+                .collect::<HashSet<_>>();
+
+            for d in durations {
+                target_set.insert(Target {
+                    symbol: item.symbol.clone(),
+                    interval: *d,
+                });
+            }
+        }
+
+        Vec::from_iter(target_set)
+    }
+
     pub fn calc(&self, k: K) -> Option<Vec<String>> {
         let indicators = self
             .items

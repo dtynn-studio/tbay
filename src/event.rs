@@ -20,9 +20,25 @@ pub enum Event {
 
 pub type EventChanTx = Sender<Event>;
 
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Target {
     pub symbol: String,
     pub interval: Duration,
+}
+
+impl std::fmt::Display for Target {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}@{}", self.symbol, self.interval)
+    }
+}
+
+impl Target {
+    pub fn bn_futures_perpetual_key(&self) -> String {
+        format!(
+            "{}_perpetual@continuousKline_{}",
+            self.symbol, self.interval
+        )
+    }
 }
 
 pub trait DataSource {
