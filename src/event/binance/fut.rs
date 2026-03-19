@@ -9,19 +9,21 @@ use std::{
 };
 
 use binance::{
-    futures::websockets::{
-        FuturesMarket, FuturesWebSockets, FuturesWebsocketEvent,
+    api::Binance,
+    futures::{
+        market,
+        websockets::{FuturesMarket, FuturesWebSockets, FuturesWebsocketEvent},
     },
-    model::{ContinuousKlineEvent, KlineEvent},
+    model::{ContinuousKlineEvent, KlineEvent, KlineSummaries, KlineSummary},
 };
 use crossbeam_channel::bounded;
-use humantime::parse_duration;
+use humantime::{Duration, parse_duration};
 use tracing::debug;
 
 use crate::{
     event::{DataSource, Event, EventChanTx, K, SubscribeStopper, Target},
     prelude::*,
-    util::time::local_from_unix_timestamp_millis_truncated,
+    util::time::{MILLI_SEC, local_from_unix_timestamp_millis_truncated},
 };
 
 fn kline_event_to_k(event: KlineEvent) -> Result<K> {
@@ -120,6 +122,58 @@ fn continuous_kline_event_to_k(event: ContinuousKlineEvent) -> Result<K> {
     })
 }
 
+fn kline_summary_to_k(
+    pair: &str,
+    interval: Duration,
+    summary: KlineSummary,
+) -> Result<K> {
+    let kraw = KRaw {
+        time_begin: local_from_unix_timestamp_millis_truncated(
+            "time_begin",
+            summary.open_time,
+        )?,
+
+        time_end: local_from_unix_timestamp_millis_truncated(
+            "time_end",
+            summary.close_time,
+        )?,
+
+        price_open: Decimal::from_str_radix(&summary.open, 10).context(
+            DecimalCtx {
+                field: "price_open",
+            },
+        )?,
+
+        price_close: Decimal::from_str_radix(&summary.close, 10).context(
+            DecimalCtx {
+                field: "price_close",
+            },
+        )?,
+
+        price_high: Decimal::from_str_radix(&summary.high, 10).context(
+            DecimalCtx {
+                field: "price_high",
+            },
+        )?,
+
+        price_low: Decimal::from_str_radix(&summary.low, 10)
+            .context(DecimalCtx { field: "price_low" })?,
+
+        quantity: Decimal::from_str_radix(&summary.volume, 10)
+            .context(DecimalCtx { field: "quantity" })?,
+
+        trades: summary.number_of_trades,
+        finalized: true,
+    };
+
+    Ok(K {
+        symbol: pair.to_lowercase(),
+        interval,
+        source: "h",
+        raw: kraw,
+    })
+}
+
 pub struct BinanceDataSource {
     event_tx: EventChanTx,
 }
@@ -134,7 +188,7 @@ impl DataSource for BinanceDataSource {
         let running = Arc::new(AtomicBool::new(true));
         let streams = targets
             .iter()
-            .map(|t| t.bn_futures_perpetual_key())
+            .map(|t| t.bn_futures_key())
             .collect::<Vec<_>>();
 
         let running_spawned = running.clone();
@@ -211,5 +265,77 @@ impl Drop for BinanceSubscriberStopper {
 impl SubscribeStopper for BinanceSubscriberStopper {
     fn stop(self) {
         drop(self)
+    }
+}
+
+pub struct FutClient {
+    client: market::FuturesMarket,
+}
+
+impl FutClient {
+    pub fn new(testnet: bool, verbose: bool) -> Result<Self> {
+        let mut client = market::FuturesMarket::new(None, None);
+        client.set_testnet(testnet);
+        client.set_verbose(verbose);
+        Ok(Self { client })
+    }
+
+    pub fn load_history(
+        &self,
+        target: &Target,
+        count: usize,
+    ) -> Result<Vec<K>> {
+        let mut history_ks: Vec<K> = Vec::new();
+        let mut first_req = true;
+        let d = std::time::Duration::from(target.interval);
+        let end_time = OffsetDateTime::now_local()?;
+        let start_time = end_time - (count as u32) * d;
+
+        loop {
+            let request_start = history_ks
+                .last()
+                .map(|k| k.raw.time_begin)
+                .unwrap_or(start_time);
+
+            if request_start >= end_time {
+                break;
+            }
+
+            if first_req {
+                first_req = false
+            } else {
+                std::thread::sleep(std::time::Duration::from_millis(200));
+            }
+
+            let ksum = self
+                .client
+                .get_klines(
+                    target.symbol.clone(),
+                    target.interval.to_string(),
+                    None,
+                    (request_start.unix_timestamp() * MILLI_SEC) as u64,
+                    (end_time.unix_timestamp() * MILLI_SEC) as u64,
+                )
+                .unwrap_or_else(|e| panic!("get klines: {e}"));
+
+            let KlineSummaries::AllKlineSummaries(klines) = ksum;
+
+            let kcount = klines.len();
+            if kcount == 0 {
+                break;
+            }
+
+            let converted = klines
+                .into_iter()
+                .map(|ks| {
+                    kline_summary_to_k(&target.symbol, target.interval, ks)
+                })
+                .collect::<Result<Vec<_>>>()
+                .expect("convert to kinfos");
+
+            history_ks.extend(converted);
+        }
+
+        Ok(history_ks)
     }
 }

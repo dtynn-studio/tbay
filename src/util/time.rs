@@ -4,6 +4,8 @@ use time::{OffsetDateTime, UtcOffset};
 
 use crate::prelude::*;
 
+pub const MILLI_SEC: i64 = 1000;
+
 pub static LOCAL_OFFSET: LazyLock<UtcOffset> = LazyLock::new(|| {
     UtcOffset::current_local_offset().expect("local time offset")
 });

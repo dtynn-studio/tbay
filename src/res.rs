@@ -26,6 +26,10 @@ pub enum Error {
         source: time::error::ComponentRange,
     },
 
+    DatetimeOffset {
+        source: time::error::IndeterminateOffset,
+    },
+
     #[snafu(display("decimal {field}: {source}"))]
     Decimal {
         field: &'static str,
@@ -56,6 +60,12 @@ impl From<binance::errors::Error> for Error {
         Error::Msg {
             reason: format!("binance: {value}").into(),
         }
+    }
+}
+
+impl From<time::error::IndeterminateOffset> for Error {
+    fn from(source: time::error::IndeterminateOffset) -> Self {
+        Error::DatetimeOffset { source }
     }
 }
 

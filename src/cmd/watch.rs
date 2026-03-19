@@ -12,6 +12,9 @@ pub struct WatchArgs {
 
     #[arg(long)]
     pub config: PathBuf,
+
+    #[arg(long, default_value_t = 1000)]
+    pub history: usize,
 }
 
 impl WatchArgs {
@@ -20,9 +23,11 @@ impl WatchArgs {
         let cfg = load_config(self.config)?;
         let mut hub = Hub::default();
 
-        info!("setup normal monitors");
-
+        info!("setup hub");
         hub.apply_config(cfg)?;
+
+        let targets = hub.targets();
+        info!(?targets, "collected");
 
         if self.dry {
             info!("dry run, stopped");

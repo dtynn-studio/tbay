@@ -39,6 +39,10 @@ impl Target {
             self.symbol, self.interval
         )
     }
+
+    pub fn bn_futures_key(&self) -> String {
+        format!("{}@kline_{}", self.symbol, self.interval)
+    }
 }
 
 pub trait DataSource {

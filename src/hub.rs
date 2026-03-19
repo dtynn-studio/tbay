@@ -76,7 +76,15 @@ impl Hub {
             }
         }
 
-        Vec::from_iter(target_set)
+        let mut targets = Vec::from_iter(target_set);
+        targets.sort_by(|left, right| {
+            if left.interval == right.interval {
+                left.symbol.cmp(&right.symbol)
+            } else {
+                left.interval.cmp(&right.interval)
+            }
+        });
+        targets
     }
 
     pub fn calc(&self, k: K) -> Option<Vec<String>> {
