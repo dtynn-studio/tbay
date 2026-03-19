@@ -6,7 +6,11 @@ use std::{
 
 use tracing::{debug, warn_span};
 
-use crate::{indicator, monitor, prelude::*};
+use crate::{
+    config::{Config, Interval, Pair},
+    indicator, monitor,
+    prelude::*,
+};
 
 pub type HubIndicator = Box<dyn Indicator<Output = Box<dyn Any>>>;
 pub type HubIndicatorBuilder = Box<dyn Builder<Target = HubIndicator>>;
@@ -103,7 +107,6 @@ impl Hub {
     ) -> Result<bool> {
         let _span = warn_span!("indicator", symbol, ?interval, key).entered();
         if self.has_indicator(symbol, interval, key) {
-            debug!("exists");
             return Ok(false);
         }
 
@@ -162,7 +165,6 @@ impl Hub {
         let _span = warn_span!("monitor", symbol, ?interval, key).entered();
 
         if self.has_monitor(symbol, interval, key) {
-            debug!("exists");
             return Ok(false);
         }
 
@@ -196,5 +198,64 @@ impl Hub {
         debug!("added");
 
         Ok(true)
+    }
+
+    pub fn apply_config(&mut self, cfg: Config) -> Result<()> {
+        let mut for_all_pairs = None;
+        let mut all_pairs = vec![];
+
+        for pair_cfg in cfg.pairs.iter() {
+            if pair_cfg.name == "*" {
+                for_all_pairs.replace(pair_cfg);
+                continue;
+            }
+
+            all_pairs.push(&pair_cfg.name);
+
+            self.apply_pair(&pair_cfg.name, pair_cfg)?;
+        }
+
+        if let Some(for_all_cfg) = for_all_pairs {
+            for pair in all_pairs.iter() {
+                self.apply_pair(pair, for_all_cfg)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn apply_pair(&mut self, pair: &str, cfg: &Pair) -> Result<()> {
+        let mut for_all_intervals = None;
+        let mut all_intervals = vec![];
+        for interval_cfg in cfg.intervals.iter() {
+            let Some(interval) = interval_cfg.name.as_ref().copied() else {
+                for_all_intervals.replace(interval_cfg);
+                continue;
+            };
+
+            all_intervals.push(interval);
+
+            self.apply_interval(pair, interval, interval_cfg)?;
+        }
+
+        if let Some(for_all_cfg) = for_all_intervals {
+            for interval in all_intervals {
+                self.apply_interval(pair, interval, for_all_cfg)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn apply_interval(
+        &mut self,
+        pair: &str,
+        interval: Duration,
+        cfg: &Interval,
+    ) -> Result<()> {
+        for m in cfg.monitors.iter() {
+            self.register_monitor(pair, interval, m)?;
+        }
+        Ok(())
     }
 }
