@@ -13,6 +13,7 @@ use crate::{
 
 #[derive(Debug, Clone, Copy)]
 pub struct HoldArgs {
+    pub val_kind: ExtractKind,
     pub calc_kind: CalcKind,
     pub ma: usize,
     pub hold: usize,
@@ -22,17 +23,18 @@ impl FromStr for HoldArgs {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut val_kind_str = String::new();
         let mut calc_kind_str = String::new();
         let mut ma = 0usize;
         let mut hold = 0usize;
 
-        sscanf!(s, "hold:{calc_kind_str},{ma},{hold}").with_context(|_| {
-            ParseCtx {
+        sscanf!(s, "hold:{val_kind_str},{calc_kind_str},{ma},{hold}")
+            .with_context(|_| ParseCtx {
                 raw: s.to_owned(),
                 usage: Cow::from("parse hold args"),
-            }
-        })?;
+            })?;
 
+        let val_kind = val_kind_str.parse()?;
         let calc_kind = calc_kind_str.parse()?;
 
         if ma == 0 {
@@ -44,6 +46,7 @@ impl FromStr for HoldArgs {
         }
 
         Ok(Self {
+            val_kind,
             calc_kind,
             ma,
             hold,
@@ -52,23 +55,31 @@ impl FromStr for HoldArgs {
 }
 
 impl Args for HoldArgs {
-    type Type = (CalcKind, usize, usize);
+    type Type = (ExtractKind, CalcKind, usize, usize);
     type Target = Hold;
 
     fn new(args: Self::Type) -> Self {
         Self {
-            calc_kind: args.0,
-            ma: args.1,
-            hold: args.2,
+            val_kind: args.0,
+            calc_kind: args.1,
+            ma: args.2,
+            hold: args.3,
         }
     }
 
     fn key(&self) -> String {
-        format!("hold:{},{},{}", self.calc_kind.as_str(), self.ma, self.hold)
+        format!(
+            "hold:{},{},{},{}",
+            self.val_kind.as_str(),
+            self.calc_kind.as_str(),
+            self.ma,
+            self.hold
+        )
     }
 
     fn build(self) -> Result<Self::Target> {
-        let pos_args = PositionArgs::new((self.calc_kind, self.ma));
+        let pos_args =
+            PositionArgs::new((self.val_kind, self.calc_kind, self.ma));
         let pos_key = pos_args.key();
         let key = self.key();
 
