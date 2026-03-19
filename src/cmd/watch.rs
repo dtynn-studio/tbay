@@ -16,44 +16,89 @@ pub struct WatchArgs {
 
 impl WatchArgs {
     pub fn run(self) -> Result<()> {
+        info!(file=?self.config, "load config");
         let cfg = load_config(self.config)?;
         let mut hub = Hub::default();
 
-        info!("setup monitors");
+        info!("setup normal monitors");
 
-        let mut for_all = None;
-        let mut all_symbols = Vec::new();
-        for symbol in cfg.symbols.into_iter() {
-            if symbol.name == "*" {
-                for_all.replace(symbol);
+        let mut for_all_pairs = None;
+        let mut all_pairs = Vec::new();
+        for pair in cfg.pairs.into_iter() {
+            if pair.name == "*" {
+                for_all_pairs.replace(pair);
                 continue;
             }
 
-            all_symbols.push(symbol.name.clone());
+            all_pairs.push(pair.name.clone());
 
-            for interval in symbol.intervals {
+            let mut for_all_intervals = None;
+            let mut all_intervals = Vec::new();
+
+            for interval in pair.intervals {
+                let Some(interval_key) = interval.name.as_ref().copied() else {
+                    for_all_intervals.replace(interval);
+                    continue;
+                };
+
+                all_intervals.push(interval_key);
+
                 for monitor in interval.monitors {
-                    hub.register_monitor(
-                        &symbol.name,
-                        interval.name,
-                        &monitor,
-                    )?;
+                    hub.register_monitor(&pair.name, interval_key, &monitor)?;
+                }
+            }
+
+            if let Some(for_all_intervals) = for_all_intervals {
+                for all_interval_key in all_intervals.iter() {
+                    for monitor in for_all_intervals.monitors.iter() {
+                        hub.register_monitor(
+                            &pair.name,
+                            *all_interval_key,
+                            monitor,
+                        )?;
+                    }
                 }
             }
         }
 
-        info!("setup * monitors");
-        if let Some(for_all) = for_all {
-            for interval in for_all.intervals {
+        if let Some(for_all_pairs) = for_all_pairs {
+            info!("setup * monitors");
+
+            let mut for_all_intervals = None;
+            let mut all_intervals = Vec::new();
+
+            for interval in for_all_pairs.intervals {
+                let Some(interval_key) = interval.name.as_ref().copied() else {
+                    for_all_intervals.replace(interval);
+                    continue;
+                };
+
+                all_intervals.push(interval_key);
+
                 for monitor in interval.monitors {
-                    for sym in all_symbols.iter() {
-                        hub.register_monitor(sym, interval.name, &monitor)?;
+                    for sym in all_pairs.iter() {
+                        hub.register_monitor(sym, interval_key, &monitor)?;
+                    }
+                }
+            }
+
+            if let Some(for_all_intervals) = for_all_intervals {
+                for sym in all_pairs.iter() {
+                    for all_interval_key in all_intervals.iter() {
+                        for monitor in for_all_intervals.monitors.iter() {
+                            hub.register_monitor(
+                                sym,
+                                *all_interval_key,
+                                monitor,
+                            )?;
+                        }
                     }
                 }
             }
         }
 
         if self.dry {
+            info!("dry run, stopped");
             return Ok(());
         }
 

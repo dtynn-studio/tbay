@@ -6,19 +6,22 @@ use crate::prelude::*;
 
 #[derive(Deserialize)]
 pub struct Config {
-    pub symbols: Vec<Symbol>,
+    pub pairs: Vec<Pair>,
 }
 
 #[derive(Deserialize)]
-pub struct Symbol {
+pub struct Pair {
     pub name: String,
+    #[serde(default)]
     pub intervals: Vec<Interval>,
 }
 
 #[derive(Deserialize)]
 pub struct Interval {
     #[serde(with = "humantime_serde")]
-    pub name: Duration,
+    #[serde(default)]
+    pub name: Option<Duration>,
+    #[serde(default)]
     pub monitors: Vec<String>,
 }
 
