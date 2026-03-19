@@ -1,7 +1,5 @@
 #![allow(clippy::result_large_err)]
 
-use tracing::debug;
-
 use std::{
     sync::{
         Arc,
@@ -17,27 +15,26 @@ use binance::{
     model::{ContinuousKlineEvent, KlineEvent},
 };
 use crossbeam_channel::bounded;
-use time::OffsetDateTime;
+use tracing::debug;
 
 use crate::{
     event::{DataSource, Event, EventChanTx, K, SubscribeStopper, Target},
     prelude::*,
+    util::time::local_from_unix_timestamp_millis_truncated,
 };
 
 fn kline_event_to_k(event: KlineEvent) -> Result<K> {
     let kraw =
         KRaw {
-            time_begin: OffsetDateTime::from_unix_timestamp(
-                event.kline.open_time / 1000,
-            )
-            .context(DatetimeCtx {
-                field: "time_begin",
-            })?,
+            time_begin: local_from_unix_timestamp_millis_truncated(
+                "time_begin",
+                event.kline.open_time,
+            )?,
 
-            time_end: OffsetDateTime::from_unix_timestamp(
-                event.kline.close_time / 1000,
-            )
-            .context(DatetimeCtx { field: "time_end" })?,
+            time_end: local_from_unix_timestamp_millis_truncated(
+                "time_end",
+                event.kline.close_time,
+            )?,
 
             price_open: Decimal::from_str_radix(&event.kline.open, 10)
                 .context(DecimalCtx {
@@ -67,6 +64,7 @@ fn kline_event_to_k(event: KlineEvent) -> Result<K> {
     Ok(K {
         symbol: event.kline.symbol.to_lowercase(),
         interval: event.kline.interval,
+        source: "kline",
         raw: kraw,
     })
 }
@@ -74,17 +72,15 @@ fn kline_event_to_k(event: KlineEvent) -> Result<K> {
 fn continuous_kline_event_to_k(event: ContinuousKlineEvent) -> Result<K> {
     let kraw =
         KRaw {
-            time_begin: OffsetDateTime::from_unix_timestamp(
-                event.kline.start_time / 1000,
-            )
-            .context(DatetimeCtx {
-                field: "time_begin",
-            })?,
+            time_begin: local_from_unix_timestamp_millis_truncated(
+                "time_begin",
+                event.kline.start_time,
+            )?,
 
-            time_end: OffsetDateTime::from_unix_timestamp(
-                event.kline.end_time / 1000,
-            )
-            .context(DatetimeCtx { field: "time_end" })?,
+            time_end: local_from_unix_timestamp_millis_truncated(
+                "time_end",
+                event.kline.end_time,
+            )?,
 
             price_open: Decimal::from_str_radix(&event.kline.open, 10)
                 .context(DecimalCtx {
@@ -114,6 +110,7 @@ fn continuous_kline_event_to_k(event: ContinuousKlineEvent) -> Result<K> {
     Ok(K {
         symbol: event.pair.to_lowercase(),
         interval: event.kline.interval,
+        source: "continuous_kline",
         raw: kraw,
     })
 }

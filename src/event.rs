@@ -8,6 +8,7 @@ pub mod binance;
 pub struct K {
     pub symbol: String,
     pub interval: String,
+    pub source: &'static str,
     pub raw: KRaw,
 }
 
