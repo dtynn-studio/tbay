@@ -143,6 +143,15 @@ pub struct KCtx {
     vals: HashMap<String, Box<dyn Any>>,
 }
 
+impl From<KRaw> for KCtx {
+    fn from(value: KRaw) -> Self {
+        KCtx {
+            info: value.into(),
+            vals: Default::default(),
+        }
+    }
+}
+
 impl KCtx {
     pub fn get_val<T: 'static>(&self, key: &str) -> Option<&T> {
         self.vals.get(key).and_then(|o| o.downcast_ref())

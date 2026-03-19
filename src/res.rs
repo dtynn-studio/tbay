@@ -45,6 +45,10 @@ pub enum Error {
     Signal {
         source: ctrlc::Error,
     },
+
+    ParseDuration {
+        source: humantime::DurationError,
+    },
 }
 
 impl From<binance::errors::Error> for Error {

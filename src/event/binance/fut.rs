@@ -15,6 +15,7 @@ use binance::{
     model::{ContinuousKlineEvent, KlineEvent},
 };
 use crossbeam_channel::bounded;
+use humantime::parse_duration;
 use tracing::debug;
 
 use crate::{
@@ -63,8 +64,9 @@ fn kline_event_to_k(event: KlineEvent) -> Result<K> {
 
     Ok(K {
         symbol: event.kline.symbol.to_lowercase(),
-        interval: event.kline.interval,
-        source: "kline",
+        interval: parse_duration(&event.kline.interval)
+            .context(ParseDurationCtx)?,
+        source: "k",
         raw: kraw,
     })
 }
@@ -109,8 +111,9 @@ fn continuous_kline_event_to_k(event: ContinuousKlineEvent) -> Result<K> {
 
     Ok(K {
         symbol: event.pair.to_lowercase(),
-        interval: event.kline.interval,
-        source: "continuous_kline",
+        interval: parse_duration(&event.kline.interval)
+            .context(ParseDurationCtx)?,
+        source: "ck",
         raw: kraw,
     })
 }

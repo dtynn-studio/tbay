@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crossbeam_channel::Sender;
 
 use crate::prelude::{KRaw, Result};
@@ -7,7 +9,7 @@ pub mod binance;
 #[derive(Debug)]
 pub struct K {
     pub symbol: String,
-    pub interval: String,
+    pub interval: Duration,
     pub source: &'static str,
     pub raw: KRaw,
 }

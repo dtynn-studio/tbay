@@ -8,6 +8,7 @@ binance = "0.21.2"
 clap = { version = "4.6.0", features = ["derive"] }
 crossbeam-channel = "0.5.15"
 ctrlc = "3.5.2"
+humantime = "2.3.0"
 humantime-serde = "1.1.1"
 rust_decimal = { version = "1.40.0", features = ["macros", "maths"] }
 scanf = "2.0.0"

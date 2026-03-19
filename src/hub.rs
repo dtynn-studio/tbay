@@ -8,6 +8,7 @@ use tracing::{debug, warn_span};
 
 use crate::{
     config::{Config, Interval, Pair},
+    event::K,
     indicator, monitor,
     prelude::*,
 };
@@ -57,6 +58,68 @@ impl Default for Hub {
 }
 
 impl Hub {
+    pub fn calc(&self, k: K) -> Option<Vec<String>> {
+        let indicators = self
+            .items
+            .iter()
+            .find(|item| item.symbol == k.symbol)
+            .and_then(|item| item.indicators.get(&k.interval))?;
+
+        let mut kctx = KCtx::from(k.raw);
+
+        for indicator in indicators {
+            if let Some(val) = indicator.calc(&kctx) {
+                kctx.set_val(indicator.key(), val);
+            }
+        }
+
+        let monitors = self
+            .items
+            .iter()
+            .find(|item| item.symbol == k.symbol)
+            .and_then(|item| item.monitors.get(&k.interval))?;
+
+        let mut events = vec![];
+        for monitor in monitors {
+            if let Some(msg) = monitor.calc(&kctx) {
+                events.push(msg);
+            }
+        }
+
+        Some(events)
+    }
+
+    pub fn update(&mut self, k: K) -> Option<Vec<String>> {
+        let indicators = self
+            .items
+            .iter_mut()
+            .find(|item| item.symbol == k.symbol)
+            .and_then(|item| item.indicators.get_mut(&k.interval))?;
+
+        let mut kctx = KCtx::from(k.raw);
+
+        for indicator in indicators {
+            if let Some(val) = indicator.update(&kctx) {
+                kctx.set_val(indicator.key(), val);
+            }
+        }
+
+        let monitors = self
+            .items
+            .iter_mut()
+            .find(|item| item.symbol == k.symbol)
+            .and_then(|item| item.monitors.get_mut(&k.interval))?;
+
+        let mut events = vec![];
+        for monitor in monitors {
+            if let Some(msg) = monitor.update(&kctx) {
+                events.push(msg);
+            }
+        }
+
+        Some(events)
+    }
+
     fn has_indicator(
         &self,
         symbol: &str,
