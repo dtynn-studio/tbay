@@ -104,7 +104,8 @@ impl Indicator for Position {
 
 #[derive(Debug, Clone, Copy)]
 pub struct PositionArgs {
-    kind: CalcKind,
+    val_kind: ExtractKind,
+    calc_kind: CalcKind,
     base: usize,
 }
 
@@ -113,50 +114,58 @@ impl FromStr for PositionArgs {
 
     // key format: position:ema,20
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut kind_str = String::new();
+        let mut val_kind_str = String::new();
+        let mut calc_kind_str = String::new();
         let mut base = 0usize;
 
-        scanf::sscanf!(s, "position:{kind_str},{base}").with_context(|_| {
-            ParseCtx {
+        scanf::sscanf!(s, "position:{val_kind_str},{calc_kind_str},{base}")
+            .with_context(|_| ParseCtx {
                 raw: s.to_owned(),
                 usage: Cow::from("parse Position"),
-            }
-        })?;
+            })?;
 
-        let kind = kind_str.parse()?;
+        let val_kind = val_kind_str.parse()?;
+        let calc_kind = calc_kind_str.parse()?;
 
         if base == 0 {
             return Err(base.unexpected("position base period"));
         }
 
-        Ok(Self { kind, base })
+        Ok(Self {
+            val_kind,
+            calc_kind,
+            base,
+        })
     }
 }
 
 impl Args for PositionArgs {
-    type Type = (CalcKind, usize);
+    type Type = (ExtractKind, CalcKind, usize);
     type Target = Position;
 
     fn new(args: Self::Type) -> Self {
         Self {
-            kind: args.0,
-            base: args.1,
+            val_kind: args.0,
+            calc_kind: args.1,
+            base: args.2,
         }
     }
 
     fn key(&self) -> String {
-        format!("position:{},{}", self.kind.as_str(), self.base)
+        format!(
+            "position:{},{},{}",
+            self.val_kind.as_str(),
+            self.calc_kind.as_str(),
+            self.base
+        )
     }
 
     fn build(self) -> Result<Self::Target> {
         let key = self.key();
 
-        let base_key = BaseExtractorArgs::new((
-            ExtractKind::PriceClose,
-            self.kind,
-            self.base,
-        ))
-        .key();
+        let base_key =
+            BaseExtractorArgs::new((self.val_kind, self.calc_kind, self.base))
+                .key();
 
         Ok(Position::new(&key, &base_key))
     }
