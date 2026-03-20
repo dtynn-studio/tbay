@@ -4,7 +4,7 @@ use std::{
 };
 
 use humantime::Duration;
-use tracing::{debug, trace, warn_span};
+use tracing::{debug, warn_span};
 
 use crate::{
     config::{Config, Interval, Pair},
@@ -108,7 +108,6 @@ impl Hub {
         for indicator in indicators {
             if let Some(val) = indicator.apply(&kctx) {
                 let key = indicator.key();
-                trace!(key, "indicator val update");
                 kctx.set_val(key, val);
             }
         }

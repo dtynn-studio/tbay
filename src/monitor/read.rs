@@ -115,16 +115,21 @@ impl Read {
             .zip(self.args.periods.iter())
             .map(|(key, p)| match kctx.get_val::<Decimal>(key) {
                 Some(v) => {
-                    format!("{}{p}:{}", self.args.calc_kind.as_str(), v)
+                    format!("{p}:{}", v.round_dp(2))
                 }
 
                 None => {
-                    format!("{}{p}:n/a", self.args.calc_kind.as_str())
+                    format!("{p}:n/a")
                 }
             })
             .collect::<Vec<_>>();
 
-        format!("read:{}", vals.join(","))
+        format!(
+            "read:{},{}:{}",
+            self.args.val_kind.as_str(),
+            self.args.calc_kind.as_str(),
+            vals.join("|")
+        )
     }
 }
 

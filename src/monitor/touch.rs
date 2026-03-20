@@ -97,11 +97,11 @@ impl Touch {
         };
 
         format!(
-            "{}-{}:{}{}",
+            "{}-{}{}:{}",
             self.args.val_kind.as_str(),
             self.args.calc_kind.as_str(),
+            self.args.ma,
             dir_str,
-            self.args.ma
         )
     }
 }

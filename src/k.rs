@@ -157,7 +157,7 @@ impl KCtx {
         self.vals.get(key).and_then(|o| o.downcast_ref())
     }
 
-    pub fn set_val<T: 'static>(&mut self, key: &str, val: T) -> bool {
-        self.vals.insert(key.to_owned(), Box::new(val)).is_some()
+    pub fn set_val(&mut self, key: &str, val: Box<dyn Any>) -> bool {
+        self.vals.insert(key.to_owned(), val).is_some()
     }
 }

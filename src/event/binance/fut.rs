@@ -128,6 +128,7 @@ fn kline_summary_to_k(
     pair: &str,
     interval: Duration,
     summary: KlineSummary,
+    finalized: bool,
 ) -> Result<K> {
     let kraw = KRaw {
         time_begin: local_from_unix_timestamp_millis_truncated(
@@ -165,7 +166,7 @@ fn kline_summary_to_k(
             .context(DecimalCtx { field: "quantity" })?,
 
         trades: summary.number_of_trades,
-        finalized: true,
+        finalized,
     };
 
     Ok(K {
@@ -292,6 +293,9 @@ impl FutClient {
         let mut first_req = true;
         let d = std::time::Duration::from(target.interval);
         let end_time = OffsetDateTime::now_local()?;
+        let next_period_start_millis =
+            (truncate("next period start", end_time, d)? + d).unix_timestamp()
+                * MILLI_SEC;
         let start_time = end_time - (count as u32) * d;
 
         loop {
@@ -353,7 +357,13 @@ impl FutClient {
             let converted = klines
                 .into_iter()
                 .map(|ks| {
-                    kline_summary_to_k(&target.symbol, target.interval, ks)
+                    let finalized = ks.close_time < next_period_start_millis;
+                    kline_summary_to_k(
+                        &target.symbol,
+                        target.interval,
+                        ks,
+                        finalized,
+                    )
                 })
                 .collect::<Result<Vec<_>>>()
                 .expect("convert to kinfos");
