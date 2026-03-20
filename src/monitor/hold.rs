@@ -9,6 +9,7 @@ use crate::{
         position::{PositionArgs, PositionValue},
     },
     prelude::*,
+    util::time::format_hhmm,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -102,9 +103,10 @@ pub struct Hold {
 }
 
 impl Hold {
-    fn event_msg(&self) -> String {
+    fn event_msg(&self, t: &OffsetDateTime) -> String {
         format!(
-            "{}:{}{}@{}",
+            "{}:{}:{}{}@{}",
+            format_hhmm(t),
             ExtractKind::PriceClose.as_str(),
             self.args.calc_kind.as_str(),
             self.args.ma,
@@ -118,7 +120,7 @@ impl Hold {
             return None;
         }
 
-        Some(self.event_msg())
+        Some(self.event_msg(&kctx.info.raw.time_begin))
     }
 
     fn update(&mut self, kctx: &KCtx) -> Option<String> {

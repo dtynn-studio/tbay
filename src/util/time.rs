@@ -34,3 +34,7 @@ pub fn truncate(
         .with_context(|_| DatetimeCtx { field })
         .map(|t| t.to_offset(*LOCAL_OFFSET))
 }
+
+pub fn format_hhmm(t: &OffsetDateTime) -> String {
+    format!("{:02}:{:02}", t.hour(), t.minute())
+}

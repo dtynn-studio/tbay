@@ -1,9 +1,12 @@
 use std::str::FromStr;
 
+use time::OffsetDateTime;
+
 use crate::{
     impl_builder,
     indicator::cross::{CrossValue, MaCrossArgs},
     prelude::{Args, Builder, Decimal, Error, KCtx, Monitor, Result, State},
+    util::time::format_hhmm,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -61,13 +64,17 @@ impl Cross {
     ) -> Option<(&'c CrossValue<Decimal>, String)> {
         let val = kctx.get_val::<CrossValue<Decimal>>(&self.cross_key)?;
         let direction = val.cross?;
-        Some((val, self.cross_event_msg(direction)))
+        Some((
+            val,
+            self.cross_event_msg(&kctx.info.raw.time_begin, direction),
+        ))
     }
 
-    fn cross_event_msg(&self, direction: bool) -> String {
+    fn cross_event_msg(&self, t: &OffsetDateTime, direction: bool) -> String {
         let dir_flag = if direction { "↗" } else { "↘" };
         format!(
-            "{}-{}:{}{dir_flag}{}",
+            "{}:{}-{}:{}{dir_flag}{}",
+            format_hhmm(t),
             self.args.0.val_kind.as_str(),
             self.args.0.calc_kind.as_str(),
             self.args.0.fast,

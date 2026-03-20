@@ -6,6 +6,7 @@ use crate::{
     impl_builder,
     indicator::base::{BaseExtractorArgs, CalcKind, ExtractKind},
     prelude::*,
+    util::time::format_hhmm,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -89,7 +90,7 @@ pub struct Touch {
 }
 
 impl Touch {
-    fn event_msg(&self, dir: Option<bool>) -> String {
+    fn event_msg(&self, t: &OffsetDateTime, dir: Option<bool>) -> String {
         let dir_str = match dir {
             Some(true) => "↑",
             Some(false) => "↓",
@@ -97,7 +98,8 @@ impl Touch {
         };
 
         format!(
-            "{}-{}{}:{}",
+            "{}:{}-{}{}:{}",
+            format_hhmm(t),
             self.args.val_kind.as_str(),
             self.args.calc_kind.as_str(),
             self.args.ma,
@@ -122,7 +124,7 @@ impl Touch {
 
         let dir = kctx.info.direction;
 
-        Some(self.event_msg(dir))
+        Some(self.event_msg(&kctx.info.raw.time_begin, dir))
     }
 
     fn update(&mut self, kctx: &KCtx) -> Option<String> {
@@ -144,7 +146,7 @@ impl Touch {
 
         let dir = kctx.info.direction;
 
-        Some(self.event_msg(dir))
+        Some(self.event_msg(&kctx.info.raw.time_begin, dir))
     }
 }
 
