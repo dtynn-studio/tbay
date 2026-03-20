@@ -2,6 +2,7 @@ use crate::prelude::*;
 
 pub mod cross;
 pub mod hold;
+pub mod read;
 pub mod touch;
 
 #[derive(Debug, Default)]

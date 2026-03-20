@@ -4,7 +4,7 @@ use std::{
 };
 
 use humantime::Duration;
-use tracing::{debug, warn_span};
+use tracing::{debug, trace, warn_span};
 
 use crate::{
     config::{Config, Interval, Pair},
@@ -57,6 +57,7 @@ impl Default for Hub {
         hub.register_monitor_builder(monitor::cross::CrossBuilder);
         hub.register_monitor_builder(monitor::touch::TouchBuilder);
         hub.register_monitor_builder(monitor::hold::HoldBuilder);
+        hub.register_monitor_builder(monitor::read::ReadBuilder);
 
         hub
     }
@@ -106,7 +107,9 @@ impl Hub {
 
         for indicator in indicators {
             if let Some(val) = indicator.apply(&kctx) {
-                kctx.set_val(indicator.key(), val);
+                let key = indicator.key();
+                trace!(key, "indicator val update");
+                kctx.set_val(key, val);
             }
         }
 
