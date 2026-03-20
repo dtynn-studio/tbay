@@ -87,12 +87,15 @@ impl Hub {
         targets
     }
 
-    pub fn calc(&self, k: K) -> Option<Vec<String>> {
-        let indicators = self
+    pub fn apply(&mut self, k: K) {
+        let Some(indicators) = self
             .items
             .iter()
             .find(|item| item.symbol == k.symbol)
-            .and_then(|item| item.indicators.get(&k.interval))?;
+            .and_then(|item| item.indicators.get(&k.interval))
+        else {
+            return;
+        };
 
         let mut kctx = KCtx::from(k.raw);
 
@@ -102,51 +105,18 @@ impl Hub {
             }
         }
 
-        let monitors = self
-            .items
-            .iter()
-            .find(|item| item.symbol == k.symbol)
-            .and_then(|item| item.monitors.get(&k.interval))?;
-
-        let mut events = vec![];
-        for monitor in monitors {
-            if let Some(msg) = monitor.calc(&kctx) {
-                events.push(msg);
-            }
-        }
-
-        Some(events)
-    }
-
-    pub fn update(&mut self, k: K) -> Option<Vec<String>> {
-        let indicators = self
+        let Some(monitors) = self
             .items
             .iter_mut()
             .find(|item| item.symbol == k.symbol)
-            .and_then(|item| item.indicators.get_mut(&k.interval))?;
+            .and_then(|item| item.monitors.get_mut(&k.interval))
+        else {
+            return;
+        };
 
-        let mut kctx = KCtx::from(k.raw);
-
-        for indicator in indicators {
-            if let Some(val) = indicator.update(&kctx) {
-                kctx.set_val(indicator.key(), val);
-            }
-        }
-
-        let monitors = self
-            .items
-            .iter_mut()
-            .find(|item| item.symbol == k.symbol)
-            .and_then(|item| item.monitors.get_mut(&k.interval))?;
-
-        let mut events = vec![];
         for monitor in monitors {
-            if let Some(msg) = monitor.update(&kctx) {
-                events.push(msg);
-            }
+            monitor.apply(&kctx);
         }
-
-        Some(events)
     }
 
     fn has_indicator(

@@ -4,11 +4,19 @@ pub mod cross;
 pub mod hold;
 pub mod touch;
 
+#[derive(Debug, Default)]
+pub struct State {
+    pub temp: Option<String>,
+    pub perm: Option<String>,
+}
+
 pub trait Monitor {
     fn key(&self) -> &str;
     fn deps(&self) -> Vec<&str>;
-    fn calc(&self, kctx: &KCtx) -> Option<String>;
-    fn update(&mut self, kctx: &KCtx) -> Option<String>;
+    // fn calc(&self, kctx: &KCtx) -> Option<String>;
+    // fn update(&mut self, kctx: &KCtx) -> Option<String>;
+    fn apply(&mut self, kctx: &KCtx);
+    fn state(&self) -> &State;
     fn terminated(&self) -> bool;
 }
 

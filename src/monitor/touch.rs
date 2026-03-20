@@ -73,6 +73,7 @@ impl Args for TouchArgs {
             key,
             ma_key,
             prev_touched: false,
+            state: Default::default(),
         })
     }
 }
@@ -84,6 +85,7 @@ pub struct Touch {
     key: String,
     ma_key: String,
     prev_touched: bool,
+    state: State,
 }
 
 impl Touch {
@@ -104,15 +106,7 @@ impl Touch {
     }
 }
 
-impl Monitor for Touch {
-    fn key(&self) -> &str {
-        &self.key
-    }
-
-    fn deps(&self) -> Vec<&str> {
-        vec![&self.ma_key]
-    }
-
+impl Touch {
     fn calc(&self, kctx: &KCtx) -> Option<String> {
         if self.prev_touched {
             return None;
@@ -151,6 +145,29 @@ impl Monitor for Touch {
         let dir = kctx.info.direction;
 
         Some(self.event_msg(dir))
+    }
+}
+
+impl Monitor for Touch {
+    fn key(&self) -> &str {
+        &self.key
+    }
+
+    fn deps(&self) -> Vec<&str> {
+        vec![&self.ma_key]
+    }
+
+    fn apply(&mut self, kctx: &KCtx) {
+        if kctx.info.raw.finalized {
+            self.state.temp.take();
+            self.state.perm = self.update(kctx);
+        } else {
+            self.state.temp = self.calc(kctx);
+        }
+    }
+
+    fn state(&self) -> &State {
+        &self.state
     }
 
     fn terminated(&self) -> bool {

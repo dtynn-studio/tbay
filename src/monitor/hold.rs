@@ -87,14 +87,18 @@ impl Args for HoldArgs {
             args: self,
             key,
             pos_key,
+            state: Default::default(),
         })
     }
 }
+
+impl_builder!(HoldBuilder: HoldArgs => Hold);
 
 pub struct Hold {
     args: HoldArgs,
     key: String,
     pos_key: String,
+    state: State,
 }
 
 impl Hold {
@@ -106,16 +110,6 @@ impl Hold {
             self.args.ma,
             self.args.hold
         )
-    }
-}
-
-impl Monitor for Hold {
-    fn key(&self) -> &str {
-        &self.key
-    }
-
-    fn deps(&self) -> Vec<&str> {
-        vec![&self.pos_key]
     }
 
     fn calc(&self, kctx: &KCtx) -> Option<String> {
@@ -130,10 +124,31 @@ impl Monitor for Hold {
     fn update(&mut self, kctx: &KCtx) -> Option<String> {
         self.calc(kctx)
     }
+}
+
+impl Monitor for Hold {
+    fn key(&self) -> &str {
+        &self.key
+    }
+
+    fn deps(&self) -> Vec<&str> {
+        vec![&self.pos_key]
+    }
+
+    fn apply(&mut self, kctx: &KCtx) {
+        if kctx.info.raw.finalized {
+            self.state.temp.take();
+            self.state.perm = self.update(kctx);
+        } else {
+            self.state.temp = self.calc(kctx);
+        }
+    }
+
+    fn state(&self) -> &State {
+        &self.state
+    }
 
     fn terminated(&self) -> bool {
         false
     }
 }
-
-impl_builder!(HoldBuilder: HoldArgs => Hold);

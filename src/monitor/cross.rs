@@ -3,7 +3,7 @@ use std::str::FromStr;
 use crate::{
     impl_builder,
     indicator::cross::{CrossValue, MaCrossArgs},
-    prelude::{Args, Builder, Decimal, Error, KCtx, Monitor, Result},
+    prelude::{Args, Builder, Decimal, Error, KCtx, Monitor, Result, State},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -38,9 +38,12 @@ impl Args for CrossArgs {
             key,
             cross_key,
             current: None,
+            state: Default::default(),
         })
     }
 }
+
+impl_builder!(CrossBuilder: CrossArgs => Cross);
 
 // cross & stay
 pub struct Cross {
@@ -48,6 +51,7 @@ pub struct Cross {
     key: String,
     cross_key: String,
     current: Option<CrossValue<Decimal>>,
+    state: State,
 }
 
 impl Cross {
@@ -70,18 +74,6 @@ impl Cross {
             self.args.0.slow
         )
     }
-}
-
-impl_builder!(CrossBuilder: CrossArgs => Cross);
-
-impl Monitor for Cross {
-    fn key(&self) -> &str {
-        &self.key
-    }
-
-    fn deps(&self) -> Vec<&str> {
-        vec![&self.cross_key]
-    }
 
     fn calc(&self, kctx: &KCtx) -> Option<String> {
         self.cross_event(kctx).map(|(_, msg)| msg)
@@ -92,6 +84,29 @@ impl Monitor for Cross {
         self.current.replace(val.clone());
 
         Some(msg)
+    }
+}
+
+impl Monitor for Cross {
+    fn key(&self) -> &str {
+        &self.key
+    }
+
+    fn deps(&self) -> Vec<&str> {
+        vec![&self.cross_key]
+    }
+
+    fn apply(&mut self, kctx: &KCtx) {
+        if kctx.info.raw.finalized {
+            self.state.temp.take();
+            self.state.perm = self.update(kctx);
+        } else {
+            self.state.temp = self.calc(kctx);
+        }
+    }
+
+    fn state(&self) -> &State {
+        &self.state
     }
 
     fn terminated(&self) -> bool {
