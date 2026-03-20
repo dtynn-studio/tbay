@@ -18,12 +18,14 @@ use binance::{
 };
 use crossbeam_channel::bounded;
 use humantime::{Duration, parse_duration};
-use tracing::debug;
+use tracing::{debug, warn_span};
 
 use crate::{
     event::{DataSource, Event, EventChanTx, K, SubscribeStopper, Target},
     prelude::*,
-    util::time::{MILLI_SEC, local_from_unix_timestamp_millis_truncated},
+    util::time::{
+        MILLI_SEC, local_from_unix_timestamp_millis_truncated, truncate,
+    },
 };
 
 fn kline_event_to_k(event: KlineEvent) -> Result<K> {
@@ -285,6 +287,7 @@ impl FutClient {
         target: &Target,
         count: usize,
     ) -> Result<Vec<K>> {
+        let _span = warn_span!("historical ks", sym = target.symbol, int = %target.interval).entered();
         let mut history_ks: Vec<K> = Vec::new();
         let mut first_req = true;
         let d = std::time::Duration::from(target.interval);
@@ -294,12 +297,14 @@ impl FutClient {
         loop {
             let request_start = history_ks
                 .last()
-                .map(|k| k.raw.time_begin)
+                .map(|k| k.raw.time_begin + d)
                 .unwrap_or(start_time);
 
             if request_start >= end_time {
                 break;
             }
+
+            debug!(start = %request_start, end = %end_time, "request");
 
             if first_req {
                 first_req = false
@@ -324,6 +329,26 @@ impl FutClient {
             if kcount == 0 {
                 break;
             }
+
+            let period_start = local_from_unix_timestamp_millis_truncated(
+                "period_start",
+                klines[0].open_time,
+            )
+            .and_then(|t| truncate("period_start", t, d))
+            .unwrap();
+            let period_end = local_from_unix_timestamp_millis_truncated(
+                "period_end",
+                klines[kcount - 1].open_time,
+            )
+            .and_then(|t| truncate("period_end", t, d))
+            .unwrap();
+
+            debug!(
+                start = ?period_start,
+                end = ?period_end,
+                n = kcount,
+                "loaded"
+            );
 
             let converted = klines
                 .into_iter()

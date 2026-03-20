@@ -25,6 +25,13 @@ pub trait Indicator {
     fn deps(&self) -> Vec<&str>;
     fn calc(&self, next: &KCtx) -> Option<Self::Output>;
     fn update(&mut self, next: &KCtx) -> Option<Self::Output>;
+    fn apply(&mut self, next: &KCtx) -> Option<Self::Output> {
+        if next.info.raw.finalized {
+            self.update(next)
+        } else {
+            self.calc(next)
+        }
+    }
 }
 
 pub trait IndicatorExt: Indicator + Sized + 'static {

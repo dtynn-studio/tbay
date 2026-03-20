@@ -24,6 +24,11 @@ pub struct HubItem {
     pub monitors: BTreeMap<Duration, Vec<HubMonitor>>,
 }
 
+pub struct HubState<'s> {
+    pub symbol: String,
+    pub states: BTreeMap<Duration, Vec<&'s State>>,
+}
+
 pub struct Hub {
     indicator_builders: HashMap<TypeId, HubIndicatorBuilder>,
     monitor_builders: HashMap<TypeId, HubMonitorBuilder>,
@@ -87,12 +92,12 @@ impl Hub {
         targets
     }
 
-    pub fn apply(&mut self, k: K) {
+    pub fn apply_k(&mut self, k: K) {
         let Some(indicators) = self
             .items
-            .iter()
+            .iter_mut()
             .find(|item| item.symbol == k.symbol)
-            .and_then(|item| item.indicators.get(&k.interval))
+            .and_then(|item| item.indicators.get_mut(&k.interval))
         else {
             return;
         };
@@ -100,7 +105,7 @@ impl Hub {
         let mut kctx = KCtx::from(k.raw);
 
         for indicator in indicators {
-            if let Some(val) = indicator.calc(&kctx) {
+            if let Some(val) = indicator.apply(&kctx) {
                 kctx.set_val(indicator.key(), val);
             }
         }
@@ -117,6 +122,25 @@ impl Hub {
         for monitor in monitors {
             monitor.apply(&kctx);
         }
+    }
+
+    pub fn states(&self) -> Vec<HubState<'_>> {
+        let mut states = Vec::new();
+        for item in self.items.iter() {
+            let mut hstate = HubState {
+                symbol: item.symbol.clone(),
+                states: BTreeMap::new(),
+            };
+
+            for (d, ms) in item.monitors.iter() {
+                let hs = ms.iter().map(|m| m.state()).collect();
+                hstate.states.insert(*d, hs);
+            }
+
+            states.push(hstate);
+        }
+
+        states
     }
 
     fn has_indicator(

@@ -1,9 +1,11 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use tracing::info;
+use tracing::{error, info};
 
-use crate::{config::load_config, hub::Hub, prelude::*};
+use crate::{
+    config::load_config, event::binance::fut::FutClient, hub::Hub, prelude::*,
+};
 
 #[derive(Parser)]
 pub struct WatchArgs {
@@ -32,6 +34,34 @@ impl WatchArgs {
         if self.dry {
             info!("dry run, stopped");
             return Ok(());
+        }
+
+        let client = FutClient::new(false, false)?;
+        for target in targets {
+            match client.load_history(&target, self.history) {
+                Ok(ks) => {
+                    for k in ks {
+                        hub.apply_k(k);
+                    }
+                }
+                Err(e) => {
+                    error!(t = ?target, "load history: {e:?}");
+                }
+            }
+        }
+
+        info!("history ks loaded");
+
+        let states = hub.states();
+
+        for hs in states {
+            println!("Hub State for {}", hs.symbol);
+            for (d, sts) in hs.states {
+                println!("\t{d}");
+                for st in sts {
+                    println!("\t\ttemp: {:?}, perm: {:?}", st.temp, st.perm);
+                }
+            }
         }
 
         Ok(())
