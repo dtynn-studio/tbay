@@ -8,19 +8,26 @@ use std::{
     thread::JoinHandle,
 };
 
-use humantime::Duration;
+use crossbeam_channel::bounded;
+use futures_util::SinkExt;
+use humantime::{parse_duration, Duration};
 use tracing::{debug, warn_span};
 
 use super::client::BinanceHttpClient;
-use super::convert::KlineSummaries;
+use super::convert::{ContinuousKlineEvent, KlineEvent, KlineSummaries};
 use super::proxy::ProxyConfig;
+use super::ws::{build_subscribe_msg, run_event_loop, WsConnection};
 use crate::{
-    event::{DataSource, EventChanTx, K, SubscribeStopper, Target},
+    event::{DataSource, Event, EventChanTx, K, SubscribeStopper, Target},
     prelude::*,
     util::time::{
         MILLI_SEC, local_from_unix_timestamp_millis_truncated, truncate,
     },
 };
+
+// =============================================================================
+// 数据转换
+// =============================================================================
 
 fn kline_summary_to_k(
     pair: &str,
@@ -75,8 +82,102 @@ fn kline_summary_to_k(
     })
 }
 
+fn kline_event_to_k(event: KlineEvent) -> Result<K> {
+    let kraw = KRaw {
+        time_begin: local_from_unix_timestamp_millis_truncated(
+            "time_begin",
+            event.kline.open_time,
+        )?,
+
+        time_end: local_from_unix_timestamp_millis_truncated(
+            "time_end",
+            event.kline.close_time,
+        )?,
+
+        price_open: Decimal::from_str_radix(&event.kline.open, 10)
+            .context(DecimalCtx {
+                field: "price_open",
+            })?,
+
+        price_close: Decimal::from_str_radix(&event.kline.close, 10)
+            .context(DecimalCtx {
+                field: "price_close",
+            })?,
+
+        price_high: Decimal::from_str_radix(&event.kline.high, 10)
+            .context(DecimalCtx {
+                field: "price_high",
+            })?,
+
+        price_low: Decimal::from_str_radix(&event.kline.low, 10)
+            .context(DecimalCtx { field: "price_low" })?,
+
+        quantity: Decimal::from_str_radix(&event.kline.volume, 10)
+            .context(DecimalCtx { field: "quantity" })?,
+
+        trades: event.kline.number_of_trades,
+        finalized: event.kline.is_final_bar,
+    };
+
+    Ok(K {
+        symbol: event.kline.symbol.to_lowercase(),
+        interval: parse_duration(&event.kline.interval)
+            .context(ParseDurationCtx)?
+            .into(),
+        source: "k",
+        raw: kraw,
+    })
+}
+
+fn continuous_kline_event_to_k(event: ContinuousKlineEvent) -> Result<K> {
+    let kraw = KRaw {
+        time_begin: local_from_unix_timestamp_millis_truncated(
+            "time_begin",
+            event.kline.start_time,
+        )?,
+
+        time_end: local_from_unix_timestamp_millis_truncated(
+            "time_end",
+            event.kline.end_time,
+        )?,
+
+        price_open: Decimal::from_str_radix(&event.kline.open, 10)
+            .context(DecimalCtx {
+                field: "price_open",
+            })?,
+
+        price_close: Decimal::from_str_radix(&event.kline.close, 10)
+            .context(DecimalCtx {
+                field: "price_close",
+            })?,
+
+        price_high: Decimal::from_str_radix(&event.kline.high, 10)
+            .context(DecimalCtx {
+                field: "price_high",
+            })?,
+
+        price_low: Decimal::from_str_radix(&event.kline.low, 10)
+            .context(DecimalCtx { field: "price_low" })?,
+
+        quantity: Decimal::from_str_radix(&event.kline.volume, 10)
+            .context(DecimalCtx { field: "quantity" })?,
+
+        trades: event.kline.number_of_trades,
+        finalized: event.kline.is_final_bar,
+    };
+
+    Ok(K {
+        symbol: event.pair.to_lowercase(),
+        interval: parse_duration(&event.kline.interval)
+            .context(ParseDurationCtx)?
+            .into(),
+        source: "ck",
+        raw: kraw,
+    })
+}
+
 // =============================================================================
-// BinanceDataSource (WebSocket) - TODO: 实现
+// BinanceDataSource (WebSocket)
 // =============================================================================
 
 pub struct BinanceDataSource {
@@ -90,12 +191,82 @@ impl DataSource for BinanceDataSource {
     }
 
     #[allow(refining_impl_trait)]
-    fn start(self, _targets: Vec<Target>) -> Result<BinanceSubscriberStopper> {
-        // TODO: 使用 reqwest-websocket 实现 WebSocket 订阅
-        let _ = self;
-        let _ = _targets;
-        Err(Error::Msg {
-            reason: "BinanceDataSource WebSocket not yet implemented".into(),
+    fn start(self, targets: Vec<Target>) -> Result<BinanceSubscriberStopper> {
+        let (res_tx, res_rx) = bounded::<Result<()>>(1);
+        let streams = targets
+            .iter()
+            .map(|t| t.bn_futures_key())
+            .collect::<Vec<_>>();
+        let perpetual_streams = targets
+            .iter()
+            .map(|t| t.bn_futures_perpetual_key())
+            .collect::<Vec<_>>();
+        let all_streams = streams
+            .iter()
+            .chain(perpetual_streams.iter())
+            .cloned()
+            .collect::<Vec<_>>();
+
+        let event_tx = self.event_tx.clone();
+        let proxy = self.proxy.clone();
+
+        let handler = std::thread::spawn(move || {
+            let rt = tokio::runtime::Runtime::new().unwrap();
+
+            let connect_result = rt.block_on(async {
+                let url = "wss://fstream.binance.com/ws";
+                WsConnection::connect(&proxy, url).await
+            });
+
+            let (conn, mut ws) = match connect_result {
+                Ok((conn, ws)) => {
+                    _ = res_tx.send(Ok(()));
+                    (conn, ws)
+                }
+                Err(e) => {
+                    _ = res_tx.send(Err(e));
+                    return;
+                }
+            };
+
+            // 发送订阅消息
+            let subscribe_msg = build_subscribe_msg(&all_streams);
+            rt.block_on(async {
+                if let Err(e) = ws.send(reqwest_websocket::Message::Text(subscribe_msg.into())).await {
+                    tracing::warn!(?e, "subscribe failed");
+                }
+            });
+
+            // 运行事件循环
+            let event_tx_for_kline = event_tx.clone();
+            let event_tx_for_continuous = event_tx.clone();
+            rt.block_on(run_event_loop(
+                ws,
+                conn.running.clone(),
+                move |evt| {
+                    if let Ok(k) = kline_event_to_k(evt) {
+                        _ = event_tx_for_kline.send(Event::K(k));
+                    }
+                    Ok(())
+                },
+                move |evt| {
+                    if let Ok(k) = continuous_kline_event_to_k(evt) {
+                        _ = event_tx_for_continuous.send(Event::K(k));
+                    }
+                    Ok(())
+                },
+            ));
+
+            debug!("ws event loop ended");
+        });
+
+        res_rx.recv().map_err(|_| Error::Msg {
+            reason: "result channel broken".into(),
+        })??;
+
+        Ok(BinanceSubscriberStopper {
+            _handler: handler,
+            running: Arc::new(AtomicBool::new(true)),
         })
     }
 }
@@ -136,24 +307,24 @@ impl FutClient {
         Self::with_proxy(testnet, verbose, ProxyConfig::from_env().unwrap_or_default())
     }
 
-    pub fn with_proxy(testnet: bool, verbose: bool, proxy: ProxyConfig) -> Result<Self> {
+    pub fn with_proxy(
+        testnet: bool,
+        verbose: bool,
+        proxy: ProxyConfig,
+    ) -> Result<Self> {
         let client = BinanceHttpClient::new(proxy, testnet, verbose)?;
         Ok(Self { client })
     }
 
-    pub fn load_history(
-        &self,
-        target: &Target,
-        count: usize,
-    ) -> Result<Vec<K>> {
-        let _span = warn_span!("historical ks", sym = target.symbol, int = %target.interval).entered();
+    pub fn load_history(&self, target: &Target, count: usize) -> Result<Vec<K>> {
+        let _span =
+            warn_span!("historical ks", sym = target.symbol, int = %target.interval).entered();
         let mut history_ks: Vec<K> = Vec::new();
         let mut first_req = true;
         let d = std::time::Duration::from(target.interval);
         let end_time = OffsetDateTime::now_local()?;
         let next_period_start_millis =
-            (truncate("next period start", end_time, d)? + d).unix_timestamp()
-                * MILLI_SEC;
+            (truncate("next period start", end_time, d)? + d).unix_timestamp() * MILLI_SEC;
         let start_time = end_time - (count as u32) * d;
 
         loop {
@@ -215,12 +386,7 @@ impl FutClient {
                 .into_iter()
                 .map(|ks| {
                     let finalized = ks.close_time < next_period_start_millis;
-                    kline_summary_to_k(
-                        &target.symbol,
-                        target.interval,
-                        ks,
-                        finalized,
-                    )
+                    kline_summary_to_k(&target.symbol, target.interval, ks, finalized)
                 })
                 .collect::<Result<Vec<_>>>()
                 .expect("convert to kinfos");

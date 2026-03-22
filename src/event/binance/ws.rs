@@ -7,7 +7,7 @@ use std::{
     },
 };
 
-use futures_util::{SinkExt, StreamExt};
+use futures_util::StreamExt;
 use reqwest::Client;
 use reqwest_websocket::{Message, Upgrade, WebSocket};
 
