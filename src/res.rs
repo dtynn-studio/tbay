@@ -53,6 +53,14 @@ pub enum Error {
     ParseDuration {
         source: humantime::DurationError,
     },
+
+    Reqwest {
+        source: reqwest::Error,
+    },
+
+    Websocket {
+        source: reqwest_websocket::Error,
+    },
 }
 
 impl From<time::error::IndeterminateOffset> for Error {
@@ -64,6 +72,18 @@ impl From<time::error::IndeterminateOffset> for Error {
 impl From<toml::de::Error> for Error {
     fn from(value: toml::de::Error) -> Self {
         Error::TomlDe { source: value }
+    }
+}
+
+impl From<reqwest::Error> for Error {
+    fn from(value: reqwest::Error) -> Self {
+        Error::Reqwest { source: value }
+    }
+}
+
+impl From<reqwest_websocket::Error> for Error {
+    fn from(value: reqwest_websocket::Error) -> Self {
+        Error::Websocket { source: value }
     }
 }
 
