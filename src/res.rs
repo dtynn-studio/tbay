@@ -61,6 +61,10 @@ pub enum Error {
     Websocket {
         source: reqwest_websocket::Error,
     },
+
+    Json {
+        source: serde_json::Error,
+    },
 }
 
 impl From<time::error::IndeterminateOffset> for Error {
@@ -87,6 +91,12 @@ impl From<reqwest_websocket::Error> for Error {
     }
 }
 
+impl From<serde_json::Error> for Error {
+    fn from(value: serde_json::Error) -> Self {
+        Error::Json { source: value }
+    }
+}
+
 pub trait Unexpected<T> {
     fn unexpected(self, msg: &str) -> Error;
 }
@@ -100,6 +110,22 @@ impl<T: Display> Unexpected<T> for T {
             )
             .into(),
         }
+    }
+}
+
+pub trait Required<T> {
+    fn required(self, usage: &str) -> Result<T>;
+}
+
+impl<T> Required<T> for Option<T> {
+    fn required(self, usage: &str) -> Result<T> {
+        self.ok_or_else(|| Error::Msg {
+            reason: format!(
+                "{usage}: a value of {} is required",
+                std::any::type_name::<T>()
+            )
+            .into(),
+        })
     }
 }
 
