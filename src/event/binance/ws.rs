@@ -1,18 +1,18 @@
 //! WebSocket 客户端：订阅实时 K线数据
 
-use std::{
-    sync::{
-        Arc,
-        atomic::{AtomicBool, Ordering},
-    },
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
 };
 
 use futures_util::StreamExt;
 use reqwest::Client;
 use reqwest_websocket::{Message, Upgrade, WebSocket};
 
-use super::convert::{ContinuousKlineEvent, KlineEvent};
-use super::proxy::ProxyConfig;
+use super::{
+    convert::{ContinuousKlineEvent, KlineEvent},
+    proxy::ProxyConfig,
+};
 use crate::prelude::*;
 
 /// WebSocket 连接控制
@@ -29,11 +29,11 @@ impl WsConnection {
         let mut builder = Client::builder();
 
         if let Some(proxy_url) = proxy.to_reqwest_proxy_url() {
-            builder = builder.proxy(
-                reqwest::Proxy::all(&proxy_url).map_err(|e| Error::Msg {
+            builder = builder.proxy(reqwest::Proxy::all(&proxy_url).map_err(
+                |e| Error::Msg {
                     reason: format!("reqwest proxy: {e}").into(),
-                })?,
-            );
+                },
+            )?);
         }
 
         let client = builder.build().map_err(|e| Error::Msg {
@@ -99,21 +99,23 @@ pub async fn run_event_loop(
     mut ws: WebSocket,
     running: Arc<AtomicBool>,
     mut on_kline: impl FnMut(KlineEvent) -> Result<()> + Send + 'static,
-    mut on_continuous_kline: impl FnMut(ContinuousKlineEvent) -> Result<()> + Send + 'static,
+    mut on_continuous_kline: impl FnMut(ContinuousKlineEvent) -> Result<()>
+    + Send
+    + 'static,
 ) {
     while running.load(Ordering::Relaxed) {
         tokio::select! {
             result = ws.next() => {
                 match result {
                     Some(Ok(Message::Text(text))) => {
-                        if let Some(kline) = try_parse::<KlineEvent>(&text) {
-                            if let Err(e) = on_kline(kline) {
-                                tracing::warn!(?e, "kline handler error");
-                            }
-                        } else if let Some(ck) = try_parse::<ContinuousKlineEvent>(&text) {
-                            if let Err(e) = on_continuous_kline(ck) {
-                                tracing::warn!(?e, "continuous kline handler error");
-                            }
+                        if let Some(kline) = try_parse::<KlineEvent>(&text)
+                            && let Err(e) = on_kline(kline)
+                        {
+                            tracing::warn!(?e, "kline handler error");
+                        } else if let Some(ck) = try_parse::<ContinuousKlineEvent>(&text)
+                            && let Err(e) = on_continuous_kline(ck)
+                        {
+                            tracing::warn!(?e, "continuous kline handler error");
                         }
                     }
                     Some(Ok(Message::Close { .. })) | None => {

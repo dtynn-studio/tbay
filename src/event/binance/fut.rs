@@ -10,13 +10,15 @@ use std::{
 
 use crossbeam_channel::bounded;
 use futures_util::SinkExt;
-use humantime::{parse_duration, Duration};
+use humantime::{Duration, parse_duration};
 use tracing::{debug, warn_span};
 
-use super::client::BinanceHttpClient;
-use super::convert::{ContinuousKlineEvent, KlineEvent, KlineSummaries};
-use super::proxy::ProxyConfig;
-use super::ws::{build_subscribe_msg, run_event_loop, WsConnection};
+use super::{
+    client::BinanceHttpClient,
+    convert::{ContinuousKlineEvent, KlineEvent, KlineSummaries},
+    proxy::ProxyConfig,
+    ws::{WsConnection, build_subscribe_msg, run_event_loop},
+};
 use crate::{
     event::{DataSource, Event, EventChanTx, K, SubscribeStopper, Target},
     prelude::*,
@@ -83,41 +85,42 @@ fn kline_summary_to_k(
 }
 
 fn kline_event_to_k(event: KlineEvent) -> Result<K> {
-    let kraw = KRaw {
-        time_begin: local_from_unix_timestamp_millis_truncated(
-            "time_begin",
-            event.kline.open_time,
-        )?,
+    let kraw =
+        KRaw {
+            time_begin: local_from_unix_timestamp_millis_truncated(
+                "time_begin",
+                event.kline.open_time,
+            )?,
 
-        time_end: local_from_unix_timestamp_millis_truncated(
-            "time_end",
-            event.kline.close_time,
-        )?,
+            time_end: local_from_unix_timestamp_millis_truncated(
+                "time_end",
+                event.kline.close_time,
+            )?,
 
-        price_open: Decimal::from_str_radix(&event.kline.open, 10)
-            .context(DecimalCtx {
-                field: "price_open",
-            })?,
+            price_open: Decimal::from_str_radix(&event.kline.open, 10)
+                .context(DecimalCtx {
+                    field: "price_open",
+                })?,
 
-        price_close: Decimal::from_str_radix(&event.kline.close, 10)
-            .context(DecimalCtx {
-                field: "price_close",
-            })?,
+            price_close: Decimal::from_str_radix(&event.kline.close, 10)
+                .context(DecimalCtx {
+                    field: "price_close",
+                })?,
 
-        price_high: Decimal::from_str_radix(&event.kline.high, 10)
-            .context(DecimalCtx {
-                field: "price_high",
-            })?,
+            price_high: Decimal::from_str_radix(&event.kline.high, 10)
+                .context(DecimalCtx {
+                    field: "price_high",
+                })?,
 
-        price_low: Decimal::from_str_radix(&event.kline.low, 10)
-            .context(DecimalCtx { field: "price_low" })?,
+            price_low: Decimal::from_str_radix(&event.kline.low, 10)
+                .context(DecimalCtx { field: "price_low" })?,
 
-        quantity: Decimal::from_str_radix(&event.kline.volume, 10)
-            .context(DecimalCtx { field: "quantity" })?,
+            quantity: Decimal::from_str_radix(&event.kline.volume, 10)
+                .context(DecimalCtx { field: "quantity" })?,
 
-        trades: event.kline.number_of_trades,
-        finalized: event.kline.is_final_bar,
-    };
+            trades: event.kline.number_of_trades,
+            finalized: event.kline.is_final_bar,
+        };
 
     Ok(K {
         symbol: event.kline.symbol.to_lowercase(),
@@ -130,41 +133,42 @@ fn kline_event_to_k(event: KlineEvent) -> Result<K> {
 }
 
 fn continuous_kline_event_to_k(event: ContinuousKlineEvent) -> Result<K> {
-    let kraw = KRaw {
-        time_begin: local_from_unix_timestamp_millis_truncated(
-            "time_begin",
-            event.kline.start_time,
-        )?,
+    let kraw =
+        KRaw {
+            time_begin: local_from_unix_timestamp_millis_truncated(
+                "time_begin",
+                event.kline.start_time,
+            )?,
 
-        time_end: local_from_unix_timestamp_millis_truncated(
-            "time_end",
-            event.kline.end_time,
-        )?,
+            time_end: local_from_unix_timestamp_millis_truncated(
+                "time_end",
+                event.kline.end_time,
+            )?,
 
-        price_open: Decimal::from_str_radix(&event.kline.open, 10)
-            .context(DecimalCtx {
-                field: "price_open",
-            })?,
+            price_open: Decimal::from_str_radix(&event.kline.open, 10)
+                .context(DecimalCtx {
+                    field: "price_open",
+                })?,
 
-        price_close: Decimal::from_str_radix(&event.kline.close, 10)
-            .context(DecimalCtx {
-                field: "price_close",
-            })?,
+            price_close: Decimal::from_str_radix(&event.kline.close, 10)
+                .context(DecimalCtx {
+                    field: "price_close",
+                })?,
 
-        price_high: Decimal::from_str_radix(&event.kline.high, 10)
-            .context(DecimalCtx {
-                field: "price_high",
-            })?,
+            price_high: Decimal::from_str_radix(&event.kline.high, 10)
+                .context(DecimalCtx {
+                    field: "price_high",
+                })?,
 
-        price_low: Decimal::from_str_radix(&event.kline.low, 10)
-            .context(DecimalCtx { field: "price_low" })?,
+            price_low: Decimal::from_str_radix(&event.kline.low, 10)
+                .context(DecimalCtx { field: "price_low" })?,
 
-        quantity: Decimal::from_str_radix(&event.kline.volume, 10)
-            .context(DecimalCtx { field: "quantity" })?,
+            quantity: Decimal::from_str_radix(&event.kline.volume, 10)
+                .context(DecimalCtx { field: "quantity" })?,
 
-        trades: event.kline.number_of_trades,
-        finalized: event.kline.is_final_bar,
-    };
+            trades: event.kline.number_of_trades,
+            finalized: event.kline.is_final_bar,
+        };
 
     Ok(K {
         symbol: event.pair.to_lowercase(),
@@ -232,7 +236,12 @@ impl DataSource for BinanceDataSource {
             // 发送订阅消息
             let subscribe_msg = build_subscribe_msg(&all_streams);
             rt.block_on(async {
-                if let Err(e) = ws.send(reqwest_websocket::Message::Text(subscribe_msg.into())).await {
+                if let Err(e) = ws
+                    .send(reqwest_websocket::Message::Text(
+                        subscribe_msg,
+                    ))
+                    .await
+                {
                     tracing::warn!(?e, "subscribe failed");
                 }
             });
@@ -304,7 +313,11 @@ pub struct FutClient {
 
 impl FutClient {
     pub fn new(testnet: bool, verbose: bool) -> Result<Self> {
-        Self::with_proxy(testnet, verbose, ProxyConfig::from_env().unwrap_or_default())
+        Self::with_proxy(
+            testnet,
+            verbose,
+            ProxyConfig::from_env().unwrap_or_default(),
+        )
     }
 
     pub fn with_proxy(
@@ -316,7 +329,11 @@ impl FutClient {
         Ok(Self { client })
     }
 
-    pub fn load_history(&self, target: &Target, count: usize) -> Result<Vec<K>> {
+    pub fn load_history(
+        &self,
+        target: &Target,
+        count: usize,
+    ) -> Result<Vec<K>> {
         let _span =
             warn_span!("historical ks", sym = target.symbol, int = %target.interval).entered();
         let mut history_ks: Vec<K> = Vec::new();
@@ -324,7 +341,8 @@ impl FutClient {
         let d = std::time::Duration::from(target.interval);
         let end_time = OffsetDateTime::now_local()?;
         let next_period_start_millis =
-            (truncate("next period start", end_time, d)? + d).unix_timestamp() * MILLI_SEC;
+            (truncate("next period start", end_time, d)? + d).unix_timestamp()
+                * MILLI_SEC;
         let start_time = end_time - (count as u32) * d;
 
         loop {
@@ -386,7 +404,12 @@ impl FutClient {
                 .into_iter()
                 .map(|ks| {
                     let finalized = ks.close_time < next_period_start_millis;
-                    kline_summary_to_k(&target.symbol, target.interval, ks, finalized)
+                    kline_summary_to_k(
+                        &target.symbol,
+                        target.interval,
+                        ks,
+                        finalized,
+                    )
                 })
                 .collect::<Result<Vec<_>>>()
                 .expect("convert to kinfos");

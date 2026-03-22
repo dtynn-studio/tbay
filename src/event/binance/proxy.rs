@@ -45,11 +45,12 @@ impl ProxyConfig {
         let socks5 = self.socks5.as_ref()?;
         let addr = socks5.addr.to_string();
 
-        let url = if let (Some(u), Some(p)) = (&socks5.username, &socks5.password) {
-            format!("socks5://{u}:{p}@{addr}")
-        } else {
-            format!("socks5://{addr}")
-        };
+        let url =
+            if let (Some(u), Some(p)) = (&socks5.username, &socks5.password) {
+                format!("socks5://{u}:{p}@{addr}")
+            } else {
+                format!("socks5://{addr}")
+            };
 
         Some(url)
     }

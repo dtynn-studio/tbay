@@ -2,8 +2,10 @@
 
 use reqwest::Client;
 
-use super::convert::{KlineSummary, KlineSummaries};
-use super::proxy::ProxyConfig;
+use super::{
+    convert::{KlineSummaries, KlineSummary},
+    proxy::ProxyConfig,
+};
 use crate::prelude::*;
 
 const FUTURES_API_BASE: &str = "https://fapi.binance.com";
@@ -15,15 +17,20 @@ pub struct BinanceHttpClient {
 }
 
 impl BinanceHttpClient {
-    pub fn new(proxy: ProxyConfig, testnet: bool, verbose: bool) -> Result<Self> {
+    pub fn new(
+        proxy: ProxyConfig,
+        testnet: bool,
+        verbose: bool,
+    ) -> Result<Self> {
         let mut builder = Client::builder();
 
         if let Some(url) = proxy.to_reqwest_proxy_url() {
-            builder = builder.proxy(
-                reqwest::Proxy::all(&url).map_err(|e| Error::Msg {
-                    reason: format!("reqwest proxy: {e}").into(),
-                })?,
-            );
+            builder =
+                builder.proxy(reqwest::Proxy::all(&url).map_err(|e| {
+                    Error::Msg {
+                        reason: format!("reqwest proxy: {e}").into(),
+                    }
+                })?);
         }
 
         let inner = builder.build().map_err(|e| Error::Msg {
@@ -44,7 +51,8 @@ impl BinanceHttpClient {
         end_time: u64,
     ) -> Result<KlineSummaries> {
         let handle = tokio::runtime::Handle::current();
-        handle.block_on(self._get_klines(symbol, interval, start_time, end_time))
+        handle
+            .block_on(self._get_klines(symbol, interval, start_time, end_time))
     }
 
     async fn _get_klines(
@@ -69,12 +77,8 @@ impl BinanceHttpClient {
             tracing::debug!("GET {}", url);
         }
 
-        let resp = self
-            .inner
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| Error::Msg {
+        let resp =
+            self.inner.get(&url).send().await.map_err(|e| Error::Msg {
                 reason: format!("reqwest send: {e}").into(),
             })?;
 
@@ -89,23 +93,49 @@ impl BinanceHttpClient {
             });
         }
 
-        let klines: Vec<Vec<serde_json::Value>> =
-            serde_json::from_str(&body).map_err(|e| Error::Msg {
-                reason: format!("parse json: {e}").into(),
-            })?;
+        let klines: Vec<Vec<serde_json::Value>> = serde_json::from_str(&body)
+            .map_err(|e| Error::Msg {
+            reason: format!("parse json: {e}").into(),
+        })?;
 
         let summaries = klines
             .into_iter()
             .map(|row| {
                 Ok(KlineSummary {
-                    open_time: row.get(0).and_then(|v| v.as_i64()).unwrap_or(0),
-                    open: row.get(1).and_then(|v| v.as_str()).unwrap_or("0").to_string(),
-                    high: row.get(2).and_then(|v| v.as_str()).unwrap_or("0").to_string(),
-                    low: row.get(3).and_then(|v| v.as_str()).unwrap_or("0").to_string(),
-                    close: row.get(4).and_then(|v| v.as_str()).unwrap_or("0").to_string(),
-                    volume: row.get(5).and_then(|v| v.as_str()).unwrap_or("0").to_string(),
-                    close_time: row.get(6).and_then(|v| v.as_i64()).unwrap_or(0),
-                    number_of_trades: row.get(8).and_then(|v| v.as_i64()).unwrap_or(0),
+                    open_time: row.first().and_then(|v| v.as_i64()).unwrap_or(0),
+                    open: row
+                        .get(1)
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("0")
+                        .to_string(),
+                    high: row
+                        .get(2)
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("0")
+                        .to_string(),
+                    low: row
+                        .get(3)
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("0")
+                        .to_string(),
+                    close: row
+                        .get(4)
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("0")
+                        .to_string(),
+                    volume: row
+                        .get(5)
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("0")
+                        .to_string(),
+                    close_time: row
+                        .get(6)
+                        .and_then(|v| v.as_i64())
+                        .unwrap_or(0),
+                    number_of_trades: row
+                        .get(8)
+                        .and_then(|v| v.as_i64())
+                        .unwrap_or(0),
                 })
             })
             .collect::<Result<Vec<_>>>()?;
