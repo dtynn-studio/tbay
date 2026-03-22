@@ -1,4 +1,4 @@
-pub mod client;
+pub mod cli;
 pub mod convert;
 pub mod fut;
 pub mod proxy;

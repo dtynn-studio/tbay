@@ -14,7 +14,7 @@ use humantime::{Duration, parse_duration};
 use tracing::{debug, warn_span};
 
 use super::{
-    client::BinanceHttpClient,
+    cli::BinanceHttpClient,
     convert::{ContinuousKlineEvent, KlineEvent, KlineSummaries},
     proxy::ProxyConfig,
     ws::{WsConnection, build_subscribe_msg, run_event_loop},
@@ -237,9 +237,7 @@ impl DataSource for BinanceDataSource {
             let subscribe_msg = build_subscribe_msg(&all_streams);
             rt.block_on(async {
                 if let Err(e) = ws
-                    .send(reqwest_websocket::Message::Text(
-                        subscribe_msg,
-                    ))
+                    .send(reqwest_websocket::Message::Text(subscribe_msg))
                     .await
                 {
                     tracing::warn!(?e, "subscribe failed");
