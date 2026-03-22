@@ -55,14 +55,6 @@ pub enum Error {
     },
 }
 
-impl From<binance::errors::Error> for Error {
-    fn from(value: binance::errors::Error) -> Self {
-        Error::Msg {
-            reason: format!("binance: {value}").into(),
-        }
-    }
-}
-
 impl From<time::error::IndeterminateOffset> for Error {
     fn from(source: time::error::IndeterminateOffset) -> Self {
         Error::DatetimeOffset { source }
