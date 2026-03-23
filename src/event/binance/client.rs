@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use futures_util::{SinkExt, StreamExt};
+use humantime::Duration;
 use reqwest::{Client, Proxy};
 use reqwest_websocket::{CloseCode, Message, Upgrade, WebSocket};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
@@ -11,7 +12,13 @@ use tokio::{
 };
 use tracing::trace;
 
-use crate::prelude::*;
+use crate::{
+    event::K,
+    prelude::*,
+    util::time::{
+        MILLI_SEC, local_from_unix_timestamp_millis_truncated, truncate,
+    },
+};
 
 const FUTURES_MAINNET: &str = "https://fapi.binance.com";
 const FUTURES_TESTNET: &str = "https://testnet.binancefuture.com";
@@ -363,20 +370,75 @@ fn parse_ws_event(msg: &str) -> Result<FuturesWebsocketEvent> {
     })
 }
 
-pub struct EventStream {}
-pub struct EventStreamStopper {}
+fn kline_summary_to_k(
+    pair: &str,
+    interval: Duration,
+    summary: KlineSummary,
+    finalized: bool,
+) -> Result<K> {
+    let kraw = KRaw {
+        time_begin: local_from_unix_timestamp_millis_truncated(
+            "time_begin",
+            summary.open_time,
+        )?,
+
+        time_end: local_from_unix_timestamp_millis_truncated(
+            "time_end",
+            summary.close_time,
+        )?,
+
+        price_open: Decimal::from_str_radix(&summary.open, 10).context(
+            DecimalCtx {
+                field: "price_open",
+            },
+        )?,
+
+        price_close: Decimal::from_str_radix(&summary.close, 10).context(
+            DecimalCtx {
+                field: "price_close",
+            },
+        )?,
+
+        price_high: Decimal::from_str_radix(&summary.high, 10).context(
+            DecimalCtx {
+                field: "price_high",
+            },
+        )?,
+
+        price_low: Decimal::from_str_radix(&summary.low, 10)
+            .context(DecimalCtx { field: "price_low" })?,
+
+        quantity: Decimal::from_str_radix(&summary.volume, 10)
+            .context(DecimalCtx { field: "quantity" })?,
+
+        trades: summary.number_of_trades,
+        finalized,
+    };
+
+    Ok(K {
+        symbol: pair.to_lowercase(),
+        interval,
+        source: "h",
+        raw: kraw,
+    })
+}
 
 impl BnClient {
     pub fn get_klines(
         &self,
         symbol: String,
         interval: String,
+        limit: Option<u16>,
         start_time: Option<u64>,
         end_time: Option<u64>,
     ) -> Result<KlineSummaries> {
         let mut query = Query::default();
         query.set("symbol", symbol);
         query.set("interval", interval);
+
+        if let Some(l) = limit {
+            query.set("limit", l);
+        }
 
         if let Some(t) = start_time {
             query.set("startTime", t);
@@ -398,6 +460,37 @@ impl BnClient {
         );
 
         Ok(klines)
+    }
+
+    pub fn load_k_history(&self, target: &Target) -> Result<Vec<K>> {
+        let now = OffsetDateTime::now_local()?;
+        let d = std::time::Duration::from(target.interval);
+        let next_period_start_millis =
+            (truncate("next period start", now, d)? + d).unix_timestamp()
+                * MILLI_SEC;
+        let now_milli = now.unix_timestamp() * MILLI_SEC;
+        let ksum = self.get_klines(
+            target.symbol.to_owned(),
+            target.interval.to_string(),
+            Some(1000),
+            None,
+            Some(next_period_start_millis as _),
+        )?;
+
+        let KlineSummaries::AllKlineSummaries(klines) = ksum;
+
+        klines
+            .into_iter()
+            .map(|summary| {
+                let finalized = summary.close_time < now_milli;
+                kline_summary_to_k(
+                    &target.symbol,
+                    target.interval,
+                    summary,
+                    finalized,
+                )
+            })
+            .collect()
     }
 
     pub fn subscribe_klines(

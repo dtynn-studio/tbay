@@ -4,7 +4,10 @@ use clap::Parser;
 use tracing::{error, info};
 
 use crate::{
-    config::load_config, event::binance::fut::FutClient, hub::Hub, prelude::*,
+    config::load_config,
+    event::binance::client::{BnClient, Config},
+    hub::Hub,
+    prelude::*,
 };
 
 #[derive(Parser)]
@@ -42,9 +45,13 @@ impl WatchArgs {
             return Ok(());
         }
 
-        let client = FutClient::new(self.testnet, false)?;
+        let client = BnClient::new(Config {
+            testnet: self.testnet,
+            proxy: self.proxy,
+        })?;
+
         for target in targets {
-            match client.load_history(&target, self.history) {
+            match client.load_k_history(&target) {
                 Ok(ks) => {
                     for k in ks {
                         hub.apply_k(k);
