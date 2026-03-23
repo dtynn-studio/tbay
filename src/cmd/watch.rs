@@ -17,6 +17,12 @@ pub struct WatchArgs {
 
     #[arg(long, default_value_t = 1000)]
     pub history: usize,
+
+    #[arg(from_global)]
+    pub testnet: bool,
+
+    #[arg(from_global)]
+    pub proxy: Option<String>,
 }
 
 impl WatchArgs {
@@ -36,7 +42,7 @@ impl WatchArgs {
             return Ok(());
         }
 
-        let client = FutClient::new(false, false)?;
+        let client = FutClient::new(self.testnet, false)?;
         for target in targets {
             match client.load_history(&target, self.history) {
                 Ok(ks) => {

@@ -23,6 +23,9 @@ pub struct Args {
     #[arg(long, default_value_t = false, global = true)]
     pub verbose: bool,
 
+    #[arg(long, global = true)]
+    pub proxy: Option<String>,
+
     #[command(subcommand)]
     pub cmds: Cmds,
 }
