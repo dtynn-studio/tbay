@@ -459,7 +459,7 @@ pub struct BnClient {
 
 impl BnClient {
     pub fn new(cfg: Config) -> Result<Self> {
-        let mut builder = Client::builder();
+        let mut builder = Client::builder().http1_only();
         if let Some(purl) = cfg.proxy {
             let proxy = Proxy::all(purl)?;
             builder = builder.proxy(proxy);
