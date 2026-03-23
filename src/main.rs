@@ -5,12 +5,13 @@ use tbay::{
     prelude::Result,
 };
 
-pub fn main() -> Result<()> {
+#[tokio::main]
+pub async fn main() -> Result<()> {
     logger_init();
 
     let args = Args::parse();
     match args.cmds {
-        Cmds::Simple(simple) => simple.run(),
-        Cmds::Watch(watch) => watch.run(),
+        Cmds::Simple(simple) => simple.run().await,
+        Cmds::Watch(watch) => watch.run().await,
     }
 }

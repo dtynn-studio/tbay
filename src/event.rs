@@ -5,7 +5,7 @@ use crate::prelude::{KRaw, Result};
 
 pub mod binance;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct K {
     pub symbol: String,
     pub interval: Duration,
@@ -13,9 +13,11 @@ pub struct K {
     pub raw: KRaw,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Event {
     K(K),
+    Disconnect(String),
+    Broken(String),
 }
 
 pub type EventChanTx = Sender<Event>;

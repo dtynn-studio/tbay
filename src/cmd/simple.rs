@@ -1,9 +1,11 @@
 use clap::Parser;
-use crossbeam_channel::unbounded;
 use humantime::Duration;
 use tracing::info;
 
-use crate::{event::binance::fut::BinanceDataSource, prelude::*};
+use crate::{
+    event::binance::client::{BnClient, Config, WebsocketControl},
+    prelude::*,
+};
 
 #[derive(Parser)]
 pub struct SimpleArgs {
@@ -12,10 +14,16 @@ pub struct SimpleArgs {
 
     #[arg(long)]
     pub interval: Duration,
+
+    #[arg(from_global)]
+    pub testnet: bool,
+
+    #[arg(from_global)]
+    pub proxy: Option<String>,
 }
 
 impl SimpleArgs {
-    pub fn run(self) -> Result<()> {
+    pub async fn run(self) -> Result<()> {
         info!(pair = self.pair, interval = %self.interval, "simple runs");
 
         let target = Target {
@@ -23,23 +31,36 @@ impl SimpleArgs {
             interval: self.interval,
         };
 
-        let (tx, rx) = unbounded();
+        let client = BnClient::new(Config {
+            testnet: self.testnet,
+            proxy: self.proxy,
+        })?;
 
-        let bn_src = BinanceDataSource::new(tx);
-        let targets = vec![target];
-        let stopper = bn_src.start(targets)?;
+        let (mut event_rx, ctrl_tx) =
+            client.subscribe_klines(&[target]).await?;
 
-        let mut stopper_opt = Some(stopper);
         ctrlc::set_handler(move || {
             info!("stop signal captured");
-            if let Some(stopper) = stopper_opt.take() {
-                stopper.stop();
-            }
+            _ = ctrl_tx.send(WebsocketControl::Disconnect);
         })
         .context(SignalCtx)?;
 
-        while let Ok(evt) = rx.recv() {
-            info!(?evt, "received");
+        while let Some(evt) = event_rx.recv().await {
+            match evt {
+                Event::K(k) => {
+                    info!(?k, "k received");
+                }
+
+                Event::Disconnect(reason) => {
+                    info!(reason, "disconnect");
+                    break;
+                }
+
+                Event::Broken(reason) => {
+                    info!(reason, "broken");
+                    break;
+                }
+            }
         }
 
         info!("stopped");

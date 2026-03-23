@@ -29,7 +29,7 @@ pub struct WatchArgs {
 }
 
 impl WatchArgs {
-    pub fn run(self) -> Result<()> {
+    pub async fn run(self) -> Result<()> {
         info!(file=?self.config, "load config");
         let cfg = load_config(self.config)?;
         let mut hub = Hub::default();
@@ -51,7 +51,7 @@ impl WatchArgs {
         })?;
 
         for target in targets {
-            match client.load_k_history(&target) {
+            match client.load_k_history(&target).await {
                 Ok(ks) => {
                     for k in ks {
                         hub.apply_k(k);

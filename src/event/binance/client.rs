@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
 
 use futures_util::{SinkExt, StreamExt};
-use humantime::Duration;
+use humantime::{Duration, parse_duration};
 use reqwest::{Client, Proxy};
-use reqwest_websocket::{CloseCode, Message, Upgrade, WebSocket};
+use reqwest_websocket::{Message, Upgrade, WebSocket};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::{Value, from_value};
 use tokio::{
@@ -13,7 +13,7 @@ use tokio::{
 use tracing::trace;
 
 use crate::{
-    event::K,
+    event::{Event, K},
     prelude::*,
     util::time::{
         MILLI_SEC, local_from_unix_timestamp_millis_truncated, truncate,
@@ -52,67 +52,6 @@ impl Query {
         }
 
         query
-    }
-}
-
-#[derive(Clone)]
-pub struct BnClient {
-    client: Client,
-    api_base_url: &'static str,
-    ws_base_url: &'static str,
-}
-
-impl BnClient {
-    pub fn new(cfg: Config) -> Result<Self> {
-        let mut builder = Client::builder();
-        if let Some(purl) = cfg.proxy {
-            let proxy = Proxy::all(purl)?;
-            builder = builder.proxy(proxy);
-        }
-
-        let client = builder.build()?;
-
-        let (api_base_url, ws_base_url) = if cfg.testnet {
-            (FUTURES_TESTNET, FUTURES_WS_TESTNET)
-        } else {
-            (FUTURES_MAINNET, FUTURES_WS_MAINNET)
-        };
-
-        Ok(Self {
-            client,
-            api_base_url,
-            ws_base_url,
-        })
-    }
-
-    async fn get_json<T: DeserializeOwned>(
-        &self,
-        path: &str,
-        query: Option<Query>,
-    ) -> Result<T> {
-        let url = if let Some(q) = query.map(|q| q.build()) {
-            format!("{}{path}?{q}", self.api_base_url)
-        } else {
-            format!("{}{path}", self.api_base_url)
-        };
-
-        let resp = self.client.get(url).send().await?.error_for_status()?;
-        resp.json().await.map_err(From::from)
-    }
-
-    async fn connect_ws(
-        &self,
-        path: &str,
-        query: Option<Query>,
-    ) -> Result<WebSocket> {
-        let url = if let Some(q) = query.map(|q| q.build()) {
-            format!("{}{path}?{q}", self.ws_base_url)
-        } else {
-            format!("{}{path}", self.ws_base_url)
-        };
-
-        let resp = self.client.get(url).upgrade().send().await?;
-        resp.into_websocket().await.map_err(From::from)
     }
 }
 
@@ -342,14 +281,6 @@ pub enum FuturesWebsocketEvent {
     ContinuousKline(ContinuousKlineEvent),
 }
 
-#[allow(clippy::large_enum_variant)]
-#[derive(Debug, Clone)]
-pub enum WebsocketEvent {
-    Futures(FuturesWebsocketEvent),
-    Disconnect { code: CloseCode, reason: String },
-    Broken,
-}
-
 pub enum WebsocketControl {
     Disconnect,
 }
@@ -423,8 +354,165 @@ fn kline_summary_to_k(
     })
 }
 
+fn kline_event_to_k(event: KlineEvent) -> Result<K> {
+    let kraw =
+        KRaw {
+            time_begin: local_from_unix_timestamp_millis_truncated(
+                "time_begin",
+                event.kline.open_time,
+            )?,
+
+            time_end: local_from_unix_timestamp_millis_truncated(
+                "time_end",
+                event.kline.close_time,
+            )?,
+
+            price_open: Decimal::from_str_radix(&event.kline.open, 10)
+                .context(DecimalCtx {
+                    field: "price_open",
+                })?,
+
+            price_close: Decimal::from_str_radix(&event.kline.close, 10)
+                .context(DecimalCtx {
+                    field: "price_close",
+                })?,
+
+            price_high: Decimal::from_str_radix(&event.kline.high, 10)
+                .context(DecimalCtx {
+                    field: "price_high",
+                })?,
+
+            price_low: Decimal::from_str_radix(&event.kline.low, 10)
+                .context(DecimalCtx { field: "price_low" })?,
+
+            quantity: Decimal::from_str_radix(&event.kline.volume, 10)
+                .context(DecimalCtx { field: "quantity" })?,
+
+            trades: event.kline.number_of_trades,
+            finalized: event.kline.is_final_bar,
+        };
+
+    Ok(K {
+        symbol: event.kline.symbol.to_lowercase(),
+        interval: parse_duration(&event.kline.interval)
+            .context(ParseDurationCtx)?
+            .into(),
+        source: "k",
+        raw: kraw,
+    })
+}
+
+fn continuous_kline_event_to_k(event: ContinuousKlineEvent) -> Result<K> {
+    let kraw =
+        KRaw {
+            time_begin: local_from_unix_timestamp_millis_truncated(
+                "time_begin",
+                event.kline.start_time,
+            )?,
+
+            time_end: local_from_unix_timestamp_millis_truncated(
+                "time_end",
+                event.kline.end_time,
+            )?,
+
+            price_open: Decimal::from_str_radix(&event.kline.open, 10)
+                .context(DecimalCtx {
+                    field: "price_open",
+                })?,
+
+            price_close: Decimal::from_str_radix(&event.kline.close, 10)
+                .context(DecimalCtx {
+                    field: "price_close",
+                })?,
+
+            price_high: Decimal::from_str_radix(&event.kline.high, 10)
+                .context(DecimalCtx {
+                    field: "price_high",
+                })?,
+
+            price_low: Decimal::from_str_radix(&event.kline.low, 10)
+                .context(DecimalCtx { field: "price_low" })?,
+
+            quantity: Decimal::from_str_radix(&event.kline.volume, 10)
+                .context(DecimalCtx { field: "quantity" })?,
+
+            trades: event.kline.number_of_trades,
+            finalized: event.kline.is_final_bar,
+        };
+
+    Ok(K {
+        symbol: event.pair.to_lowercase(),
+        interval: parse_duration(&event.kline.interval)
+            .context(ParseDurationCtx)?
+            .into(),
+        source: "ck",
+        raw: kraw,
+    })
+}
+
+#[derive(Clone)]
+pub struct BnClient {
+    client: Client,
+    api_base_url: &'static str,
+    ws_base_url: &'static str,
+}
+
 impl BnClient {
-    pub fn get_klines(
+    pub fn new(cfg: Config) -> Result<Self> {
+        let mut builder = Client::builder();
+        if let Some(purl) = cfg.proxy {
+            let proxy = Proxy::all(purl)?;
+            builder = builder.proxy(proxy);
+        }
+
+        let client = builder.build()?;
+
+        let (api_base_url, ws_base_url) = if cfg.testnet {
+            (FUTURES_TESTNET, FUTURES_WS_TESTNET)
+        } else {
+            (FUTURES_MAINNET, FUTURES_WS_MAINNET)
+        };
+
+        Ok(Self {
+            client,
+            api_base_url,
+            ws_base_url,
+        })
+    }
+
+    async fn get_json<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        query: Option<Query>,
+    ) -> Result<T> {
+        let url = if let Some(q) = query.map(|q| q.build()) {
+            format!("{}{path}?{q}", self.api_base_url)
+        } else {
+            format!("{}{path}", self.api_base_url)
+        };
+
+        let resp = self.client.get(url).send().await?.error_for_status()?;
+        resp.json().await.map_err(From::from)
+    }
+
+    async fn connect_ws(
+        &self,
+        path: &str,
+        query: Option<Query>,
+    ) -> Result<WebSocket> {
+        let url = if let Some(q) = query.map(|q| q.build()) {
+            format!("{}{path}?{q}", self.ws_base_url)
+        } else {
+            format!("{}{path}", self.ws_base_url)
+        };
+
+        let resp = self.client.get(url).upgrade().send().await?;
+        resp.into_websocket().await.map_err(From::from)
+    }
+}
+
+impl BnClient {
+    pub async fn get_klines(
         &self,
         symbol: String,
         interval: String,
@@ -448,10 +536,8 @@ impl BnClient {
             query.set("endTime", t);
         }
 
-        let data: Vec<Vec<Value>> = tokio::runtime::Handle::current()
-            .block_on(async {
-                self.get_json("/api/v3/klines", Some(query)).await
-            })?;
+        let data: Vec<Vec<Value>> =
+            self.get_json("/fapi/v1/klines", Some(query)).await?;
 
         let klines = KlineSummaries::AllKlineSummaries(
             data.iter()
@@ -462,20 +548,22 @@ impl BnClient {
         Ok(klines)
     }
 
-    pub fn load_k_history(&self, target: &Target) -> Result<Vec<K>> {
+    pub async fn load_k_history(&self, target: &Target) -> Result<Vec<K>> {
         let now = OffsetDateTime::now_local()?;
         let d = std::time::Duration::from(target.interval);
         let next_period_start_millis =
             (truncate("next period start", now, d)? + d).unix_timestamp()
                 * MILLI_SEC;
         let now_milli = now.unix_timestamp() * MILLI_SEC;
-        let ksum = self.get_klines(
-            target.symbol.to_owned(),
-            target.interval.to_string(),
-            Some(1000),
-            None,
-            Some(next_period_start_millis as _),
-        )?;
+        let ksum = self
+            .get_klines(
+                target.symbol.to_owned(),
+                target.interval.to_string(),
+                Some(1000),
+                None,
+                Some(next_period_start_millis as _),
+            )
+            .await?;
 
         let KlineSummaries::AllKlineSummaries(klines) = ksum;
 
@@ -493,13 +581,11 @@ impl BnClient {
             .collect()
     }
 
-    pub fn subscribe_klines(
+    pub async fn subscribe_klines(
         &self,
         targets: &[Target],
-    ) -> Result<(
-        UnboundedReceiver<WebsocketEvent>,
-        UnboundedSender<WebsocketControl>,
-    )> {
+    ) -> Result<(UnboundedReceiver<Event>, UnboundedSender<WebsocketControl>)>
+    {
         let streams = targets
             .iter()
             .map(|t| t.bn_futures_key())
@@ -508,9 +594,7 @@ impl BnClient {
         let mut query = Query::default();
         query.set("streams", streams);
 
-        let mut ws = tokio::runtime::Handle::current().block_on(async {
-            self.connect_ws("/stream", Some(query)).await
-        })?;
+        let mut ws = self.connect_ws("/stream", Some(query)).await?;
 
         let (event_tx, event_rx) = unbounded_channel();
         let (ctrl_tx, mut ctrl_rx) = unbounded_channel();
@@ -527,9 +611,17 @@ impl BnClient {
 
                         match msg {
                             Message::Text(txt) => {
-                                match parse_ws_event(&txt) {
-                                    Ok(msg) => {
-                                        if let Err(_e) = event_tx.send(WebsocketEvent::Futures(msg)) {
+                                match parse_ws_event(&txt).and_then(|evt| match evt {
+                                    FuturesWebsocketEvent::Kline(kline) => {
+                                        kline_event_to_k(kline)
+                                    },
+
+                                    FuturesWebsocketEvent::ContinuousKline(kline) => {
+                                        continuous_kline_event_to_k(kline)
+                                    },
+                                }) {
+                                    Ok(k) => {
+                                        if let Err(_e) = event_tx.send(Event::K(k)) {
                                             broken_reason.replace("send futures event: chan broken".to_owned());
                                             break 'event_loop;
                                             // TODO handle error
@@ -556,7 +648,7 @@ impl BnClient {
 
                             Message::Close{ code, reason } => {
                                 trace!(%code, reason, "ws stream closed");
-                                if let Err(_e) = event_tx.send(WebsocketEvent::Disconnect{ code, reason }) {
+                                if let Err(_e) = event_tx.send(Event::Disconnect(format!("{code}: {reason}"))) {
                                     // TODO: handle error
                                     broken_reason.replace("send diconnect event: chan broken".to_owned());
                                 }
@@ -573,8 +665,7 @@ impl BnClient {
             }
 
             if let Some(reason) = broken_reason {
-                trace!("event loop broken: {reason}");
-                _ = event_tx.send(WebsocketEvent::Broken);
+                _ = event_tx.send(Event::Broken(reason));
             }
         });
 
