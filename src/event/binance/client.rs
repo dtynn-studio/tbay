@@ -1,9 +1,15 @@
 use std::collections::BTreeMap;
 
+use futures_util::{SinkExt, StreamExt};
 use reqwest::{Client, Proxy};
-use reqwest_websocket::{Upgrade, WebSocket};
+use reqwest_websocket::{CloseCode, Message, Upgrade, WebSocket};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::{Value, from_value};
+use tokio::{
+    select,
+    sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel},
+};
+use tracing::trace;
 
 use crate::prelude::*;
 
@@ -42,6 +48,7 @@ impl Query {
     }
 }
 
+#[derive(Clone)]
 pub struct BnClient {
     client: Client,
     api_base_url: &'static str,
@@ -172,6 +179,193 @@ impl TryFrom<&Vec<Value>> for KlineSummary {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Kline {
+    #[serde(rename = "t")]
+    pub open_time: i64,
+
+    #[serde(rename = "T")]
+    pub close_time: i64,
+
+    #[serde(rename = "s")]
+    pub symbol: String,
+
+    #[serde(rename = "i")]
+    pub interval: String,
+
+    #[serde(rename = "f")]
+    pub first_trade_id: i64,
+
+    #[serde(rename = "L")]
+    pub last_trade_id: i64,
+
+    #[serde(rename = "o")]
+    pub open: String,
+
+    #[serde(rename = "c")]
+    pub close: String,
+
+    #[serde(rename = "h")]
+    pub high: String,
+
+    #[serde(rename = "l")]
+    pub low: String,
+
+    #[serde(rename = "v")]
+    pub volume: String,
+
+    #[serde(rename = "n")]
+    pub number_of_trades: i64,
+
+    #[serde(rename = "x")]
+    pub is_final_bar: bool,
+
+    #[serde(rename = "q")]
+    pub quote_asset_volume: String,
+
+    #[serde(rename = "V")]
+    pub taker_buy_base_asset_volume: String,
+
+    #[serde(rename = "Q")]
+    pub taker_buy_quote_asset_volume: String,
+
+    #[serde(skip, rename = "B")]
+    pub ignore_me: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ContinuousKline {
+    #[serde(rename = "t")]
+    pub start_time: i64,
+
+    #[serde(rename = "T")]
+    pub end_time: i64,
+
+    #[serde(rename = "i")]
+    pub interval: String,
+
+    #[serde(rename = "f")]
+    pub first_trade_id: i64,
+
+    #[serde(rename = "L")]
+    pub last_trade_id: i64,
+
+    #[serde(rename = "o")]
+    pub open: String,
+
+    #[serde(rename = "c")]
+    pub close: String,
+
+    #[serde(rename = "h")]
+    pub high: String,
+
+    #[serde(rename = "l")]
+    pub low: String,
+
+    #[serde(rename = "v")]
+    pub volume: String,
+
+    #[serde(rename = "n")]
+    pub number_of_trades: i64,
+
+    #[serde(rename = "x")]
+    pub is_final_bar: bool,
+
+    #[serde(rename = "q")]
+    pub quote_volume: String,
+
+    #[serde(rename = "V")]
+    pub active_buy_volume: String,
+
+    #[serde(rename = "Q")]
+    pub active_volume_buy_quote: String,
+
+    #[serde(skip, rename = "B")]
+    pub ignore_me: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct KlineEvent {
+    #[serde(rename = "e")]
+    pub event_type: String,
+
+    #[serde(rename = "E")]
+    pub event_time: u64,
+
+    #[serde(rename = "s")]
+    pub symbol: String,
+
+    #[serde(rename = "k")]
+    pub kline: Kline,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ContinuousKlineEvent {
+    #[serde(rename = "e")]
+    pub event_type: String,
+
+    #[serde(rename = "E")]
+    pub event_time: u64,
+
+    #[serde(rename = "ps")]
+    pub pair: String,
+
+    #[serde(rename = "ct")]
+    pub contract_type: String,
+
+    #[serde(rename = "k")]
+    pub kline: ContinuousKline,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+enum FuturesEvents {
+    KlineEvent(KlineEvent),
+    ContinuousKlineEvent(ContinuousKlineEvent),
+}
+
+#[allow(clippy::large_enum_variant)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum FuturesWebsocketEvent {
+    Kline(KlineEvent),
+    ContinuousKline(ContinuousKlineEvent),
+}
+
+#[allow(clippy::large_enum_variant)]
+#[derive(Debug, Clone)]
+pub enum WebsocketEvent {
+    Futures(FuturesWebsocketEvent),
+    Disconnect { code: CloseCode, reason: String },
+    Broken,
+}
+
+pub enum WebsocketControl {
+    Disconnect,
+}
+
+fn parse_ws_event(msg: &str) -> Result<FuturesWebsocketEvent> {
+    let value: Value = serde_json::from_str(msg)?;
+
+    if let Some(data) = value.get("data") {
+        return parse_ws_event(&data.to_string());
+    }
+
+    let event: FuturesEvents = from_value(value)?;
+    Ok(match event {
+        FuturesEvents::KlineEvent(k) => FuturesWebsocketEvent::Kline(k),
+        FuturesEvents::ContinuousKlineEvent(k) => {
+            FuturesWebsocketEvent::ContinuousKline(k)
+        }
+    })
+}
+
+pub struct EventStream {}
+pub struct EventStreamStopper {}
+
 impl BnClient {
     pub fn get_klines(
         &self,
@@ -204,5 +398,93 @@ impl BnClient {
         );
 
         Ok(klines)
+    }
+
+    pub fn subscribe_klines(
+        &self,
+        targets: &[Target],
+    ) -> Result<(
+        UnboundedReceiver<WebsocketEvent>,
+        UnboundedSender<WebsocketControl>,
+    )> {
+        let streams = targets
+            .iter()
+            .map(|t| t.bn_futures_key())
+            .collect::<Vec<_>>()
+            .join("/");
+        let mut query = Query::default();
+        query.set("streams", streams);
+
+        let mut ws = tokio::runtime::Handle::current().block_on(async {
+            self.connect_ws("/stream", Some(query)).await
+        })?;
+
+        let (event_tx, event_rx) = unbounded_channel();
+        let (ctrl_tx, mut ctrl_rx) = unbounded_channel();
+
+        tokio::spawn(async move {
+            let mut broken_reason = None;
+
+            'event_loop: loop {
+                select! {
+                    msg_opt = ws.next() => {
+                        let Some(Ok(msg)) = msg_opt else {
+                            break;
+                        };
+
+                        match msg {
+                            Message::Text(txt) => {
+                                match parse_ws_event(&txt) {
+                                    Ok(msg) => {
+                                        if let Err(_e) = event_tx.send(WebsocketEvent::Futures(msg)) {
+                                            broken_reason.replace("send futures event: chan broken".to_owned());
+                                            break 'event_loop;
+                                            // TODO handle error
+                                        }
+                                    },
+                                    Err(e) => {
+                                        // TODO handle error
+                                        trace!("parse ws event: {e}");
+                                    },
+                                }
+                            },
+
+
+                            Message::Ping(data) => {
+                                if let Err(e) = ws.send(Message::Pong(data)).await {
+                                    // TODO: handle pong error
+                                    broken_reason.replace(format!("send pong: {e}"));
+                                    break 'event_loop;
+                                };
+                            },
+
+                            Message::Pong(_data) => {},
+                            Message::Binary(_data) => {},
+
+                            Message::Close{ code, reason } => {
+                                trace!(%code, reason, "ws stream closed");
+                                if let Err(_e) = event_tx.send(WebsocketEvent::Disconnect{ code, reason }) {
+                                    // TODO: handle error
+                                    broken_reason.replace("send diconnect event: chan broken".to_owned());
+                                }
+
+                                break 'event_loop;
+                            },
+                        }
+                    },
+
+                    _ = ctrl_rx.recv() => {
+                        break;
+                    },
+                }
+            }
+
+            if let Some(reason) = broken_reason {
+                trace!("event loop broken: {reason}");
+                _ = event_tx.send(WebsocketEvent::Broken);
+            }
+        });
+
+        Ok((event_rx, ctrl_tx))
     }
 }
