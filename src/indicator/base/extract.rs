@@ -68,6 +68,13 @@ impl ExtractKind {
             Self::Qty => Self::QTY_STR,
         }
     }
+
+    pub const fn as_str_short(&self) -> &'static str {
+        match self {
+            Self::PriceClose => "C",
+            Self::Qty => "Q",
+        }
+    }
 }
 
 impl FromStr for ExtractKind {
@@ -99,6 +106,14 @@ impl CalcKind {
             Self::Sma => Self::SMA_STR,
             Self::Ema => Self::EMA_STR,
             Self::StdDev => Self::STD_DEV_STR,
+        }
+    }
+
+    pub const fn as_str_short(&self) -> &'static str {
+        match self {
+            Self::Sma => "SM",
+            Self::Ema => "EM",
+            Self::StdDev => "SD",
         }
     }
 }

@@ -71,8 +71,8 @@ impl Args for ReadArgs {
 
         format!(
             "read:{},{},{}",
-            self.val_kind.as_str(),
-            self.calc_kind.as_str(),
+            self.val_kind.as_str_short(),
+            self.calc_kind.as_str_short(),
             periods.join(",")
         )
     }
