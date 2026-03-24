@@ -89,6 +89,7 @@ impl Args for HoldArgs {
             key,
             pos_key,
             state: Default::default(),
+            temp_t: None,
         })
     }
 }
@@ -100,6 +101,7 @@ pub struct Hold {
     key: String,
     pos_key: String,
     state: State,
+    temp_t: Option<OffsetDateTime>,
 }
 
 impl Hold {
@@ -142,7 +144,10 @@ impl Monitor for Hold {
             self.state.temp.take();
             self.state.perm = self.update(kctx);
         } else {
-            self.state.temp = self.calc(kctx);
+            let prev_temp_t = self.temp_t.replace(kctx.info.raw.time_begin);
+            if prev_temp_t != self.temp_t || self.state.temp.is_none() {
+                self.state.temp = self.calc(kctx);
+            }
         }
     }
 

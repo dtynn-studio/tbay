@@ -42,6 +42,7 @@ impl Args for CrossArgs {
             cross_key,
             current: None,
             state: Default::default(),
+            temp_t: None,
         })
     }
 }
@@ -55,6 +56,7 @@ pub struct Cross {
     cross_key: String,
     current: Option<CrossValue<Decimal>>,
     state: State,
+    temp_t: Option<OffsetDateTime>,
 }
 
 impl Cross {
@@ -108,7 +110,10 @@ impl Monitor for Cross {
             self.state.temp.take();
             self.state.perm = self.update(kctx);
         } else {
-            self.state.temp = self.calc(kctx);
+            let prev_temp_t = self.temp_t.replace(kctx.info.raw.time_begin);
+            if prev_temp_t != self.temp_t || self.state.temp.is_none() {
+                self.state.temp = self.calc(kctx);
+            }
         }
     }
 

@@ -75,6 +75,7 @@ impl Args for TouchArgs {
             ma_key,
             prev_touched: false,
             state: Default::default(),
+            temp_t: None,
         })
     }
 }
@@ -87,6 +88,7 @@ pub struct Touch {
     ma_key: String,
     prev_touched: bool,
     state: State,
+    temp_t: Option<OffsetDateTime>,
 }
 
 impl Touch {
@@ -164,7 +166,10 @@ impl Monitor for Touch {
             self.state.temp.take();
             self.state.perm = self.update(kctx);
         } else {
-            self.state.temp = self.calc(kctx);
+            let prev_temp_t = self.temp_t.replace(kctx.info.raw.time_begin);
+            if prev_temp_t != self.temp_t || self.state.temp.is_none() {
+                self.state.temp = self.calc(kctx);
+            }
         }
     }
 
