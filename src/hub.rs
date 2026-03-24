@@ -145,6 +145,59 @@ impl Hub {
         states
     }
 
+    pub fn collect_state_msgs(&self) -> (Vec<String>, Vec<String>) {
+        let mut temp_msgs = Vec::new();
+        let mut perm_msgs = Vec::new();
+
+        let states = self.states();
+        for hstate in states {
+            for (d, sts) in hstate.states {
+                let temp_combined = sts
+                    .iter()
+                    .filter_map(|st| st.temp.clone())
+                    .collect::<Vec<_>>();
+                if !temp_combined.is_empty() {
+                    temp_msgs.push(format!(
+                        "{}@{d}:{}",
+                        hstate.symbol,
+                        temp_combined.join(" ")
+                    ));
+                }
+
+                let perm_combined = sts
+                    .iter()
+                    .filter_map(|st| st.perm.clone())
+                    .collect::<Vec<_>>();
+                if !perm_combined.is_empty() {
+                    perm_msgs.push(format!(
+                        "{}@{d}:{}",
+                        hstate.symbol,
+                        perm_combined.join(" ")
+                    ));
+                }
+            }
+        }
+
+        (temp_msgs, perm_msgs)
+    }
+
+    pub fn print_state_msgs(&self, temp: bool, perm: bool) {
+        let now_str = OffsetDateTime::now_local()
+            .map(|t| format!("{t}\n"))
+            .unwrap_or("".to_owned());
+
+        let (temp_msgs, perm_msgs) = self.collect_state_msgs();
+        if temp && !temp_msgs.is_empty() {
+            let lines = temp_msgs.join("\n\t");
+            println!("{now_str}TEMP STATES:\n\t{lines}\n\n");
+        }
+
+        if perm && !perm_msgs.is_empty() {
+            let lines = perm_msgs.join("\n\t");
+            println!("{now_str}PERM STATES:\n\t{lines}\n\n");
+        }
+    }
+
     fn has_indicator(
         &self,
         symbol: &str,

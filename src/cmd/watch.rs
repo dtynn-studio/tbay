@@ -1,11 +1,16 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use tracing::{error, info};
+use humantime::Duration;
+use tokio::{signal, time::interval};
+use tracing::{debug, error, info, trace, warn_span};
 
 use crate::{
     config::load_config,
-    event::binance::client::{BnClient, Config},
+    event::{
+        Event,
+        binance::client::{BnClient, Config, WebsocketControl},
+    },
     hub::Hub,
     prelude::*,
 };
@@ -26,10 +31,14 @@ pub struct WatchArgs {
 
     #[arg(from_global)]
     pub proxy: Option<String>,
+
+    #[arg(long, default_value_t = Duration::from(std::time::Duration::from_secs(30)))]
+    pub watch: Duration,
 }
 
 impl WatchArgs {
     pub async fn run(self) -> Result<()> {
+        let _span = warn_span!("watch").entered();
         info!(file=?self.config, "load config");
         let cfg = load_config(self.config)?;
         let mut hub = Hub::default();
@@ -50,9 +59,10 @@ impl WatchArgs {
             proxy: self.proxy,
         })?;
 
-        for target in targets {
-            match client.load_k_history(&target).await {
+        for target in targets.iter() {
+            match client.load_k_history(target).await {
                 Ok(ks) => {
+                    debug!(s = target.symbol, i = %target.interval, n = ks.len(), "klines loaded");
                     for k in ks {
                         hub.apply_k(k);
                     }
@@ -63,19 +73,46 @@ impl WatchArgs {
             }
         }
 
-        info!("history ks loaded");
+        let (mut stream, stopper) = client.subscribe_klines(&targets).await?;
+        let mut period = interval(self.watch.into());
 
-        let states = hub.states();
+        loop {
+            tokio::select! {
+                evt = stream.recv() => {
+                    let Some(evt) = evt else {
+                        break;
+                    };
 
-        for hs in states {
-            println!("Hub State for {}", hs.symbol);
-            for (d, sts) in hs.states {
-                println!("\t{d}");
-                for st in sts {
-                    println!("\t\ttemp: {:?}, perm: {:?}", st.temp, st.perm);
+                    match evt {
+                        Event::K(k) => {
+                            hub.apply_k(k);
+                        },
+
+                        Event::Disconnect(reason) => {
+                            debug!(reason, "event stream disconnected");
+                            break;
+                        },
+
+                        Event::Broken(reason) => {
+                            debug!(reason, "event stream broken");
+                        },
+                    }
+                },
+
+                _ = period.tick() => {
+                    trace!("period tick");
+                    hub.print_state_msgs(true, false);
                 }
+
+                _ = signal::ctrl_c() => {
+                    debug!("signal captured");
+                    break;
+                },
+
             }
         }
+
+        _ = stopper.send(WebsocketControl::Disconnect);
 
         Ok(())
     }
