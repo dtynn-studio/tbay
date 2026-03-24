@@ -22,3 +22,4 @@ time = { version = "0.3.47", features = ["local-offset", "formatting"] }
 toml = "1.0.6"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+crossterm = "0.29.0"

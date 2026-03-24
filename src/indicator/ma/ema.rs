@@ -1,4 +1,6 @@
-use crate::{indicator::Calculator, prelude::Decimal, util::RingBuffer};
+use crate::{
+    indicator::Calculator, prelude::Decimal, util::ring_buffer::RingBuffer,
+};
 
 pub struct Ema {
     buffer: RingBuffer<Decimal>,

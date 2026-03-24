@@ -13,6 +13,7 @@ use crate::{
     },
     hub::Hub,
     prelude::*,
+    util::term::clean_up_rows,
 };
 
 #[derive(Parser)]
@@ -76,6 +77,9 @@ impl WatchArgs {
         let (mut stream, stopper) = client.subscribe_klines(&targets).await?;
         let mut period = interval(self.watch.into());
 
+        let mut state_lines = 0usize;
+        let mut sout = std::io::stdout();
+
         loop {
             tokio::select! {
                 evt = stream.recv() => {
@@ -101,7 +105,18 @@ impl WatchArgs {
 
                 _ = period.tick() => {
                     trace!("period tick");
-                    hub.print_state_msgs(true, false);
+
+                    if state_lines > 0 {
+                        _ = clean_up_rows(&mut sout, state_lines as u16);
+                    }
+
+                    let mut time_line = 0;
+                    if let Ok(t) = OffsetDateTime::now_local() {
+                        println!("{t}");
+                        time_line = 1;
+                    }
+
+                    state_lines = hub.print_state_msgs(true, false) + time_line;
                 }
 
                 _ = signal::ctrl_c() => {

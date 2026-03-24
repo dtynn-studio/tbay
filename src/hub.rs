@@ -181,21 +181,22 @@ impl Hub {
         (temp_msgs, perm_msgs)
     }
 
-    pub fn print_state_msgs(&self, temp: bool, perm: bool) {
-        let now_str = OffsetDateTime::now_local()
-            .map(|t| format!("{t}\n"))
-            .unwrap_or("".to_owned());
-
+    pub fn print_state_msgs(&self, temp: bool, perm: bool) -> usize {
+        let mut line_count = 0;
         let (temp_msgs, perm_msgs) = self.collect_state_msgs();
         if temp && !temp_msgs.is_empty() {
+            line_count += temp_msgs.len() + 2;
             let lines = temp_msgs.join("\n\t");
-            println!("{now_str}TEMP STATES:\n\t{lines}\n\n");
+            println!("TEMP STATES:\n\t{lines}\n");
         }
 
         if perm && !perm_msgs.is_empty() {
+            line_count += perm_msgs.len() + 2;
             let lines = perm_msgs.join("\n\t");
-            println!("{now_str}PERM STATES:\n\t{lines}\n\n");
+            println!("PERM STATES:\n\t{lines}\n");
         }
+
+        line_count
     }
 
     fn has_indicator(

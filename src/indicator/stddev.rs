@@ -1,6 +1,8 @@
 use rust_decimal::MathematicalOps;
 
-use crate::{indicator::Calculator, prelude::Decimal, util::RingBuffer};
+use crate::{
+    indicator::Calculator, prelude::Decimal, util::ring_buffer::RingBuffer,
+};
 
 /// 根据给定的总和、平方和和周期计算标准差
 fn compute_std_dev(

@@ -65,6 +65,10 @@ pub enum Error {
     Json {
         source: serde_json::Error,
     },
+
+    Term {
+        source: std::io::Error,
+    },
 }
 
 impl From<time::error::IndeterminateOffset> for Error {
