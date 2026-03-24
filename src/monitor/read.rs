@@ -126,7 +126,7 @@ impl Read {
             .collect::<Vec<_>>();
 
         format!(
-            "{}:{},{}:{}",
+            "{}:({}/{}):{}",
             format_hhmm(&kctx.info.raw.time_begin),
             self.args.val_kind.as_str(),
             self.args.calc_kind.as_str(),

@@ -75,7 +75,7 @@ impl Cross {
     fn cross_event_msg(&self, t: &OffsetDateTime, direction: bool) -> String {
         let dir_flag = if direction { "↗" } else { "↘" };
         format!(
-            "{}:{}-{}:{}{dir_flag}{}",
+            "{}:({}/{}):{}{dir_flag}{}",
             format_hhmm(t),
             self.args.0.val_kind.as_str_short(),
             self.args.0.calc_kind.as_str_short(),

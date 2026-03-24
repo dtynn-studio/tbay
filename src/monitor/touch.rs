@@ -100,7 +100,7 @@ impl Touch {
         };
 
         format!(
-            "{}:{}-{}{}:{}",
+            "{}:({}/{}{}):{}",
             format_hhmm(t),
             self.args.val_kind.as_str_short(),
             self.args.calc_kind.as_str_short(),

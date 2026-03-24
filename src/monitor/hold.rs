@@ -107,9 +107,9 @@ pub struct Hold {
 impl Hold {
     fn event_msg(&self, t: &OffsetDateTime) -> String {
         format!(
-            "{}:{}:{}{}@{}",
+            "{}:({}/{}{}):@{}",
             format_hhmm(t),
-            ExtractKind::PriceClose.as_str_short(),
+            self.args.val_kind.as_str_short(),
             self.args.calc_kind.as_str_short(),
             self.args.ma,
             self.args.hold
