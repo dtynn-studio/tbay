@@ -121,6 +121,10 @@ impl Monitor for Cross {
         &self.state
     }
 
+    fn take_alerts(&mut self) -> Vec<String> {
+        vec![]
+    }
+
     fn terminated(&self) -> bool {
         false
     }

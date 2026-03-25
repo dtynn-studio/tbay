@@ -18,6 +18,7 @@ pub trait Monitor {
     // fn update(&mut self, kctx: &KCtx) -> Option<String>;
     fn apply(&mut self, kctx: &KCtx);
     fn state(&self) -> &State;
+    fn take_alerts(&mut self) -> Vec<String>;
     fn terminated(&self) -> bool;
 }
 
