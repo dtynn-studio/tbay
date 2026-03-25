@@ -6,7 +6,6 @@ use crate::{
     impl_builder,
     indicator::base::{BaseExtractorArgs, CalcKind, ExtractKind},
     prelude::*,
-    util::time::format_hhmm,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -92,7 +91,7 @@ pub struct Touch {
 }
 
 impl Touch {
-    fn event_msg(&self, t: &OffsetDateTime, dir: Option<bool>) -> String {
+    fn event_msg(&self, dir: Option<bool>) -> String {
         let dir_str = match dir {
             Some(true) => "↑",
             Some(false) => "↓",
@@ -100,8 +99,7 @@ impl Touch {
         };
 
         format!(
-            "{}:({}/{}{}):{}",
-            format_hhmm(t),
+            "({}/{}{}):{}",
             self.args.val_kind.as_str_short(),
             self.args.calc_kind.as_str_short(),
             self.args.ma,
@@ -126,7 +124,7 @@ impl Touch {
 
         let dir = kctx.info.direction;
 
-        Some(self.event_msg(&kctx.info.raw.time_begin, dir))
+        Some(self.event_msg(dir))
     }
 
     fn update(&mut self, kctx: &KCtx) -> Option<String> {
@@ -148,7 +146,7 @@ impl Touch {
 
         let dir = kctx.info.direction;
 
-        Some(self.event_msg(&kctx.info.raw.time_begin, dir))
+        Some(self.event_msg(dir))
     }
 }
 
@@ -164,11 +162,13 @@ impl Monitor for Touch {
     fn apply(&mut self, kctx: &KCtx) {
         if kctx.info.raw.finalized {
             self.state.temp.take();
-            self.state.perm = self.update(kctx);
+            self.state.perm =
+                self.update(kctx).map(|msg| (kctx.info.raw.time_begin, msg));
         } else {
             let prev_temp_t = self.temp_t.replace(kctx.info.raw.time_begin);
             if prev_temp_t != self.temp_t || self.state.temp.is_none() {
-                self.state.temp = self.calc(kctx);
+                self.state.temp =
+                    self.calc(kctx).map(|msg| (kctx.info.raw.time_begin, msg));
             }
         }
     }

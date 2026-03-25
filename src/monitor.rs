@@ -7,8 +7,8 @@ pub mod touch;
 
 #[derive(Debug, Default)]
 pub struct State {
-    pub temp: Option<String>,
-    pub perm: Option<String>,
+    pub temp: Option<(OffsetDateTime, String)>,
+    pub perm: Option<(OffsetDateTime, String)>,
 }
 
 pub trait Monitor {

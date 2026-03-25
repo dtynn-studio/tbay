@@ -134,7 +134,7 @@ impl KInfo {
     }
 
     pub fn is_not_below(&self, base: Decimal) -> bool {
-        matches!(self.relative_position(base), RelativePosition::Below)
+        !matches!(self.relative_position(base), RelativePosition::Below)
     }
 }
 

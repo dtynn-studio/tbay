@@ -6,7 +6,6 @@ use crate::{
     impl_builder,
     indicator::base::{BaseExtractorArgs, CalcKind, ExtractKind},
     prelude::*,
-    util::time::format_hhmm,
 };
 
 #[derive(Debug, Clone)]
@@ -126,8 +125,7 @@ impl Read {
             .collect::<Vec<_>>();
 
         format!(
-            "{}:({}/{}):{}",
-            format_hhmm(&kctx.info.raw.time_begin),
+            "({}/{}):{}",
             self.args.val_kind.as_str(),
             self.args.calc_kind.as_str(),
             vals.join("|")
@@ -147,9 +145,13 @@ impl Monitor for Read {
     fn apply(&mut self, kctx: &KCtx) {
         if kctx.info.raw.finalized {
             self.state.temp.take();
-            self.state.perm.replace(self.read_msg(kctx));
+            self.state
+                .perm
+                .replace((kctx.info.raw.time_begin, self.read_msg(kctx)));
         } else {
-            self.state.temp.replace(self.read_msg(kctx));
+            self.state
+                .temp
+                .replace((kctx.info.raw.time_begin, self.read_msg(kctx)));
         }
     }
 

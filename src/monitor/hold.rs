@@ -9,7 +9,6 @@ use crate::{
         position::{PositionArgs, PositionValue},
     },
     prelude::*,
-    util::time::format_hhmm,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -105,10 +104,11 @@ pub struct Hold {
 }
 
 impl Hold {
-    fn event_msg(&self, t: &OffsetDateTime) -> String {
+    fn event_msg(&self, pos: bool) -> String {
+        let pos_str = if pos { "▲" } else { "▼" };
+
         format!(
-            "{}:({}/{}{}):@{}",
-            format_hhmm(t),
+            "({}/{}{}):{pos_str}{}",
             self.args.val_kind.as_str_short(),
             self.args.calc_kind.as_str_short(),
             self.args.ma,
@@ -122,7 +122,7 @@ impl Hold {
             return None;
         }
 
-        Some(self.event_msg(&kctx.info.raw.time_begin))
+        Some(self.event_msg(val.state.position))
     }
 
     fn update(&mut self, kctx: &KCtx) -> Option<String> {
@@ -142,11 +142,13 @@ impl Monitor for Hold {
     fn apply(&mut self, kctx: &KCtx) {
         if kctx.info.raw.finalized {
             self.state.temp.take();
-            self.state.perm = self.update(kctx);
+            self.state.perm =
+                self.update(kctx).map(|msg| (kctx.info.raw.time_begin, msg));
         } else {
             let prev_temp_t = self.temp_t.replace(kctx.info.raw.time_begin);
             if prev_temp_t != self.temp_t || self.state.temp.is_none() {
-                self.state.temp = self.calc(kctx);
+                self.state.temp =
+                    self.calc(kctx).map(|msg| (kctx.info.raw.time_begin, msg));
             }
         }
     }

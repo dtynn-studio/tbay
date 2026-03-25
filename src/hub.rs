@@ -11,6 +11,7 @@ use crate::{
     event::K,
     indicator, monitor,
     prelude::*,
+    util::time::format_hhmm,
 };
 
 pub type HubIndicator = Box<dyn Indicator<Output = Box<dyn Any>>>;
@@ -150,29 +151,39 @@ impl Hub {
         let mut perm_msgs = Vec::new();
 
         let states = self.states();
+
         for hstate in states {
             for (d, sts) in hstate.states {
-                let temp_combined = sts
-                    .iter()
-                    .filter_map(|st| st.temp.clone())
-                    .collect::<Vec<_>>();
-                if !temp_combined.is_empty() {
+                let mut temp_combined: BTreeMap<OffsetDateTime, Vec<String>> =
+                    BTreeMap::new();
+                let mut perm_combined: BTreeMap<OffsetDateTime, Vec<String>> =
+                    BTreeMap::new();
+
+                for st in sts {
+                    if let Some((t, msg)) = st.temp.clone() {
+                        temp_combined.entry(t).or_default().push(msg);
+                    }
+
+                    if let Some((t, msg)) = st.perm.clone() {
+                        perm_combined.entry(t).or_default().push(msg);
+                    }
+                }
+
+                for (t, msgs) in temp_combined {
                     temp_msgs.push(format!(
-                        "{}@{d}:{}",
+                        "{}/{d}@{}: {}",
                         hstate.symbol,
-                        temp_combined.join(" ")
+                        format_hhmm(&t),
+                        msgs.join("  ")
                     ));
                 }
 
-                let perm_combined = sts
-                    .iter()
-                    .filter_map(|st| st.perm.clone())
-                    .collect::<Vec<_>>();
-                if !perm_combined.is_empty() {
+                for (t, msgs) in perm_combined {
                     perm_msgs.push(format!(
-                        "{}@{d}:{}",
+                        "{}/{d}@{}: {}",
                         hstate.symbol,
-                        perm_combined.join(" ")
+                        format_hhmm(&t),
+                        msgs.join("  ")
                     ));
                 }
             }

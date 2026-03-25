@@ -6,7 +6,6 @@ use crate::{
     impl_builder,
     indicator::cross::{CrossValue, MaCrossArgs},
     prelude::{Args, Builder, Decimal, Error, KCtx, Monitor, Result, State},
-    util::time::format_hhmm,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -66,17 +65,13 @@ impl Cross {
     ) -> Option<(&'c CrossValue<Decimal>, String)> {
         let val = kctx.get_val::<CrossValue<Decimal>>(&self.cross_key)?;
         let direction = val.cross?;
-        Some((
-            val,
-            self.cross_event_msg(&kctx.info.raw.time_begin, direction),
-        ))
+        Some((val, self.cross_event_msg(direction)))
     }
 
-    fn cross_event_msg(&self, t: &OffsetDateTime, direction: bool) -> String {
+    fn cross_event_msg(&self, direction: bool) -> String {
         let dir_flag = if direction { "↗" } else { "↘" };
         format!(
-            "{}:({}/{}):{}{dir_flag}{}",
-            format_hhmm(t),
+            "({}/{}):{}{dir_flag}{}",
             self.args.0.val_kind.as_str_short(),
             self.args.0.calc_kind.as_str_short(),
             self.args.0.fast,
@@ -108,11 +103,13 @@ impl Monitor for Cross {
     fn apply(&mut self, kctx: &KCtx) {
         if kctx.info.raw.finalized {
             self.state.temp.take();
-            self.state.perm = self.update(kctx);
+            self.state.perm =
+                self.update(kctx).map(|msg| (kctx.info.raw.time_begin, msg));
         } else {
             let prev_temp_t = self.temp_t.replace(kctx.info.raw.time_begin);
             if prev_temp_t != self.temp_t || self.state.temp.is_none() {
-                self.state.temp = self.calc(kctx);
+                self.state.temp =
+                    self.calc(kctx).map(|msg| (kctx.info.raw.time_begin, msg));
             }
         }
     }
