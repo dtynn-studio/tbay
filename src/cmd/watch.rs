@@ -116,7 +116,7 @@ impl WatchArgs {
                         time_line = 1;
                     }
 
-                    state_lines = hub.print_state_msgs(true, false) + time_line;
+                    state_lines = hub.print_state_msgs(true, true) + time_line;
                 }
 
                 _ = signal::ctrl_c() => {
