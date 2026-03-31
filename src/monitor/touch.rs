@@ -5,6 +5,7 @@ use scanf::sscanf;
 use crate::{
     impl_builder,
     indicator::base::{BaseExtractorArgs, CalcKind, ExtractKind},
+    monitor::alert::AlertManager,
     prelude::*,
 };
 
@@ -74,6 +75,7 @@ impl Args for TouchArgs {
             ma_key,
             prev_touched: false,
             state: Default::default(),
+            alerts: Default::default(),
             temp_t: None,
         })
     }
@@ -87,6 +89,7 @@ pub struct Touch {
     ma_key: String,
     prev_touched: bool,
     state: State,
+    alerts: AlertManager,
     temp_t: Option<OffsetDateTime>,
 }
 

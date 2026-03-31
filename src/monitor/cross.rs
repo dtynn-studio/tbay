@@ -5,6 +5,7 @@ use time::OffsetDateTime;
 use crate::{
     impl_builder,
     indicator::cross::{CrossValue, MaCrossArgs},
+    monitor::alert::AlertManager,
     prelude::{Args, Builder, Decimal, Error, KCtx, Monitor, Result, State},
 };
 
@@ -41,6 +42,7 @@ impl Args for CrossArgs {
             cross_key,
             current: None,
             state: Default::default(),
+            alerts: Default::default(),
             temp_t: None,
         })
     }
@@ -55,6 +57,7 @@ pub struct Cross {
     cross_key: String,
     current: Option<CrossValue<Decimal>>,
     state: State,
+    alerts: AlertManager,
     temp_t: Option<OffsetDateTime>,
 }
 

@@ -5,6 +5,7 @@ use scanf::sscanf;
 use crate::{
     impl_builder,
     indicator::base::{BaseExtractorArgs, CalcKind, ExtractKind},
+    monitor::alert::AlertManager,
     prelude::*,
 };
 
@@ -93,6 +94,7 @@ impl Args for ReadArgs {
             key,
             ma_keys,
             state: Default::default(),
+            alerts: Default::default(),
         })
     }
 }
@@ -105,6 +107,7 @@ pub struct Read {
     key: String,
     ma_keys: Vec<String>,
     state: State,
+    alerts: AlertManager,
 }
 
 impl Read {

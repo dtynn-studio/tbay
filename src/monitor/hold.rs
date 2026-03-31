@@ -8,6 +8,7 @@ use crate::{
         base::{CalcKind, ExtractKind},
         position::{PositionArgs, PositionValue},
     },
+    monitor::alert::AlertManager,
     prelude::*,
 };
 
@@ -88,6 +89,7 @@ impl Args for HoldArgs {
             key,
             pos_key,
             state: Default::default(),
+            alerts: Default::default(),
             temp_t: None,
         })
     }
@@ -100,6 +102,7 @@ pub struct Hold {
     key: String,
     pos_key: String,
     state: State,
+    alerts: AlertManager,
     temp_t: Option<OffsetDateTime>,
 }
 
