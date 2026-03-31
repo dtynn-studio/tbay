@@ -155,6 +155,10 @@ impl Monitor for Read {
             self.state
                 .temp
                 .replace((kctx.info.raw.time_begin, self.read_msg(kctx)));
+
+            if let Some((t, msg)) = self.state.temp.as_ref().cloned() {
+                self.alerts.add(t, msg);
+            }
         }
     }
 

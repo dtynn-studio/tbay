@@ -152,6 +152,10 @@ impl Monitor for Hold {
             if prev_temp_t != self.temp_t || self.state.temp.is_none() {
                 self.state.temp =
                     self.calc(kctx).map(|msg| (kctx.info.raw.time_begin, msg));
+
+                if let Some((t, msg)) = self.state.temp.as_ref().cloned() {
+                    self.alerts.add(t, msg);
+                }
             }
         }
     }
