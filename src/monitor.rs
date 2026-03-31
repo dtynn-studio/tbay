@@ -1,5 +1,6 @@
 use crate::prelude::*;
 
+pub mod alert;
 pub mod cross;
 pub mod hold;
 pub mod read;
@@ -18,7 +19,7 @@ pub trait Monitor {
     // fn update(&mut self, kctx: &KCtx) -> Option<String>;
     fn apply(&mut self, kctx: &KCtx);
     fn state(&self) -> &State;
-    fn take_alerts(&mut self) -> Vec<String>;
+    fn take_alerts(&mut self) -> Vec<(OffsetDateTime, String)>;
     fn terminated(&self) -> bool;
 }
 

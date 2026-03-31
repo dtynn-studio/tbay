@@ -177,7 +177,7 @@ impl Monitor for Touch {
         &self.state
     }
 
-    fn take_alerts(&mut self) -> Vec<String> {
+    fn take_alerts(&mut self) -> Vec<(OffsetDateTime, String)> {
         vec![]
     }
 
