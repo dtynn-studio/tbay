@@ -165,7 +165,7 @@ impl Monitor for Hold {
     }
 
     fn take_alerts(&mut self) -> Vec<(OffsetDateTime, String)> {
-        vec![]
+        self.alerts.take()
     }
 
     fn terminated(&self) -> bool {

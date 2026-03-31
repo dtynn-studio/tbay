@@ -167,7 +167,7 @@ impl Monitor for Read {
     }
 
     fn take_alerts(&mut self) -> Vec<(OffsetDateTime, String)> {
-        vec![]
+        self.alerts.take()
     }
 
     fn terminated(&self) -> bool {
