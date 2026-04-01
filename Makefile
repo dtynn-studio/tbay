@@ -1,8 +1,8 @@
 build:
 	cargo build --release --workspace
 
-build-win:
-	cargo build --release --workspace --target x86_64-pc-windows-msvc
+build-notify:
+	cargo build --release -p tbay-notify --target x86_64-pc-windows-msvc
 
 fmt:
 	cargo fmt --all
