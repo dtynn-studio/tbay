@@ -210,6 +210,55 @@ impl Hub {
         line_count
     }
 
+    pub fn collect_alert_msgs(&mut self) -> Vec<String> {
+        let mut lines = Vec::new();
+        for item in self.items.iter_mut() {
+            for (d, hubms) in item.monitors.iter_mut() {
+                let mut alerts: BTreeMap<OffsetDateTime, Vec<String>> =
+                    BTreeMap::new();
+                for m in hubms.iter_mut() {
+                    let alert_msgs = m.take_alerts();
+                    for (t, msg) in alert_msgs {
+                        alerts.entry(t).or_default().push(msg);
+                    }
+                }
+
+                let mut formatted_alerts = Vec::new();
+                for (t, amsgs) in alerts {
+                    formatted_alerts.push(format!(
+                        "@{}:{}",
+                        format_hhmm(&t),
+                        amsgs.join(" ")
+                    ));
+                }
+
+                if !formatted_alerts.is_empty() {
+                    lines.push(format!(
+                        "{}/{d}: {}",
+                        item.symbol,
+                        formatted_alerts.join("  ")
+                    ));
+                }
+            }
+        }
+
+        lines
+    }
+
+    pub fn show_alerts(&mut self) -> usize {
+        let alert_lines = self.collect_alert_msgs();
+        if alert_lines.is_empty() {
+            return 0;
+        }
+
+        let line_num = alert_lines.len() + 2;
+        let lines = alert_lines.join("\n\t");
+        print!("\x07");
+        println!("ALERTS:\n\t{lines}\n");
+
+        line_num
+    }
+
     fn has_indicator(
         &self,
         symbol: &str,
