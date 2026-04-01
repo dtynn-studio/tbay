@@ -7,6 +7,9 @@ use crate::prelude::*;
 #[derive(Deserialize)]
 pub struct Config {
     pub pairs: Vec<Pair>,
+
+    #[serde(default)]
+    pub notify: Notify,
 }
 
 #[derive(Deserialize)]
@@ -23,6 +26,20 @@ pub struct Interval {
     pub name: Option<Duration>,
     #[serde(default)]
     pub monitors: Vec<String>,
+}
+
+#[derive(Deserialize)]
+pub struct NotifyCmdArgs {
+    pub bin: String,
+    pub args: Vec<String>,
+}
+
+#[derive(Deserialize, Default)]
+#[serde(tag = "type")]
+pub enum Notify {
+    #[default]
+    No,
+    Cmd(NotifyCmdArgs),
 }
 
 pub fn load_config(p: impl AsRef<Path>) -> Result<Config> {

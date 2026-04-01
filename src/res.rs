@@ -69,6 +69,10 @@ pub enum Error {
     Term {
         source: std::io::Error,
     },
+
+    Execute {
+        source: std::io::Error,
+    },
 }
 
 impl From<time::error::IndeterminateOffset> for Error {

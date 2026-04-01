@@ -9,6 +9,7 @@ pub mod indicator;
 pub mod k;
 pub mod logger;
 pub mod monitor;
+pub mod notifier;
 pub mod prelude;
 pub mod res;
 pub mod util;
