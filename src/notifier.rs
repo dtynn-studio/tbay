@@ -1,6 +1,9 @@
 use std::process::Command;
 
-use crate::{config::NotifyCmdArgs, prelude::*};
+use crate::{
+    config::{Notify, NotifyCmdArgs},
+    prelude::*,
+};
 
 pub enum Notifier {
     No,
@@ -8,7 +11,14 @@ pub enum Notifier {
 }
 
 impl Notifier {
-    pub fn process(&self, title: String, lines: &[String]) -> Result<()> {
+    pub fn new(cfg: Notify) -> Self {
+        match cfg {
+            Notify::No => Self::No,
+            Notify::Cmd(args) => Self::Cmd(CmdNotifier { args }),
+        }
+    }
+
+    pub fn process(&self, title: &str, lines: &[String]) -> Result<()> {
         if let Self::Cmd(nofi) = self {
             nofi.process(title, lines)
         } else {
@@ -22,13 +32,13 @@ pub struct CmdNotifier {
 }
 
 impl CmdNotifier {
-    fn process(&self, title: String, lines: &[String]) -> Result<()> {
+    fn process(&self, title: &str, lines: &[String]) -> Result<()> {
         if lines.is_empty() {
             return Ok(());
         }
 
         let args = self.args.args.iter().map(|s| match s.as_str() {
-            "$title" => title.clone(),
+            "$title" => title.to_owned(),
             "$body" => lines.join("\n"),
             _ => s.to_owned(),
         });

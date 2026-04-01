@@ -10,6 +10,7 @@ use crate::{
     config::{Config, Interval, Pair},
     event::K,
     indicator, monitor,
+    notifier::Notifier,
     prelude::*,
     util::time::format_hhmm,
 };
@@ -34,6 +35,7 @@ pub struct Hub {
     indicator_builders: HashMap<TypeId, HubIndicatorBuilder>,
     monitor_builders: HashMap<TypeId, HubMonitorBuilder>,
     items: Vec<HubItem>,
+    notifier: Option<Notifier>,
 }
 
 impl Default for Hub {
@@ -42,6 +44,7 @@ impl Default for Hub {
             indicator_builders: Default::default(),
             monitor_builders: Default::default(),
             items: Default::default(),
+            notifier: None,
         };
 
         // indicator builders
@@ -251,6 +254,10 @@ impl Hub {
             return 0;
         }
 
+        if let Some(notifier) = self.notifier.as_ref() {
+            _ = notifier.process("alerts", &alert_lines);
+        }
+
         let line_num = alert_lines.len() + 2;
         let lines = alert_lines.join("\n\t");
         print!("\x07");
@@ -422,6 +429,9 @@ impl Hub {
                 self.apply_pair(pair, for_all_cfg)?;
             }
         }
+
+        let notifier = Notifier::new(cfg.notify);
+        self.notifier.replace(notifier);
 
         Ok(())
     }
