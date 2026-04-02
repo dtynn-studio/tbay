@@ -1,8 +1,10 @@
 use std::borrow::Cow;
 
+use crossterm::style::Stylize;
 use scanf::sscanf;
 
 use crate::{
+    config::ColorTable,
     impl_builder,
     indicator::base::{BaseExtractorArgs, CalcKind, ExtractKind},
     monitor::{Msg, alert::AlertManager},
@@ -94,11 +96,11 @@ pub struct Touch {
 }
 
 impl Touch {
-    fn event_msg(&self, dir: Option<bool>) -> Msg {
-        let dir_str = match dir {
-            Some(true) => "↑",
-            Some(false) => "↓",
-            None => "-",
+    fn event_msg(&self, dir: Option<bool>, colors: ColorTable) -> Msg {
+        let (dir_str, color) = match dir {
+            Some(true) => ("↑", colors.up),
+            Some(false) => ("↓", colors.down),
+            None => ("-", colors.normal),
         };
 
         let normal = format!(
@@ -109,10 +111,15 @@ impl Touch {
             dir_str,
         );
 
-        Msg {
-            normal: normal.clone(),
-            tty: normal,
-        }
+        let tty = format!(
+            "({}/{}{}):{}",
+            self.args.val_kind.as_str_short(),
+            self.args.calc_kind.as_str_short(),
+            self.args.ma,
+            dir_str.with(color),
+        );
+
+        Msg { normal, tty }
     }
 }
 
@@ -147,7 +154,7 @@ impl Touch {
 
         let dir = kctx.info.direction;
 
-        Some(self.event_msg(dir))
+        Some(self.event_msg(dir, kctx.colors))
     }
 
     fn update(&mut self, kctx: &KCtx) -> Option<Msg> {
@@ -168,7 +175,7 @@ impl Touch {
 
         let dir = kctx.info.direction;
 
-        Some(self.event_msg(dir))
+        Some(self.event_msg(dir, kctx.colors))
     }
 }
 

@@ -1,8 +1,10 @@
 use std::str::FromStr;
 
+use crossterm::style::Stylize;
 use time::OffsetDateTime;
 
 use crate::{
+    config::ColorTable,
     impl_builder,
     indicator::cross::{CrossValue, MaCrossArgs},
     monitor::{Msg, alert::AlertManager},
@@ -68,11 +70,15 @@ impl Cross {
     ) -> Option<(&'c CrossValue<Decimal>, Msg)> {
         let val = kctx.get_val::<CrossValue<Decimal>>(&self.cross_key)?;
         let direction = val.cross?;
-        Some((val, self.cross_event_msg(direction)))
+        Some((val, self.cross_event_msg(direction, kctx.colors)))
     }
 
-    fn cross_event_msg(&self, direction: bool) -> Msg {
-        let dir_flag = if direction { "↗" } else { "↘" };
+    fn cross_event_msg(&self, direction: bool, colors: ColorTable) -> Msg {
+        let (dir_flag, color) = if direction {
+            ("↗", colors.up)
+        } else {
+            ("↘", colors.down)
+        };
         let normal = format!(
             "({}/{}):{}{dir_flag}{}",
             self.args.0.val_kind.as_str_short(),
@@ -81,10 +87,16 @@ impl Cross {
             self.args.0.slow
         );
 
-        Msg {
-            normal: normal.clone(),
-            tty: normal,
-        }
+        let tty = format!(
+            "({}/{}):{}{}{}",
+            self.args.0.val_kind.as_str_short(),
+            self.args.0.calc_kind.as_str_short(),
+            self.args.0.fast,
+            dir_flag.with(color),
+            self.args.0.slow
+        );
+
+        Msg { normal, tty }
     }
 
     fn calc(&self, kctx: &KCtx) -> Option<Msg> {

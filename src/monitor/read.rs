@@ -1,5 +1,6 @@
 use std::{borrow::Cow, str::FromStr};
 
+use crossterm::style::Stylize;
 use scanf::sscanf;
 
 use crate::{
@@ -134,10 +135,35 @@ impl Read {
             vals.join("|")
         );
 
-        Msg {
-            normal: normal.clone(),
-            tty: normal,
-        }
+        let tty_vals = self
+            .ma_keys
+            .iter()
+            .zip(self.args.periods.iter())
+            .map(|(key, p)| match kctx.get_val::<Decimal>(key) {
+                Some(v) => {
+                    let color = if v >= &kctx.info.raw.price_close {
+                        kctx.colors.up
+                    } else {
+                        kctx.colors.down
+                    };
+
+                    format!("{p}:{}", v.round_dp(2)).with(color).to_string()
+                }
+
+                None => {
+                    format!("{p}:n/a")
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let tty = format!(
+            "({}/{}):{}",
+            self.args.val_kind.as_str(),
+            self.args.calc_kind.as_str(),
+            tty_vals.join("|")
+        );
+
+        Msg { normal, tty }
     }
 }
 

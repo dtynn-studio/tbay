@@ -1,8 +1,10 @@
 use std::{borrow::Cow, str::FromStr};
 
+use crossterm::style::Stylize;
 use scanf::sscanf;
 
 use crate::{
+    config::ColorTable,
     impl_builder,
     indicator::{
         base::{CalcKind, ExtractKind},
@@ -107,8 +109,12 @@ pub struct Hold {
 }
 
 impl Hold {
-    fn event_msg(&self, pos: bool) -> Msg {
-        let pos_str = if pos { "▲" } else { "▼" };
+    fn event_msg(&self, pos: bool, colors: ColorTable) -> Msg {
+        let (pos_str, color) = if pos {
+            ("▲", colors.up)
+        } else {
+            ("▼", colors.down)
+        };
 
         let normal = format!(
             "({}/{}{}):{pos_str}{}",
@@ -118,10 +124,16 @@ impl Hold {
             self.args.hold
         );
 
-        Msg {
-            normal: normal.clone(),
-            tty: normal,
-        }
+        let tty = format!(
+            "({}/{}{}):{}{}",
+            self.args.val_kind.as_str_short(),
+            self.args.calc_kind.as_str_short(),
+            self.args.ma,
+            pos_str.with(color),
+            self.args.hold
+        );
+
+        Msg { normal, tty }
     }
 
     fn calc(&self, kctx: &KCtx) -> Option<Msg> {
@@ -130,7 +142,7 @@ impl Hold {
             return None;
         }
 
-        Some(self.event_msg(val.state.position))
+        Some(self.event_msg(val.state.position, kctx.colors))
     }
 
     fn update(&mut self, kctx: &KCtx) -> Option<Msg> {

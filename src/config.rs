@@ -56,6 +56,7 @@ pub enum Notify {
 
 #[derive(Deserialize, Clone, Copy)]
 pub struct ColorTable {
+    pub normal: Color,
     pub up: Color,
     pub down: Color,
 }
@@ -63,6 +64,7 @@ pub struct ColorTable {
 impl Default for ColorTable {
     fn default() -> Self {
         Self {
+            normal: Color::Reset,
             up: Color::Green,
             down: Color::Red,
         }

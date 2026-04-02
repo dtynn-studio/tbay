@@ -36,7 +36,7 @@ pub struct Hub {
     monitor_builders: HashMap<TypeId, HubMonitorBuilder>,
     items: Vec<HubItem>,
     notifiers: Vec<Notifier>,
-    colors: Option<ColorTable>,
+    colors: ColorTable,
     is_tty: bool,
 }
 
@@ -451,9 +451,8 @@ impl Hub {
             self.notifiers.push(noti);
         }
 
-        if is_tty {
-            self.colors.replace(cfg.colors);
-        }
+        self.is_tty = is_tty;
+        self.colors = cfg.colors;
 
         Ok(())
     }
