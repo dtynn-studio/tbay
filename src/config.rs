@@ -1,5 +1,6 @@
 use std::{path::Path, time::Duration};
 
+use crossterm::style::Color;
 use serde::Deserialize;
 
 use crate::prelude::*;
@@ -10,6 +11,9 @@ pub struct Config {
 
     #[serde(default)]
     pub notify: Vec<Notify>,
+
+    #[serde(default)]
+    pub colors: ColorTable,
 }
 
 #[derive(Deserialize)]
@@ -48,6 +52,21 @@ pub enum Notify {
     No,
     Cmd(NotifyCmdArgs),
     DingTalk(DingTalkArgs),
+}
+
+#[derive(Deserialize, Clone, Copy)]
+pub struct ColorTable {
+    pub up: Color,
+    pub down: Color,
+}
+
+impl Default for ColorTable {
+    fn default() -> Self {
+        Self {
+            up: Color::Green,
+            down: Color::Red,
+        }
+    }
 }
 
 pub fn load_config(p: impl AsRef<Path>) -> Result<Config> {
