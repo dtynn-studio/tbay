@@ -7,7 +7,7 @@ use humantime::Duration;
 use tracing::{debug, warn_span};
 
 use crate::{
-    config::{Config, Interval, Pair},
+    config::{ColorTable, Config, Interval, Pair},
     event::K,
     indicator, monitor,
     notifier::Notifier,
@@ -36,6 +36,7 @@ pub struct Hub {
     monitor_builders: HashMap<TypeId, HubMonitorBuilder>,
     items: Vec<HubItem>,
     notifiers: Vec<Notifier>,
+    colors: ColorTable,
 }
 
 impl Default for Hub {
@@ -45,6 +46,7 @@ impl Default for Hub {
             monitor_builders: Default::default(),
             items: Default::default(),
             notifiers: Default::default(),
+            colors: Default::default(),
         };
 
         // indicator builders
@@ -107,7 +109,7 @@ impl Hub {
             return;
         };
 
-        let mut kctx = KCtx::from(k.raw);
+        let mut kctx = KCtx::new(k.raw, self.colors);
 
         for indicator in indicators {
             if let Some(val) = indicator.apply(&kctx) {
@@ -434,6 +436,8 @@ impl Hub {
             let noti = Notifier::new(ncfg)?;
             self.notifiers.push(noti);
         }
+
+        self.colors = cfg.colors;
 
         Ok(())
     }

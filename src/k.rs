@@ -1,6 +1,9 @@
 use std::{any::Any, cmp::Ordering, collections::HashMap};
 
-use crate::prelude::{Decimal, OffsetDateTime};
+use crate::{
+    config::ColorTable,
+    prelude::{Decimal, OffsetDateTime},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum RelativePosition {
@@ -140,19 +143,28 @@ impl KInfo {
 
 pub struct KCtx {
     pub info: KInfo,
+    pub colors: ColorTable,
     vals: HashMap<String, Box<dyn Any>>,
 }
 
-impl From<KRaw> for KCtx {
-    fn from(value: KRaw) -> Self {
-        KCtx {
-            info: value.into(),
+// impl From<KRaw> for KCtx {
+//     fn from(value: KRaw) -> Self {
+//         KCtx {
+//             info: value.into(),
+//             vals: Default::default(),
+//         }
+//     }
+// }
+
+impl KCtx {
+    pub fn new(raw: KRaw, colors: ColorTable) -> Self {
+        Self {
+            info: raw.into(),
+            colors,
             vals: Default::default(),
         }
     }
-}
 
-impl KCtx {
     pub fn get_val<T: 'static>(&self, key: &str) -> Option<&T> {
         self.vals.get(key).and_then(|o| o.downcast_ref())
     }
