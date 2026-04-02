@@ -112,6 +112,22 @@ impl Touch {
 }
 
 impl Touch {
+    fn touched(&self, kctx: &KCtx, val: Decimal) -> bool {
+        match self.args.val_kind {
+            ExtractKind::PriceClose => self.close_touched(kctx, val),
+
+            ExtractKind::Qty => self.qty_touched(kctx, val),
+        }
+    }
+
+    fn close_touched(&self, kctx: &KCtx, val: Decimal) -> bool {
+        kctx.info.raw.price_high >= val && kctx.info.raw.price_low <= val
+    }
+
+    fn qty_touched(&self, kctx: &KCtx, val: Decimal) -> bool {
+        kctx.info.raw.quantity >= val
+    }
+
     fn calc(&self, kctx: &KCtx) -> Option<String> {
         if self.prev_touched {
             return None;
@@ -119,8 +135,7 @@ impl Touch {
 
         let ma = kctx.get_val::<Decimal>(&self.ma_key).copied()?;
 
-        let touched =
-            kctx.info.raw.price_high >= ma && kctx.info.raw.price_low <= ma;
+        let touched = self.touched(kctx, ma);
         if !touched {
             return None;
         }
@@ -139,8 +154,7 @@ impl Touch {
 
         let ma = kctx.get_val::<Decimal>(&self.ma_key).copied()?;
 
-        let touched =
-            kctx.info.raw.price_high >= ma && kctx.info.raw.price_low <= ma;
+        let touched = self.touched(kctx, ma);
         if !touched {
             return None;
         }
