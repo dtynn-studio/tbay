@@ -9,7 +9,7 @@ pub struct Config {
     pub pairs: Vec<Pair>,
 
     #[serde(default)]
-    pub notify: Notify,
+    pub notify: Vec<Notify>,
 }
 
 #[derive(Deserialize)]

@@ -35,7 +35,7 @@ pub struct Hub {
     indicator_builders: HashMap<TypeId, HubIndicatorBuilder>,
     monitor_builders: HashMap<TypeId, HubMonitorBuilder>,
     items: Vec<HubItem>,
-    notifier: Option<Notifier>,
+    notifiers: Vec<Notifier>,
 }
 
 impl Default for Hub {
@@ -44,7 +44,7 @@ impl Default for Hub {
             indicator_builders: Default::default(),
             monitor_builders: Default::default(),
             items: Default::default(),
-            notifier: None,
+            notifiers: Default::default(),
         };
 
         // indicator builders
@@ -254,8 +254,8 @@ impl Hub {
             return 0;
         }
 
-        if let Some(notifier) = self.notifier.as_ref() {
-            _ = notifier.process("alerts", &alert_lines);
+        for n in self.notifiers.iter() {
+            _ = n.process("alerts", &alert_lines);
         }
 
         let line_num = alert_lines.len() + 2;
@@ -430,8 +430,10 @@ impl Hub {
             }
         }
 
-        let notifier = Notifier::new(cfg.notify)?;
-        self.notifier.replace(notifier);
+        for ncfg in cfg.notify {
+            let noti = Notifier::new(ncfg)?;
+            self.notifiers.push(noti);
+        }
 
         Ok(())
     }
