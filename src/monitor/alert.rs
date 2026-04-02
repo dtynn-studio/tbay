@@ -2,9 +2,11 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use time::OffsetDateTime;
 
+use crate::monitor::Msg;
+
 pub struct AlertManager {
     cap: usize,
-    alerts: BTreeMap<OffsetDateTime, String>,
+    alerts: BTreeMap<OffsetDateTime, Msg>,
     taken: BTreeSet<OffsetDateTime>,
 }
 
@@ -23,7 +25,7 @@ impl AlertManager {
         }
     }
 
-    pub fn add(&mut self, t: OffsetDateTime, msg: String) {
+    pub fn add(&mut self, t: OffsetDateTime, msg: Msg) {
         if self.alerts.try_insert(t, msg).is_err() {
             return;
         }
@@ -38,7 +40,7 @@ impl AlertManager {
         }
     }
 
-    pub fn take(&mut self) -> Vec<(OffsetDateTime, String)> {
+    pub fn take(&mut self) -> Vec<(OffsetDateTime, Msg)> {
         let mut msgs = Vec::new();
         for (k, v) in self.alerts.iter() {
             if self.taken.insert(*k) {

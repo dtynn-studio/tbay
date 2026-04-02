@@ -229,53 +229,78 @@ impl Hub {
         line_count
     }
 
-    pub fn collect_alert_msgs(&mut self) -> Vec<String> {
-        let mut lines = Vec::new();
+    pub fn collect_alert_msgs(&mut self) -> (Vec<String>, Vec<String>) {
+        let mut normal_lines = Vec::new();
+        let mut tty_lines = Vec::new();
         for item in self.items.iter_mut() {
             for (d, hubms) in item.monitors.iter_mut() {
-                let mut alerts: BTreeMap<OffsetDateTime, Vec<String>> =
+                let mut normal_alerts: BTreeMap<OffsetDateTime, Vec<String>> =
                     BTreeMap::new();
+
+                let mut tty_alerts: BTreeMap<OffsetDateTime, Vec<String>> =
+                    BTreeMap::new();
+
                 for m in hubms.iter_mut() {
                     let alert_msgs = m.take_alerts();
                     for (t, msg) in alert_msgs {
-                        alerts.entry(t).or_default().push(msg);
+                        normal_alerts.entry(t).or_default().push(msg.normal);
+                        tty_alerts.entry(t).or_default().push(msg.tty);
                     }
                 }
 
-                let mut formatted_alerts = Vec::new();
-                for (t, amsgs) in alerts {
-                    formatted_alerts.push(format!(
+                let mut normal_formatted_alerts = Vec::new();
+
+                for (t, amsgs) in normal_alerts {
+                    normal_formatted_alerts.push(format!(
                         "@{}:{}",
                         format_hhmm(&t),
                         amsgs.join(" ")
                     ));
                 }
 
-                if !formatted_alerts.is_empty() {
-                    lines.push(format!(
+                if !normal_formatted_alerts.is_empty() {
+                    normal_lines.push(format!(
                         "{}/{d}: {}",
                         item.symbol,
-                        formatted_alerts.join("  ")
+                        normal_formatted_alerts.join("  ")
+                    ));
+                }
+
+                let mut tty_formatted_alerts = Vec::new();
+
+                for (t, amsgs) in tty_alerts {
+                    tty_formatted_alerts.push(format!(
+                        "@{}:{}",
+                        format_hhmm(&t),
+                        amsgs.join(" ")
+                    ));
+                }
+
+                if !tty_formatted_alerts.is_empty() {
+                    tty_lines.push(format!(
+                        "{}/{d}: {}",
+                        item.symbol,
+                        tty_formatted_alerts.join("  ")
                     ));
                 }
             }
         }
 
-        lines
+        (normal_lines, tty_lines)
     }
 
     pub fn show_alerts(&mut self) -> usize {
-        let alert_lines = self.collect_alert_msgs();
-        if alert_lines.is_empty() {
+        let (normal_alert_lines, tty_alert_lines) = self.collect_alert_msgs();
+        if normal_alert_lines.is_empty() {
             return 0;
         }
 
         for n in self.notifiers.iter() {
-            _ = n.process("alerts", &alert_lines);
+            _ = n.process("alerts", &normal_alert_lines);
         }
 
-        let line_num = alert_lines.len() + 2;
-        let lines = alert_lines.join("\n\t");
+        let line_num = tty_alert_lines.len() + 2;
+        let lines = tty_alert_lines.join("\n\t");
         print!("\x07");
         println!("ALERTS:\n\t{lines}\n");
 

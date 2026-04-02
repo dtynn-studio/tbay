@@ -131,8 +131,8 @@ impl Monitor for Cross {
                 self.state.temp =
                     self.calc(kctx).map(|msg| (kctx.info.raw.time_begin, msg));
 
-                if let Some((t, msg)) = self.state.temp.as_ref() {
-                    self.alerts.add(*t, msg.normal.clone());
+                if let Some((t, msg)) = self.state.temp.as_ref().cloned() {
+                    self.alerts.add(t, msg);
                 }
             }
         }
@@ -142,7 +142,7 @@ impl Monitor for Cross {
         &self.state
     }
 
-    fn take_alerts(&mut self) -> Vec<(OffsetDateTime, String)> {
+    fn take_alerts(&mut self) -> Vec<(OffsetDateTime, Msg)> {
         self.alerts.take()
     }
 
