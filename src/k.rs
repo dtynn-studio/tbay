@@ -143,7 +143,7 @@ impl KInfo {
 
 pub struct KCtx {
     pub info: KInfo,
-    pub colors: ColorTable,
+    pub colors: Option<ColorTable>,
     vals: HashMap<String, Box<dyn Any>>,
 }
 
@@ -157,7 +157,7 @@ pub struct KCtx {
 // }
 
 impl KCtx {
-    pub fn new(raw: KRaw, colors: ColorTable) -> Self {
+    pub fn new(raw: KRaw, colors: Option<ColorTable>) -> Self {
         Self {
             info: raw.into(),
             colors,

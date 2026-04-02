@@ -36,7 +36,7 @@ pub struct Hub {
     monitor_builders: HashMap<TypeId, HubMonitorBuilder>,
     items: Vec<HubItem>,
     notifiers: Vec<Notifier>,
-    colors: ColorTable,
+    colors: Option<ColorTable>,
 }
 
 impl Default for Hub {
@@ -411,7 +411,7 @@ impl Hub {
         Ok(true)
     }
 
-    pub fn apply_config(&mut self, cfg: Config) -> Result<()> {
+    pub fn apply_config(&mut self, cfg: Config, is_tty: bool) -> Result<()> {
         let mut for_all_pairs = None;
         let mut all_pairs = vec![];
 
@@ -437,7 +437,9 @@ impl Hub {
             self.notifiers.push(noti);
         }
 
-        self.colors = cfg.colors;
+        if is_tty {
+            self.colors.replace(cfg.colors);
+        }
 
         Ok(())
     }

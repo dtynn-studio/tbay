@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{io::IsTerminal, path::PathBuf};
 
 use clap::Parser;
 use humantime::Duration;
@@ -39,13 +39,16 @@ pub struct WatchArgs {
 
 impl WatchArgs {
     pub async fn run(self) -> Result<()> {
+        let mut sout = std::io::stdout();
+        let is_tty = sout.is_terminal();
+
         let _span = warn_span!("watch").entered();
         info!(file=?self.config, "load config");
         let cfg = load_config(self.config)?;
         let mut hub = Hub::default();
 
-        info!("setup hub");
-        hub.apply_config(cfg)?;
+        info!(tty = is_tty, "setup hub");
+        hub.apply_config(cfg, is_tty)?;
 
         let targets = hub.targets();
         info!(?targets, "collected");
@@ -78,7 +81,6 @@ impl WatchArgs {
         let mut period = interval(self.watch.into());
 
         let mut state_lines = 0usize;
-        let mut sout = std::io::stdout();
 
         loop {
             tokio::select! {
