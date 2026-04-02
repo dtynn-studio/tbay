@@ -8,7 +8,7 @@ use crate::{
         base::{CalcKind, ExtractKind},
         position::{PositionArgs, PositionValue},
     },
-    monitor::alert::AlertManager,
+    monitor::{Msg, alert::AlertManager},
     prelude::*,
 };
 
@@ -107,19 +107,24 @@ pub struct Hold {
 }
 
 impl Hold {
-    fn event_msg(&self, pos: bool) -> String {
+    fn event_msg(&self, pos: bool) -> Msg {
         let pos_str = if pos { "▲" } else { "▼" };
 
-        format!(
+        let normal = format!(
             "({}/{}{}):{pos_str}{}",
             self.args.val_kind.as_str_short(),
             self.args.calc_kind.as_str_short(),
             self.args.ma,
             self.args.hold
-        )
+        );
+
+        Msg {
+            normal: normal.clone(),
+            tty: normal,
+        }
     }
 
-    fn calc(&self, kctx: &KCtx) -> Option<String> {
+    fn calc(&self, kctx: &KCtx) -> Option<Msg> {
         let val = kctx.get_val::<PositionValue>(&self.pos_key)?;
         if val.state.duration != self.args.hold {
             return None;
@@ -128,7 +133,7 @@ impl Hold {
         Some(self.event_msg(val.state.position))
     }
 
-    fn update(&mut self, kctx: &KCtx) -> Option<String> {
+    fn update(&mut self, kctx: &KCtx) -> Option<Msg> {
         self.calc(kctx)
     }
 }
@@ -153,8 +158,8 @@ impl Monitor for Hold {
                 self.state.temp =
                     self.calc(kctx).map(|msg| (kctx.info.raw.time_begin, msg));
 
-                if let Some((t, msg)) = self.state.temp.as_ref().cloned() {
-                    self.alerts.add(t, msg);
+                if let Some((t, msg)) = self.state.temp.as_ref() {
+                    self.alerts.add(*t, msg.normal.clone());
                 }
             }
         }

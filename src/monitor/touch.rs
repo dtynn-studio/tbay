@@ -5,7 +5,7 @@ use scanf::sscanf;
 use crate::{
     impl_builder,
     indicator::base::{BaseExtractorArgs, CalcKind, ExtractKind},
-    monitor::alert::AlertManager,
+    monitor::{Msg, alert::AlertManager},
     prelude::*,
 };
 
@@ -94,20 +94,25 @@ pub struct Touch {
 }
 
 impl Touch {
-    fn event_msg(&self, dir: Option<bool>) -> String {
+    fn event_msg(&self, dir: Option<bool>) -> Msg {
         let dir_str = match dir {
             Some(true) => "↑",
             Some(false) => "↓",
             None => "-",
         };
 
-        format!(
+        let normal = format!(
             "({}/{}{}):{}",
             self.args.val_kind.as_str_short(),
             self.args.calc_kind.as_str_short(),
             self.args.ma,
             dir_str,
-        )
+        );
+
+        Msg {
+            normal: normal.clone(),
+            tty: normal,
+        }
     }
 }
 
@@ -128,7 +133,7 @@ impl Touch {
         kctx.info.raw.quantity >= val
     }
 
-    fn calc(&self, kctx: &KCtx) -> Option<String> {
+    fn calc(&self, kctx: &KCtx) -> Option<Msg> {
         if self.prev_touched {
             return None;
         }
@@ -145,7 +150,7 @@ impl Touch {
         Some(self.event_msg(dir))
     }
 
-    fn update(&mut self, kctx: &KCtx) -> Option<String> {
+    fn update(&mut self, kctx: &KCtx) -> Option<Msg> {
         let prev_touched = self.prev_touched;
         self.prev_touched = false;
         if prev_touched {
@@ -187,8 +192,8 @@ impl Monitor for Touch {
                 self.state.temp =
                     self.calc(kctx).map(|msg| (kctx.info.raw.time_begin, msg));
 
-                if let Some((t, msg)) = self.state.temp.as_ref().cloned() {
-                    self.alerts.add(t, msg);
+                if let Some((t, msg)) = self.state.temp.as_ref() {
+                    self.alerts.add(*t, msg.normal.clone());
                 }
             }
         }

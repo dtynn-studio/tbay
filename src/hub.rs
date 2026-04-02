@@ -37,6 +37,7 @@ pub struct Hub {
     items: Vec<HubItem>,
     notifiers: Vec<Notifier>,
     colors: Option<ColorTable>,
+    is_tty: bool,
 }
 
 impl Default for Hub {
@@ -47,6 +48,7 @@ impl Default for Hub {
             items: Default::default(),
             notifiers: Default::default(),
             colors: Default::default(),
+            is_tty: false,
         };
 
         // indicator builders
@@ -165,12 +167,24 @@ impl Hub {
                     BTreeMap::new();
 
                 for st in sts {
-                    if let Some((t, msg)) = st.temp.clone() {
-                        temp_combined.entry(t).or_default().push(msg);
+                    if let Some((t, msg)) = st.temp.as_ref() {
+                        let msg = if self.is_tty {
+                            msg.tty.clone()
+                        } else {
+                            msg.normal.clone()
+                        };
+
+                        temp_combined.entry(*t).or_default().push(msg);
                     }
 
-                    if let Some((t, msg)) = st.perm.clone() {
-                        perm_combined.entry(t).or_default().push(msg);
+                    if let Some((t, msg)) = st.perm.as_ref() {
+                        let msg = if self.is_tty {
+                            msg.tty.clone()
+                        } else {
+                            msg.normal.clone()
+                        };
+
+                        perm_combined.entry(*t).or_default().push(msg);
                     }
                 }
 

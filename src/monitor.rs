@@ -6,10 +6,16 @@ pub mod hold;
 pub mod read;
 pub mod touch;
 
+#[derive(Debug, Clone)]
+pub struct Msg {
+    pub normal: String,
+    pub tty: String,
+}
+
 #[derive(Debug, Default)]
 pub struct State {
-    pub temp: Option<(OffsetDateTime, String)>,
-    pub perm: Option<(OffsetDateTime, String)>,
+    pub temp: Option<(OffsetDateTime, Msg)>,
+    pub perm: Option<(OffsetDateTime, Msg)>,
 }
 
 pub trait Monitor {

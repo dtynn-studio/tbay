@@ -5,7 +5,7 @@ use scanf::sscanf;
 use crate::{
     impl_builder,
     indicator::base::{BaseExtractorArgs, CalcKind, ExtractKind},
-    monitor::alert::AlertManager,
+    monitor::{Msg, alert::AlertManager},
     prelude::*,
 };
 
@@ -111,7 +111,7 @@ pub struct Read {
 }
 
 impl Read {
-    fn read_msg(&self, kctx: &KCtx) -> String {
+    fn read_msg(&self, kctx: &KCtx) -> Msg {
         let vals = self
             .ma_keys
             .iter()
@@ -127,12 +127,17 @@ impl Read {
             })
             .collect::<Vec<_>>();
 
-        format!(
+        let normal = format!(
             "({}/{}):{}",
             self.args.val_kind.as_str(),
             self.args.calc_kind.as_str(),
             vals.join("|")
-        )
+        );
+
+        Msg {
+            normal: normal.clone(),
+            tty: normal,
+        }
     }
 }
 
@@ -156,8 +161,8 @@ impl Monitor for Read {
                 .temp
                 .replace((kctx.info.raw.time_begin, self.read_msg(kctx)));
 
-            if let Some((t, msg)) = self.state.temp.as_ref().cloned() {
-                self.alerts.add(t, msg);
+            if let Some((t, msg)) = self.state.temp.as_ref() {
+                self.alerts.add(*t, msg.normal.clone());
             }
         }
     }
