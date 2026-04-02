@@ -34,12 +34,20 @@ pub struct NotifyCmdArgs {
     pub args: Vec<String>,
 }
 
+#[derive(Deserialize)]
+pub struct DingTalkArgs {
+    pub token: String,
+    #[serde(default)]
+    pub secret: Option<String>,
+}
+
 #[derive(Deserialize, Default)]
 #[serde(tag = "type")]
 pub enum Notify {
     #[default]
     No,
     Cmd(NotifyCmdArgs),
+    DingTalk(DingTalkArgs),
 }
 
 pub fn load_config(p: impl AsRef<Path>) -> Result<Config> {

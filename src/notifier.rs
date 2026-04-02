@@ -1,5 +1,7 @@
 use std::process::Command;
 
+use dingtalk_sdk::{Client, WebhookService};
+
 use crate::{
     config::{Notify, NotifyCmdArgs},
     prelude::*,
@@ -8,21 +10,30 @@ use crate::{
 pub enum Notifier {
     No,
     Cmd(CmdNotifier),
+    DingTalk(DingTalkNotifier),
 }
 
 impl Notifier {
-    pub fn new(cfg: Notify) -> Self {
+    pub fn new(cfg: Notify) -> Result<Self> {
         match cfg {
-            Notify::No => Self::No,
-            Notify::Cmd(args) => Self::Cmd(CmdNotifier { args }),
+            Notify::No => Ok(Self::No),
+            Notify::Cmd(args) => Ok(Self::Cmd(CmdNotifier { args })),
+            Notify::DingTalk(args) => {
+                let client = Client::builder().build().context(DingTalkCtx)?;
+                let webhook = client.webhook(args.token, args.secret);
+
+                Ok(Self::DingTalk(DingTalkNotifier {
+                    webhook: Arc::new(webhook),
+                }))
+            }
         }
     }
 
     pub fn process(&self, title: &str, lines: &[String]) -> Result<()> {
-        if let Self::Cmd(nofi) = self {
-            nofi.process(title, lines)
-        } else {
-            Ok(())
+        match self {
+            Self::No => Ok(()),
+            Self::Cmd(n) => n.process(title, lines),
+            Self::DingTalk(n) => n.process(title, lines),
         }
     }
 }
@@ -50,6 +61,25 @@ impl CmdNotifier {
 
         // TODO: handle exit status
         let _exit = child.wait();
+
+        Ok(())
+    }
+}
+
+pub struct DingTalkNotifier {
+    webhook: Arc<WebhookService>,
+}
+
+impl DingTalkNotifier {
+    fn process(&self, title: &str, lines: &[String]) -> Result<()> {
+        let content = format!("{title}\n{}", lines.join("\n"));
+        let wh = self.webhook.clone();
+        tokio::spawn(async move {
+            if let Err(_e) =
+                wh.send_text_message(&content, None, None, None).await
+            {
+            }
+        });
 
         Ok(())
     }

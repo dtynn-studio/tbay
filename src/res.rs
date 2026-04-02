@@ -73,6 +73,10 @@ pub enum Error {
     Execute {
         source: std::io::Error,
     },
+
+    DingTalk {
+        source: dingtalk_sdk::Error,
+    },
 }
 
 impl From<time::error::IndeterminateOffset> for Error {

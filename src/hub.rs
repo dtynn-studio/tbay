@@ -430,7 +430,7 @@ impl Hub {
             }
         }
 
-        let notifier = Notifier::new(cfg.notify);
+        let notifier = Notifier::new(cfg.notify)?;
         self.notifier.replace(notifier);
 
         Ok(())

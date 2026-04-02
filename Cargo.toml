@@ -31,5 +31,7 @@ toml = "1.0.6"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 crossterm = "0.29.0"
+dingtalk-sdk = "1.0.9"
+reqx = "=0.1.27"
 
 clap = { workspace = true }
