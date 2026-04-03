@@ -31,11 +31,11 @@ pub struct Macd {
     cross: Cross<Decimal>,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct MacdArgs {
-    fast: usize,
-    slow: usize,
-    dea_period: usize,
+    pub fast: usize,
+    pub slow: usize,
+    pub dea_period: usize,
 }
 
 impl FromStr for MacdArgs {

@@ -62,7 +62,7 @@ impl Args for BbArgs {
         let key = self.key();
 
         Ok(Bb {
-            _args: self,
+            args: self,
             key,
             bb_key,
             prev_touched_up: false,
@@ -77,7 +77,7 @@ impl Args for BbArgs {
 impl_builder!(BbBuilder: BbArgs => Bb);
 
 pub struct Bb {
-    _args: BbArgs,
+    args: BbArgs,
     key: String,
     bb_key: String,
     prev_touched_up: bool,
@@ -112,9 +112,17 @@ impl Bb {
             ("↓", colors.down)
         };
 
-        let normal = format!("(bb):{}", dir_str,);
+        let normal = format!(
+            "(bb/{}/{}):{}",
+            self.args.period, self.args.width, dir_str,
+        );
 
-        let tty = format!("(bb):{}", dir_str.with(color),);
+        let tty = format!(
+            "(bb/{}/{}):{}",
+            self.args.period,
+            self.args.width,
+            dir_str.with(color),
+        );
 
         Msg { normal, tty }
     }

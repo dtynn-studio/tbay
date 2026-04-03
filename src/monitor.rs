@@ -4,6 +4,7 @@ pub mod alert;
 pub mod bb;
 pub mod cross;
 pub mod hold;
+pub mod macd;
 pub mod rate;
 pub mod read;
 pub mod touch;
