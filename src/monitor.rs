@@ -3,6 +3,7 @@ use crate::prelude::*;
 pub mod alert;
 pub mod cross;
 pub mod hold;
+pub mod rate;
 pub mod read;
 pub mod touch;
 
