@@ -111,9 +111,9 @@ impl CalcKind {
 
     pub const fn as_str_short(&self) -> &'static str {
         match self {
-            Self::Sma => "SM",
-            Self::Ema => "EM",
-            Self::StdDev => "SD",
+            Self::Sma => "S",
+            Self::Ema => "E",
+            Self::StdDev => "D",
         }
     }
 }
