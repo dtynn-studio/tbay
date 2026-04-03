@@ -1,6 +1,7 @@
 use crate::prelude::*;
 
 pub mod alert;
+pub mod bb;
 pub mod cross;
 pub mod hold;
 pub mod rate;
