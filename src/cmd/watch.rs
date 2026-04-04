@@ -61,6 +61,8 @@ impl WatchArgs {
         let _span = warn_span!("watch").entered();
         info!(file=?self.config, "load config");
         let cfg = load_config(self.config)?;
+        // let colors = cfg.colors;
+
         let mut hub = Hub::default();
 
         info!(tty = is_tty, "setup hub");
@@ -98,6 +100,7 @@ impl WatchArgs {
 
         let mut state_lines = 0usize;
         let mut latest_price = None;
+        // let mut latest_price_color = colors.normal;
 
         loop {
             tokio::select! {
@@ -109,6 +112,20 @@ impl WatchArgs {
                     match evt {
                         Event::K(k) => {
                             latest_price.replace(k.raw.price_close);
+                            // let current = k.raw.price_close;
+                            // let prev = latest_price.replace(current);
+                            // latest_price_color = match prev {
+                            //     Some(p) => if current > p {
+                            //         colors.up
+                            //     } else if current < p{
+                            //         colors.down
+                            //     } else {
+                            //         colors.normal
+                            //     },
+
+                            //     None => colors.normal,
+                            // };
+
                             hub.apply_k(k);
                         },
 
@@ -129,6 +146,8 @@ impl WatchArgs {
                     if state_lines > 0 {
                         _ = clean_up_rows(&mut sout, state_lines as u16);
                     }
+
+                    state_lines = 0;
 
                     if let Ok(t) = OffsetDateTime::now_local() && let Ok(f) = t.format(&TIME_FMT) {
                         println!("TIME: {f}");

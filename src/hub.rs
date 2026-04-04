@@ -511,7 +511,7 @@ impl Hub {
             return Ok(false);
         }
 
-        let _span = warn_span!("reads", symbol, ?interval).entered();
+        let _span = warn_span!("reads", symbol, ?interval, ?periods).entered();
 
         if self.has_read(symbol, interval) {
             return Ok(false);

@@ -112,7 +112,7 @@ pub struct Read {
 impl Read {
     fn read_msg(&self, kctx: &KCtx) -> Msg {
         let close = kctx.info.raw.price_close;
-        let mut vals = self
+        let vals = self
             .ma_keys
             .iter()
             .zip(self.args.periods.iter())
@@ -127,16 +127,15 @@ impl Read {
                 };
 
                 Some((v, p, color))
-            })
-            .collect::<Vec<_>>();
+            });
 
-        vals.sort_by(|(left_v, left_p, _), (right_v, right_p, _)| {
-            if left_v != right_v {
-                left_v.cmp(right_v)
-            } else {
-                left_p.cmp(right_p)
-            }
-        });
+        // vals.sort_by(|(left_v, left_p, _), (right_v, right_p, _)| {
+        //     if left_v != right_v {
+        //         left_v.cmp(right_v)
+        //     } else {
+        //         left_p.cmp(right_p)
+        //     }
+        // });
 
         let mut normal_vals = String::new();
         let mut tty_vals = String::new();
