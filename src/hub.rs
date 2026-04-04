@@ -463,7 +463,9 @@ impl Hub {
                 continue;
             }
 
-            all_pairs.push(&pair_cfg.name);
+            if !pair_cfg.no_wildcard {
+                all_pairs.push(&pair_cfg.name);
+            }
 
             self.apply_pair(&pair_cfg.name, pair_cfg)?;
         }
@@ -496,7 +498,9 @@ impl Hub {
                 continue;
             };
 
-            all_intervals.push(interval);
+            if !interval_cfg.no_wildcard {
+                all_intervals.push(interval);
+            }
 
             self.apply_interval(pair, interval, interval_cfg)?;
         }
