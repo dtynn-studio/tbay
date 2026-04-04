@@ -2,6 +2,13 @@ use std::{io::IsTerminal, path::PathBuf};
 
 use clap::Parser;
 use humantime::Duration;
+use time::format_description::well_known::{
+    Iso8601,
+    iso8601::{
+        Config as Iso8601Config, EncodedConfig, FormattedComponents,
+        TimePrecision,
+    },
+};
 use tokio::{signal, time::interval};
 use tracing::{debug, error, info, trace, warn_span};
 
@@ -15,6 +22,15 @@ use crate::{
     prelude::*,
     util::term::clean_up_rows,
 };
+
+const TIME_CFG: EncodedConfig = Iso8601Config::DEFAULT
+    .set_formatted_components(FormattedComponents::DateTime)
+    .set_time_precision(TimePrecision::Second {
+        decimal_digits: None,
+    })
+    .encode();
+
+const TIME_FMT: Iso8601<TIME_CFG> = Iso8601::<TIME_CFG>;
 
 #[derive(Parser)]
 pub struct WatchArgs {
@@ -113,8 +129,8 @@ impl WatchArgs {
                     }
 
                     let mut time_line = 0;
-                    if let Ok(t) = OffsetDateTime::now_local() {
-                        println!("{t}");
+                    if let Ok(t) = OffsetDateTime::now_local() && let Ok(f) = t.format(&TIME_FMT) {
+                        println!("{f}");
                         time_line = 1;
                     }
 
