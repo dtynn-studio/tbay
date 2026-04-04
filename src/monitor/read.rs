@@ -156,17 +156,15 @@ impl Read {
             tty_vals.push_str(&colored);
         }
 
-        let close_rounded = close.round_dp(2);
-
         let normal = format!(
-            "({}/{}):{close_rounded}({})",
+            "({}/{}):{}",
             self.args.val_kind.as_str(),
             self.args.calc_kind.as_str(),
             normal_vals,
         );
 
         let tty = format!(
-            "({}/{}):{close_rounded}({})",
+            "({}/{}):{}",
             self.args.val_kind.as_str(),
             self.args.calc_kind.as_str(),
             tty_vals,

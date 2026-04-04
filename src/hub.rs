@@ -241,6 +241,34 @@ impl Hub {
         line_count
     }
 
+    pub fn print_read_msgs(&self) -> usize {
+        let mut read_msgs = Vec::new();
+
+        for item in self.items.iter() {
+            for (d, read) in item.reads.iter() {
+                let st = read.state();
+                let Some((t, msg)) = st.temp.as_ref() else {
+                    continue;
+                };
+
+                let content = if self.is_tty { &msg.tty } else { &msg.normal };
+
+                read_msgs.push(format!("{}/{d}@{t}:{content}", item.symbol));
+            }
+        }
+
+        if read_msgs.is_empty() {
+            return 0;
+        }
+
+        let line_count = read_msgs.len() + 2;
+
+        let lines = read_msgs.join("\n\t");
+        println!("READ:\n\t{lines}\n");
+
+        line_count
+    }
+
     pub fn collect_alert_msgs(&mut self) -> (Vec<String>, Vec<String>) {
         let mut normal_lines = Vec::new();
         let mut tty_lines = Vec::new();

@@ -97,6 +97,7 @@ impl WatchArgs {
         let mut period = interval(self.watch.into());
 
         let mut state_lines = 0usize;
+        let mut latest_price = None;
 
         loop {
             tokio::select! {
@@ -107,6 +108,7 @@ impl WatchArgs {
 
                     match evt {
                         Event::K(k) => {
+                            latest_price.replace(k.raw.price_close);
                             hub.apply_k(k);
                         },
 
@@ -128,13 +130,18 @@ impl WatchArgs {
                         _ = clean_up_rows(&mut sout, state_lines as u16);
                     }
 
-                    let mut time_line = 0;
                     if let Ok(t) = OffsetDateTime::now_local() && let Ok(f) = t.format(&TIME_FMT) {
-                        println!("{f}");
-                        time_line = 1;
+                        println!("TIME: {f}");
+                        state_lines += 1;
                     }
 
-                    state_lines = hub.print_state_msgs(true, true) + time_line;
+                    if let Some(price) = latest_price {
+                        println!("LATEST PRICE: {}", price.round_dp(2));
+                        state_lines += 1;
+                    }
+
+                    state_lines += hub.print_state_msgs(true, true);
+                    state_lines += hub.print_read_msgs();
                     state_lines += hub.show_alerts();
                 }
 
