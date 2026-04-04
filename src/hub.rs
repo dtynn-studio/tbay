@@ -9,7 +9,14 @@ use tracing::{debug, warn_span};
 use crate::{
     config::{ColorTable, Config, Interval, Pair},
     event::K,
-    indicator, monitor,
+    indicator::{
+        self,
+        base::{CalcKind, ExtractKind},
+    },
+    monitor::{
+        self,
+        read::{Read, ReadArgs},
+    },
     notifier::Notifier,
     prelude::*,
     util::time::format_hhmm,
@@ -24,6 +31,7 @@ pub struct HubItem {
     pub symbol: String,
     pub indicators: BTreeMap<Duration, Vec<HubIndicator>>,
     pub monitors: BTreeMap<Duration, Vec<HubMonitor>>,
+    pub reads: BTreeMap<Duration, Read>,
 }
 
 pub struct HubState<'s> {
@@ -123,17 +131,18 @@ impl Hub {
             }
         }
 
-        let Some(monitors) = self
-            .items
-            .iter_mut()
-            .find(|item| item.symbol == k.symbol)
-            .and_then(|item| item.monitors.get_mut(&k.interval))
-        else {
-            return;
-        };
+        if let Some(item) =
+            self.items.iter_mut().find(|item| item.symbol == k.symbol)
+        {
+            if let Some(monitors) = item.monitors.get_mut(&k.interval) {
+                for monitor in monitors {
+                    monitor.apply(&kctx);
+                }
+            }
 
-        for monitor in monitors {
-            monitor.apply(&kctx);
+            if let Some(reads) = item.reads.get_mut(&k.interval) {
+                reads.apply(&kctx);
+            }
         }
     }
 
@@ -341,6 +350,15 @@ impl Hub {
         monitors.iter().any(|i| i.key() == key)
     }
 
+    fn has_read(&self, symbol: &str, interval: Duration) -> bool {
+        let Some(item) = self.items.iter().find(|item| item.symbol == symbol)
+        else {
+            return false;
+        };
+
+        item.reads.contains_key(&interval)
+    }
+
     pub fn register_indicator_builder<
         B: Builder<Target: Indicator> + 'static,
     >(
@@ -386,6 +404,7 @@ impl Hub {
                     symbol: symbol.to_owned(),
                     indicators: Default::default(),
                     monitors: Default::default(),
+                    reads: Default::default(),
                 }),
             };
 
@@ -443,10 +462,57 @@ impl Hub {
                     symbol: symbol.to_owned(),
                     indicators: Default::default(),
                     monitors: Default::default(),
+                    reads: Default::default(),
                 }),
             };
 
         slots.monitors.entry(interval).or_default().push(monitor);
+
+        debug!("added");
+
+        Ok(true)
+    }
+
+    pub fn register_reads(
+        &mut self,
+        symbol: &str,
+        interval: Duration,
+        periods: &[usize],
+    ) -> Result<bool> {
+        if periods.is_empty() {
+            return Ok(false);
+        }
+
+        let _span = warn_span!("reads", symbol, ?interval).entered();
+
+        if self.has_read(symbol, interval) {
+            return Ok(false);
+        }
+
+        let read_monitor = ReadArgs::new((
+            ExtractKind::PriceClose,
+            CalcKind::Ema,
+            periods.to_vec(),
+        ))
+        .build()?;
+
+        let deps = read_monitor.deps();
+        for dep in deps {
+            self.register_indicator(symbol, interval, dep)?;
+        }
+
+        let slots =
+            match self.items.iter_mut().find(|item| item.symbol == symbol) {
+                Some(i) => i,
+                None => self.items.push_mut(HubItem {
+                    symbol: symbol.to_owned(),
+                    indicators: Default::default(),
+                    monitors: Default::default(),
+                    reads: Default::default(),
+                }),
+            };
+
+        slots.reads.insert(interval, read_monitor);
 
         debug!("added");
 
@@ -523,6 +589,8 @@ impl Hub {
         for m in cfg.monitors.iter() {
             self.register_monitor(pair, interval, m)?;
         }
+
+        self.register_reads(pair, interval, &cfg.reads)?;
         Ok(())
     }
 }
