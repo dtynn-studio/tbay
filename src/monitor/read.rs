@@ -119,9 +119,9 @@ impl Read {
             .filter_map(|(key, p)| {
                 let v = kctx.get_val::<Decimal>(key).copied()?;
                 let color = if close > v {
-                    kctx.colors.down
-                } else if close < v {
                     kctx.colors.up
+                } else if close < v {
+                    kctx.colors.down
                 } else {
                     kctx.colors.normal
                 };
