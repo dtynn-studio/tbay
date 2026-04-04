@@ -21,6 +21,8 @@ pub struct Pair {
     pub name: String,
     #[serde(default)]
     pub intervals: Vec<Interval>,
+    #[serde(default)]
+    pub no_wildcard: bool,
 }
 
 #[derive(Deserialize)]
@@ -30,6 +32,8 @@ pub struct Interval {
     pub name: Option<Duration>,
     #[serde(default)]
     pub monitors: Vec<String>,
+    #[serde(default)]
+    pub no_wildcard: bool,
 }
 
 #[derive(Deserialize)]
