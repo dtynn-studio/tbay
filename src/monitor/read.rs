@@ -6,7 +6,7 @@ use scanf::sscanf;
 use crate::{
     impl_builder,
     indicator::base::{BaseExtractorArgs, CalcKind, ExtractKind},
-    monitor::{Msg, alert::AlertManager},
+    monitor::Msg,
     prelude::*,
 };
 
@@ -95,7 +95,6 @@ impl Args for ReadArgs {
             key,
             ma_keys,
             state: Default::default(),
-            alerts: Default::default(),
         })
     }
 }
@@ -108,59 +107,69 @@ pub struct Read {
     key: String,
     ma_keys: Vec<String>,
     state: State,
-    alerts: AlertManager,
 }
 
 impl Read {
     fn read_msg(&self, kctx: &KCtx) -> Msg {
-        let vals = self
+        let close = kctx.info.raw.price_close;
+        let mut vals = self
             .ma_keys
             .iter()
             .zip(self.args.periods.iter())
-            .map(|(key, p)| match kctx.get_val::<Decimal>(key) {
-                Some(v) => {
-                    format!("{p}:{}", v.round_dp(2))
-                }
+            .filter_map(|(key, p)| {
+                let v = kctx.get_val::<Decimal>(key).copied()?;
+                let color = if close > v {
+                    kctx.colors.down
+                } else if close < v {
+                    kctx.colors.up
+                } else {
+                    kctx.colors.normal
+                };
 
-                None => {
-                    format!("{p}:n/a")
-                }
+                Some((v, p, color))
             })
             .collect::<Vec<_>>();
+
+        vals.sort_by(|(left_v, left_p, _), (right_v, right_p, _)| {
+            if left_v != right_v {
+                left_v.cmp(right_v)
+            } else {
+                left_p.cmp(right_p)
+            }
+        });
+
+        let mut normal_vals = String::new();
+        let mut tty_vals = String::new();
+
+        for (val, period, color) in vals {
+            let rounded = val.round_dp(2);
+
+            if !normal_vals.is_empty() {
+                normal_vals.push('|');
+                tty_vals.push('|');
+            }
+
+            let normal_piece = format!("{period}:{rounded}");
+            normal_vals.push_str(&normal_piece);
+
+            let colored = normal_piece.with(color).to_string();
+            tty_vals.push_str(&colored);
+        }
+
+        let close_rounded = close.round_dp(2);
 
         let normal = format!(
-            "({}/{}):{}",
+            "({}/{}):{close_rounded}({})",
             self.args.val_kind.as_str(),
             self.args.calc_kind.as_str(),
-            vals.join("|")
+            normal_vals,
         );
 
-        let tty_vals = self
-            .ma_keys
-            .iter()
-            .zip(self.args.periods.iter())
-            .map(|(key, p)| match kctx.get_val::<Decimal>(key) {
-                Some(v) => {
-                    let color = if v >= &kctx.info.raw.price_close {
-                        kctx.colors.up
-                    } else {
-                        kctx.colors.down
-                    };
-
-                    format!("{p}:{}", v.round_dp(2)).with(color).to_string()
-                }
-
-                None => {
-                    format!("{p}:n/a")
-                }
-            })
-            .collect::<Vec<_>>();
-
         let tty = format!(
-            "({}/{}):{}",
+            "({}/{}):{close_rounded}({})",
             self.args.val_kind.as_str(),
             self.args.calc_kind.as_str(),
-            tty_vals.join("|")
+            tty_vals,
         );
 
         Msg { normal, tty }
@@ -186,10 +195,6 @@ impl Monitor for Read {
             self.state
                 .temp
                 .replace((kctx.info.raw.time_begin, self.read_msg(kctx)));
-
-            if let Some((t, msg)) = self.state.temp.as_ref().cloned() {
-                self.alerts.add(t, msg);
-            }
         }
     }
 
@@ -198,7 +203,7 @@ impl Monitor for Read {
     }
 
     fn take_alerts(&mut self) -> Vec<(OffsetDateTime, Msg)> {
-        self.alerts.take()
+        vec![]
     }
 
     fn terminated(&self) -> bool {
