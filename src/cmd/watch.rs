@@ -1,6 +1,7 @@
 use std::{io::IsTerminal, path::PathBuf};
 
 use clap::Parser;
+use crossterm::style::Stylize;
 use humantime::Duration;
 use time::format_description::well_known::{
     Iso8601,
@@ -61,7 +62,7 @@ impl WatchArgs {
         let _span = warn_span!("watch").entered();
         info!(file=?self.config, "load config");
         let cfg = load_config(self.config)?;
-        // let colors = cfg.colors;
+        let colors = cfg.colors;
 
         let mut hub = Hub::default();
 
@@ -100,7 +101,7 @@ impl WatchArgs {
 
         let mut state_lines = 0usize;
         let mut latest_price = None;
-        // let mut latest_price_color = colors.normal;
+        let mut latest_price_color = colors.normal;
 
         loop {
             tokio::select! {
@@ -111,20 +112,21 @@ impl WatchArgs {
 
                     match evt {
                         Event::K(k) => {
-                            latest_price.replace(k.raw.price_close);
-                            // let current = k.raw.price_close;
-                            // let prev = latest_price.replace(current);
-                            // latest_price_color = match prev {
-                            //     Some(p) => if current > p {
-                            //         colors.up
-                            //     } else if current < p{
-                            //         colors.down
-                            //     } else {
-                            //         colors.normal
-                            //     },
+                            let current = k.raw.price_close;
+                            if latest_price != Some(current) {
+                                let prev = latest_price.replace(current);
+                                latest_price_color = match prev {
+                                    Some(p) => if current > p {
+                                        colors.up
+                                    } else if current < p{
+                                        colors.down
+                                    } else {
+                                        colors.normal
+                                    },
 
-                            //     None => colors.normal,
-                            // };
+                                    None => colors.normal,
+                                };
+                            }
 
                             hub.apply_k(k);
                         },
@@ -155,7 +157,7 @@ impl WatchArgs {
                     }
 
                     if let Some(price) = latest_price {
-                        println!("LATEST PRICE: {}", price.round_dp(2));
+                        println!("LATEST PRICE: {}", price.round_dp(2).to_string().with(latest_price_color));
                         state_lines += 1;
                     }
 
