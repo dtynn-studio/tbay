@@ -77,6 +77,7 @@ impl Default for Hub {
         hub.register_monitor_builder(monitor::rate::RateBuilder);
         hub.register_monitor_builder(monitor::bb::BbBuilder);
         hub.register_monitor_builder(monitor::macd::MacdMonitorBuilder);
+        hub.register_monitor_builder(monitor::shadow::ShadowBuilder);
 
         hub
     }

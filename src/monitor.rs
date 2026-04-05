@@ -7,6 +7,7 @@ pub mod hold;
 pub mod macd;
 pub mod rate;
 pub mod read;
+pub mod shadow;
 pub mod touch;
 
 #[derive(Debug, Clone)]
