@@ -50,4 +50,9 @@ impl AlertManager {
 
         msgs
     }
+
+    pub fn clear(&mut self) {
+        self.alerts.clear();
+        self.taken.clear();
+    }
 }

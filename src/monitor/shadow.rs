@@ -144,6 +144,7 @@ impl Monitor for Shadow {
             self.state.temp.take();
 
             if let Some((t, m)) = msg_opt.clone() {
+                self.alerts.clear();
                 self.alerts.add(t, m);
             }
 
