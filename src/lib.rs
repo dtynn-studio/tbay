@@ -1,5 +1,3 @@
-#![feature(map_try_insert)]
-
 pub mod cmd;
 pub mod common;
 pub mod config;
