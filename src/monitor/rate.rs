@@ -197,7 +197,7 @@ impl Rate {
         }
     }
 
-    fn calc_rate(&self, kctx: &KCtx) -> Option<(Decimal, Msg)> {
+    fn calc(&self, kctx: &KCtx) -> Option<Msg> {
         let val = self.val(kctx);
         let base: Decimal = *kctx.get_val::<Decimal>(&self.base_key)?;
 
@@ -215,7 +215,7 @@ impl Rate {
         }
 
         let msg = self.format_msg(rate, kctx.colors);
-        Some((rate, msg))
+        Some(msg)
     }
 
     fn format_msg(&self, rate: Decimal, colors: ColorTable) -> Msg {
@@ -249,10 +249,6 @@ impl Rate {
         );
 
         Msg { normal, tty }
-    }
-
-    fn calc(&self, kctx: &KCtx) -> Option<Msg> {
-        self.calc_rate(kctx).map(|(_, msg)| msg)
     }
 }
 
