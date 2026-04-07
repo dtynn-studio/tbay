@@ -4,6 +4,10 @@ use time::{OffsetDateTime, UtcOffset};
 
 use crate::prelude::*;
 
+mod duration;
+
+pub use duration::TBDuration;
+
 pub const MILLI_SEC: i64 = 1000;
 
 pub static LOCAL_OFFSET: LazyLock<UtcOffset> = LazyLock::new(|| {

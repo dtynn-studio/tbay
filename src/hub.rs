@@ -92,12 +92,13 @@ impl Hub {
                 .indicators
                 .keys()
                 .chain(item.monitors.keys())
+                .copied()
                 .collect::<HashSet<_>>();
 
             for d in durations {
                 target_set.insert(Target {
                     symbol: item.symbol.clone(),
-                    interval: *d,
+                    interval: d.into(),
                 });
             }
         }

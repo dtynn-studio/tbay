@@ -1,7 +1,10 @@
 use crossbeam_channel::Sender;
 use humantime::Duration;
 
-use crate::prelude::{KRaw, Result};
+use crate::{
+    prelude::{KRaw, Result},
+    util::time::TBDuration,
+};
 
 pub mod binance;
 
@@ -25,7 +28,7 @@ pub type EventChanTx = Sender<Event>;
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Target {
     pub symbol: String,
-    pub interval: Duration,
+    pub interval: TBDuration,
 }
 
 impl std::fmt::Display for Target {
