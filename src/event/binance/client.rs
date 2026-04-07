@@ -348,7 +348,7 @@ fn kline_summary_to_k(
 
     Ok(K {
         symbol: pair.to_lowercase(),
-        interval,
+        interval: interval.into(),
         source: "h",
         raw: kraw,
     })

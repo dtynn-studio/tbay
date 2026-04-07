@@ -3,7 +3,6 @@ use std::{
     collections::{BTreeMap, HashMap, HashSet},
 };
 
-use humantime::Duration;
 use tracing::{debug, warn_span};
 
 use crate::{
@@ -19,7 +18,7 @@ use crate::{
     },
     notifier::Notifier,
     prelude::*,
-    util::time::format_hhmm,
+    util::time::{TBDuration as Duration, format_hhmm},
 };
 
 pub type HubIndicator = Box<dyn Indicator<Output = Box<dyn Any>>>;

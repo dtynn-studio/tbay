@@ -1,5 +1,4 @@
 use crossbeam_channel::Sender;
-use humantime::Duration;
 
 use crate::{
     prelude::{KRaw, Result},
@@ -11,7 +10,7 @@ pub mod binance;
 #[derive(Debug, Clone)]
 pub struct K {
     pub symbol: String,
-    pub interval: Duration,
+    pub interval: TBDuration,
     pub source: &'static str,
     pub raw: KRaw,
 }
