@@ -41,7 +41,7 @@ impl FromStr for RateMode {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Op {
     Gt,
     Lt,
@@ -170,6 +170,7 @@ impl Args for RateArgs {
             state: Default::default(),
             alerts: Default::default(),
             temp_t: None,
+            perm_t: None,
         })
     }
 }
@@ -185,6 +186,7 @@ pub struct Rate {
     state: State,
     alerts: AlertManager,
     temp_t: Option<OffsetDateTime>,
+    perm_t: Option<OffsetDateTime>,
 }
 
 impl Rate {
@@ -264,20 +266,28 @@ impl Monitor for Rate {
     }
 
     fn apply(&mut self, kctx: &KCtx) {
-        if kctx.info.raw.finalized {
-            self.state.temp.take();
-            self.state.perm =
-                self.calc(kctx).map(|msg| (kctx.info.raw.time_begin, msg));
-        } else {
-            let prev_temp_t = self.temp_t.replace(kctx.info.raw.time_begin);
-            if prev_temp_t != self.temp_t || self.state.temp.is_none() {
-                self.state.temp =
-                    self.calc(kctx).map(|msg| (kctx.info.raw.time_begin, msg));
+        let msg_opt = self.calc(kctx);
+        let t = kctx.info.raw.time_begin;
 
-                if let Some((t, msg)) = self.state.temp.as_ref().cloned() {
-                    self.alerts.add(t, msg);
-                }
-            }
+        let (target, prev_t) = if kctx.info.raw.finalized {
+            self.state.temp.take();
+            (&mut self.state.perm, &mut self.perm_t)
+        } else {
+            (&mut self.state.temp, &mut self.temp_t)
+        };
+
+        // 无论如何，更新target
+        *target = msg_opt.clone().map(|msg| (t, msg));
+
+        // 当阈值条件符合
+        //      (finalized && op == Lt) || (!finalized && op == Gt)
+        // 且为初次更新（时间匹配）时，添加告警
+        if let Some(msg) = msg_opt
+            && ((self.args.op == Op::Lt) == kctx.info.raw.finalized)
+            && Some(t) != *prev_t
+        {
+            prev_t.replace(t);
+            self.alerts.add(t, msg);
         }
     }
 
