@@ -41,12 +41,50 @@ impl FromStr for RateMode {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum Op {
+    Gt,
+    Lt,
+}
+
+impl Op {
+    pub const GT_STR: &str = ">";
+    pub const LT_STR: &str = "<";
+
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            Self::Gt => Self::GT_STR,
+            Self::Lt => Self::LT_STR,
+        }
+    }
+
+    pub fn check(&self, rate: Decimal, threshold: Decimal) -> bool {
+        match self {
+            Self::Gt => rate > threshold,
+            Self::Lt => rate < threshold,
+        }
+    }
+}
+
+impl FromStr for Op {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            Self::GT_STR => Ok(Self::Gt),
+            Self::LT_STR => Ok(Self::Lt),
+            other => Err(other.unexpected("parse op")),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct RateArgs {
     pub val_kind: ExtractKind,
     pub calc_kind: CalcKind,
     pub period: u32,
     pub mode: RateMode,
+    pub op: Op,
     pub threshold: f64,
 }
 
@@ -58,9 +96,10 @@ impl FromStr for RateArgs {
         let mut calc_kind_str = String::new();
         let mut period = 0u32;
         let mut mode_str = String::new();
+        let mut op_str = String::new();
         let mut threshold = 0.0f64;
 
-        sscanf!(s, "rate:{val_kind_str},{calc_kind_str},{period},{mode_str},{threshold}").with_context(
+        sscanf!(s, "rate:{val_kind_str},{calc_kind_str},{period},{mode_str},{op_str},{threshold}").with_context(
             |_| ParseCtx {
                 raw: s.to_owned(),
                 usage: Cow::from("parse rate args"),
@@ -70,19 +109,21 @@ impl FromStr for RateArgs {
         let val_kind = val_kind_str.parse()?;
         let calc_kind = calc_kind_str.parse()?;
         let mode = mode_str.parse()?;
+        let op = op_str.parse()?;
 
         Ok(Self {
             val_kind,
             calc_kind,
             period,
             mode,
+            op,
             threshold,
         })
     }
 }
 
 impl Args for RateArgs {
-    type Type = (ExtractKind, CalcKind, u32, RateMode, f64);
+    type Type = (ExtractKind, CalcKind, u32, RateMode, Op, f64);
     type Target = Rate;
 
     fn new(args: Self::Type) -> Self {
@@ -91,17 +132,19 @@ impl Args for RateArgs {
             calc_kind: args.1,
             period: args.2,
             mode: args.3,
-            threshold: args.4,
+            op: args.4,
+            threshold: args.5,
         }
     }
 
     fn key(&self) -> String {
         format!(
-            "rate:{},{},{},{},{}",
+            "rate:{},{},{},{},{},{}",
             self.val_kind.as_str(),
             self.calc_kind.as_str(),
             self.period,
             self.mode.as_str(),
+            self.op.as_str(),
             self.threshold
         )
     }
@@ -165,7 +208,7 @@ impl Rate {
             RateMode::Dif => (val - base) / base,
         };
 
-        if rate.abs() < self.threshold {
+        if !self.args.op.check(rate, self.threshold) {
             return None;
         }
 
