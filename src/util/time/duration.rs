@@ -2,8 +2,14 @@
 
 use std::{fmt, time::Duration};
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TBDuration(Duration);
+
+impl fmt::Debug for TBDuration {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self}")
+    }
+}
 
 impl From<Duration> for TBDuration {
     fn from(value: Duration) -> Self {
