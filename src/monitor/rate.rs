@@ -265,21 +265,31 @@ impl Monitor for Rate {
         let msg_opt = self.calc(kctx);
         let t = kctx.info.raw.time_begin;
 
-        let (target, prev_t) = if kctx.info.raw.finalized {
+        let (target, prev_t, should_update) = if kctx.info.raw.finalized {
             self.state.temp.take();
-            (&mut self.state.perm, &mut self.perm_t)
+            (
+                &mut self.state.perm,
+                &mut self.perm_t,
+                self.args.op == Op::Lt,
+            )
         } else {
-            (&mut self.state.temp, &mut self.temp_t)
+            (
+                &mut self.state.temp,
+                &mut self.temp_t,
+                self.args.op == Op::Gt,
+            )
         };
 
         // 无论如何，更新target
-        *target = msg_opt.clone().map(|msg| (t, msg));
+        if should_update {
+            *target = msg_opt.clone().map(|msg| (t, msg));
+        }
 
         // 当阈值条件符合
         //      (finalized && op == Lt) || (!finalized && op == Gt)
         // 且为初次更新（时间匹配）时，添加告警
         if let Some(msg) = msg_opt
-            && ((self.args.op == Op::Lt) == kctx.info.raw.finalized)
+            && should_update
             && Some(t) != *prev_t
         {
             prev_t.replace(t);
