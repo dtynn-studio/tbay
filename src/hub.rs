@@ -97,7 +97,7 @@ impl Hub {
             for d in durations {
                 target_set.insert(Target {
                     symbol: item.symbol.clone(),
-                    interval: d.into(),
+                    interval: d,
                 });
             }
         }
@@ -254,7 +254,11 @@ impl Hub {
 
                 let content = if self.is_tty { &msg.tty } else { &msg.normal };
 
-                read_msgs.push(format!("{}/{d}@{t}:{content}", item.symbol));
+                read_msgs.push(format!(
+                    "{}/{d}@{}:{content}",
+                    item.symbol,
+                    format_hhmm(t),
+                ));
             }
         }
 
