@@ -29,17 +29,22 @@ impl<T: Copy> RingBuffer<T> {
         }
     }
 
-    pub fn get(&self, index: usize) -> Option<T> {
-        if index >= self.inner.len() {
-            None
-        } else {
-            let slot = if self.added <= self.capacity {
-                index
-            } else {
-                (self.added - self.capacity + index) % self.capacity
-            };
-            Some(self.inner[slot])
+    pub fn slot(&self, i: usize) -> Option<usize> {
+        if i >= self.inner.len() {
+            return None;
         }
+
+        let slot = if self.added <= self.capacity {
+            i
+        } else {
+            (self.added - self.capacity + i) % self.capacity
+        };
+
+        Some(slot)
+    }
+
+    pub fn get(&self, index: usize) -> Option<T> {
+        self.slot(index).map(|slot| self.inner[slot])
     }
 
     #[inline]
@@ -50,6 +55,14 @@ impl<T: Copy> RingBuffer<T> {
     #[inline]
     pub fn is_full(&self) -> bool {
         self.added >= self.capacity
+    }
+
+    pub fn size(&self) -> usize {
+        if self.added < self.capacity {
+            self.added
+        } else {
+            self.capacity
+        }
     }
 }
 
