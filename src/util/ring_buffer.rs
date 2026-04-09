@@ -57,6 +57,10 @@ impl<T: Copy> Deref for RingBuffer<T> {
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
-        &self.inner
+        if self.is_full() {
+            &self.inner
+        } else {
+            &self.inner[..self.added]
+        }
     }
 }
