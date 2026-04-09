@@ -207,7 +207,7 @@ impl Rate {
 
         let rate = match self.args.mode {
             RateMode::Abs => val / base,
-            RateMode::Dif => (val - base) / base,
+            RateMode::Dif => (val - base).abs() / base,
         };
 
         if !self.args.op.check(rate, self.threshold) {
