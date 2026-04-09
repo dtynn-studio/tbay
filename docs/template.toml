@@ -57,7 +57,7 @@ monitors = [
 
     "rate:qty,ema,20,abs,>,2.0",
     "rate:qty,ema,20,abs,>,4.0",
-    "rate:qty,ema,20,abs,<,0.4",
+    "rate:qty,ema,20,abs,<,0.3",
 
     "pdiff:temp,0.2",
     "pdiff:perm,0.3",
