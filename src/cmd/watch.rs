@@ -55,6 +55,9 @@ pub struct WatchArgs {
 
     #[arg(long, default_value_t = Duration::from(std::time::Duration::from_secs(600)))]
     pub reads: Duration,
+
+    #[arg(long, default_value_t = false)]
+    pub disable_notify_reads: bool,
 }
 
 impl WatchArgs {
@@ -171,7 +174,9 @@ impl WatchArgs {
                 }
 
                 _ = read_period.tick() => {
-                    hub.notify_read_msgs(latest_price);
+                    if !self.disable_notify_reads {
+                        hub.notify_read_msgs(latest_price);
+                    }
                 }
 
                 _ = signal::ctrl_c() => {
