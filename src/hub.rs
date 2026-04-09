@@ -243,7 +243,7 @@ impl Hub {
         line_count
     }
 
-    pub fn print_read_msgs(&self) -> usize {
+    fn collect_read_msgs(&self, for_tty: bool) -> Vec<String> {
         let mut read_msgs = Vec::new();
 
         for item in self.items.iter() {
@@ -253,7 +253,7 @@ impl Hub {
                     continue;
                 };
 
-                let content = if self.is_tty { &msg.tty } else { &msg.normal };
+                let content = if for_tty { &msg.tty } else { &msg.normal };
 
                 read_msgs.push(format!(
                     "{}/{d}@{}:{content}",
@@ -263,6 +263,11 @@ impl Hub {
             }
         }
 
+        read_msgs
+    }
+
+    pub fn print_read_msgs(&self) -> usize {
+        let read_msgs = self.collect_read_msgs(self.is_tty);
         if read_msgs.is_empty() {
             return 0;
         }
@@ -273,6 +278,17 @@ impl Hub {
         println!("READ:\n\t{lines}\n");
 
         line_count
+    }
+
+    pub fn notify_read_msgs(&self, latest: Option<Decimal>) {
+        let mut read_lines = self.collect_read_msgs(false);
+        if let Some(latest) = latest {
+            read_lines.push(format!("Latest: {}", latest.round_dp(2)));
+        }
+
+        for n in self.notifiers.iter() {
+            _ = n.process("reads", &read_lines);
+        }
     }
 
     pub fn collect_alert_msgs(&mut self) -> (Vec<String>, Vec<String>) {

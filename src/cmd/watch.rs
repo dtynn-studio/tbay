@@ -52,6 +52,9 @@ pub struct WatchArgs {
 
     #[arg(long, default_value_t = Duration::from(std::time::Duration::from_secs(30)))]
     pub watch: Duration,
+
+    #[arg(long, default_value_t = Duration::from(std::time::Duration::from_secs(600)))]
+    pub reads: Duration,
 }
 
 impl WatchArgs {
@@ -97,7 +100,8 @@ impl WatchArgs {
         }
 
         let (mut stream, stopper) = client.subscribe_klines(&targets).await?;
-        let mut period = interval(self.watch.into());
+        let mut watch_period = interval(self.watch.into());
+        let mut read_period = interval(self.reads.into());
 
         let mut state_lines = 0usize;
         let mut latest_price = None;
@@ -142,7 +146,7 @@ impl WatchArgs {
                     }
                 },
 
-                _ = period.tick() => {
+                _ = watch_period.tick() => {
                     trace!("period tick");
 
                     if state_lines > 0 {
@@ -164,6 +168,10 @@ impl WatchArgs {
                     state_lines += hub.print_state_msgs(true, true);
                     state_lines += hub.print_read_msgs();
                     state_lines += hub.show_alerts();
+                }
+
+                _ = read_period.tick() => {
+                    hub.notify_read_msgs(latest_price);
                 }
 
                 _ = signal::ctrl_c() => {

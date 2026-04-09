@@ -118,15 +118,15 @@ impl Read {
             .zip(self.args.periods.iter())
             .filter_map(|(key, p)| {
                 let v = kctx.get_val::<Decimal>(key).copied()?;
-                let color = if close > v {
-                    kctx.colors.up
+                let (dir, color) = if close > v {
+                    ("↑", kctx.colors.up)
                 } else if close < v {
-                    kctx.colors.down
+                    ("↓", kctx.colors.down)
                 } else {
-                    kctx.colors.normal
+                    ("-", kctx.colors.normal)
                 };
 
-                Some((v, p, color))
+                Some((v, p, dir, color))
             });
 
         // vals.sort_by(|(left_v, left_p, _), (right_v, right_p, _)| {
@@ -140,7 +140,7 @@ impl Read {
         let mut normal_vals = String::new();
         let mut tty_vals = String::new();
 
-        for (val, period, color) in vals {
+        for (val, period, dir, color) in vals {
             let rounded = val.round_dp(2);
 
             if !normal_vals.is_empty() {
@@ -148,10 +148,10 @@ impl Read {
                 tty_vals.push('|');
             }
 
-            let normal_piece = format!("{period}:{rounded}");
+            let normal_piece = format!("{period}:{rounded}{dir}");
             normal_vals.push_str(&normal_piece);
 
-            let colored = normal_piece.with(color).to_string();
+            let colored = format!("{period}:{rounded}").with(color).to_string();
             tty_vals.push_str(&colored);
         }
 
