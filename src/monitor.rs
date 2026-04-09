@@ -5,6 +5,7 @@ pub mod bb;
 pub mod cross;
 pub mod hold;
 pub mod macd;
+pub mod pdiff;
 pub mod rate;
 pub mod read;
 pub mod shadow;
