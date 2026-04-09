@@ -8,6 +8,7 @@ pub mod base;
 pub mod bollinger;
 pub mod cross;
 pub mod distance;
+pub mod hl;
 pub mod ma;
 pub mod macd;
 pub mod position;

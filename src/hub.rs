@@ -67,6 +67,7 @@ impl Default for Hub {
         hub.register_indicator_builder(indicator::cross::MaCrossBuilder);
         hub.register_indicator_builder(indicator::distance::DistanceBuilder);
         hub.register_indicator_builder(indicator::position::PositionBuilder);
+        hub.register_indicator_builder(indicator::hl::HlBuilder);
 
         // monitor builders
         hub.register_monitor_builder(monitor::cross::CrossBuilder);
