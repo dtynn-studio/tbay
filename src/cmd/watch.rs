@@ -110,6 +110,9 @@ impl WatchArgs {
         let mut latest_price = None;
         let mut latest_price_color = colors.normal;
 
+        let mut first_watch = true;
+        let mut first_read = true;
+
         loop {
             tokio::select! {
                 evt = stream.recv() => {
@@ -150,7 +153,12 @@ impl WatchArgs {
                 },
 
                 _ = watch_period.tick() => {
-                    trace!("period tick");
+                    let is_first_watch = std::mem::replace(&mut first_watch, false);
+                    if is_first_watch {
+                        continue;
+                    }
+
+                    trace!("watch period tick");
 
                     if state_lines > 0 {
                         _ = clean_up_rows(&mut sout, state_lines as u16);
@@ -174,6 +182,13 @@ impl WatchArgs {
                 }
 
                 _ = read_period.tick() => {
+                    let is_first_read = std::mem::replace(&mut first_read, false);
+                    if is_first_read {
+                        continue;
+                    }
+
+                    trace!("read period tick");
+
                     if !self.disable_notify_reads {
                         hub.notify_read_msgs(latest_price);
                     }
