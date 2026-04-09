@@ -25,7 +25,7 @@ monitors = [
     "rate:qty,ema,20,abs,>,1.5",
     "rate:qty,ema,20,abs,<,0.4",
 
-    "bb:20,2",
+    # "bb:20,2",
     "macd:12,26,9",
 
     "shadow:0.5",
@@ -47,43 +47,47 @@ monitors = [
     "cross:close,ema,20,60",
     "cross:close,ema,20,80",
     "cross:close,ema,80,240",
-    "cross:close,ema,80,240",
 
     "hold:close,ema,60,3",
     "hold:close,ema,80,3",
     "hold:close,ema,200,3",
     "hold:close,ema,240,3",
 
-    "bb:20,2",
-
     "shadow:0.7",
 
     "rate:qty,ema,20,abs,>,2.0",
     "rate:qty,ema,20,abs,>,4.0",
     "rate:qty,ema,20,abs,<,0.4",
+
+    "pdiff:temp,0.2",
+    "pdiff:perm,0.3",
 ]
 reads = [20, 60, 80, 200, 240]
 no_wildcard = true
 
 [[pairs.intervals]]
 name = "15m"
+monitors = [
+    "pdiff:temp,0.5",
+    "pdiff:perm,0.8",
+]
 
 [[pairs.intervals]]
 name = "1h"
 monitors = [
-    "touch:close,ema,5",
+    "pdiff:perm,1.5",
 ]
 
 [[pairs.intervals]]
 name = "4h"
 monitors = [
-    "touch:close,ema,5",
+    "pdiff:perm,2.4",
 ]
 
 [[pairs.intervals]]
 name = "1d"
 monitors = [
-    "touch:close,ema,5",
+    "pdiff:perm,5.0",
 ]
 
 [[pairs]]
