@@ -156,16 +156,16 @@ impl Read {
         }
 
         let normal = format!(
-            "({}/{}):{}",
-            self.args.val_kind.as_str(),
-            self.args.calc_kind.as_str(),
+            "{}/{}:{}",
+            self.args.val_kind.as_str_short(),
+            self.args.calc_kind.as_str_short(),
             normal_vals,
         );
 
         let tty = format!(
-            "({}/{}):{}",
-            self.args.val_kind.as_str(),
-            self.args.calc_kind.as_str(),
+            "{}/{}:{}",
+            self.args.val_kind.as_str_short(),
+            self.args.calc_kind.as_str_short(),
             tty_vals,
         );
 
