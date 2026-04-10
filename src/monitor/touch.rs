@@ -104,19 +104,19 @@ impl Touch {
         };
 
         let normal = format!(
-            "({}/{}{}):{}",
+            "({}/{}):{}{}",
             self.args.val_kind.as_str_short(),
             self.args.calc_kind.as_str_short(),
-            self.args.ma,
             dir_str,
+            self.args.ma,
         );
 
         let tty = format!(
-            "({}/{}{}):{}",
+            "({}/{}):{}{}",
             self.args.val_kind.as_str_short(),
             self.args.calc_kind.as_str_short(),
-            self.args.ma,
             dir_str.with(color),
+            self.args.ma,
         );
 
         Msg { normal, tty }
