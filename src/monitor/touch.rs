@@ -75,7 +75,7 @@ impl Args for TouchArgs {
             args: self,
             key,
             ma_key,
-            prev_touched: false,
+            prev_touched: None,
             state: Default::default(),
             alerts: Default::default(),
             temp_t: None,
@@ -89,18 +89,17 @@ pub struct Touch {
     args: TouchArgs,
     key: String,
     ma_key: String,
-    prev_touched: bool,
+    prev_touched: Option<bool>,
     state: State,
     alerts: AlertManager,
     temp_t: Option<OffsetDateTime>,
 }
 
 impl Touch {
-    fn event_msg(&self, dir: Option<bool>, colors: ColorTable) -> Msg {
+    fn event_msg(&self, dir: bool, colors: ColorTable) -> Msg {
         let (dir_str, color) = match dir {
-            Some(true) => ("↑", colors.up),
-            Some(false) => ("↓", colors.down),
-            None => ("-", colors.normal),
+            true => ("↑", colors.up),
+            false => ("↓", colors.down),
         };
 
         let normal = format!(
@@ -124,7 +123,7 @@ impl Touch {
 }
 
 impl Touch {
-    fn touched(&self, kctx: &KCtx, val: Decimal) -> bool {
+    fn touched(&self, kctx: &KCtx, val: Decimal) -> Option<bool> {
         match self.args.val_kind {
             ExtractKind::PriceClose => self.close_touched(kctx, val),
 
@@ -132,50 +131,44 @@ impl Touch {
         }
     }
 
-    fn close_touched(&self, kctx: &KCtx, val: Decimal) -> bool {
-        kctx.info.raw.price_high >= val && kctx.info.raw.price_low <= val
+    fn close_touched(&self, kctx: &KCtx, val: Decimal) -> Option<bool> {
+        if kctx.info.raw.price_high >= val && kctx.info.raw.price_low <= val {
+            // 开盘价在下，则向上触碰
+            Some(kctx.info.raw.price_open < val)
+        } else {
+            None
+        }
     }
 
-    fn qty_touched(&self, kctx: &KCtx, val: Decimal) -> bool {
-        kctx.info.raw.quantity >= val
+    fn qty_touched(&self, kctx: &KCtx, val: Decimal) -> Option<bool> {
+        if kctx.info.raw.quantity >= val {
+            Some(true)
+        } else {
+            None
+        }
     }
 
     fn calc(&self, kctx: &KCtx) -> Option<Msg> {
-        if self.prev_touched {
-            return None;
-        }
-
         let ma = kctx.get_val::<Decimal>(&self.ma_key).copied()?;
-
-        let touched = self.touched(kctx, ma);
-        if !touched {
+        let touch_dir = self.touched(kctx, ma)?;
+        if self.prev_touched == Some(touch_dir) {
             return None;
         }
 
-        let dir = kctx.info.direction;
-
-        Some(self.event_msg(dir, kctx.colors))
+        Some(self.event_msg(touch_dir, kctx.colors))
     }
 
     fn update(&mut self, kctx: &KCtx) -> Option<Msg> {
-        let prev_touched = self.prev_touched;
-        self.prev_touched = false;
-        if prev_touched {
-            return None;
-        }
-
+        let prev_touched = self.prev_touched.take();
         let ma = kctx.get_val::<Decimal>(&self.ma_key).copied()?;
 
-        let touched = self.touched(kctx, ma);
-        if !touched {
+        let touch_dir = self.touched(kctx, ma)?;
+        self.prev_touched.replace(touch_dir);
+        if prev_touched == Some(touch_dir) {
             return None;
         }
 
-        self.prev_touched = true;
-
-        let dir = kctx.info.direction;
-
-        Some(self.event_msg(dir, kctx.colors))
+        Some(self.event_msg(touch_dir, kctx.colors))
     }
 }
 
