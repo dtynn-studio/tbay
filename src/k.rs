@@ -5,11 +5,28 @@ use crate::{
     prelude::{Decimal, OffsetDateTime},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RelativePosition {
     Above,
     Below,
     At,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Trend {
+    Up,
+    Down,
+    Unknown,
+}
+
+impl Trend {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Trend::Up => "↑",
+            Trend::Down => "↓",
+            Trend::Unknown => "~",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -85,6 +102,7 @@ pub struct KInfo {
     pub body: PriceBar,
     pub full: PriceBar,
     pub shadow: KShadow,
+    pub trend: Trend,
 }
 
 impl From<KRaw> for KInfo {
@@ -116,13 +134,47 @@ impl From<KRaw> for KInfo {
             below: body.low - full.low,
         };
 
+        let trend = kinfo_trend(body, full, shadow, direction, None);
+
         Self {
             raw: value,
             direction,
             body,
             full,
             shadow,
+            trend,
         }
+    }
+}
+
+fn kinfo_trend(
+    body: PriceBar,
+    full: PriceBar,
+    shadow: KShadow,
+    direction: Option<bool>,
+    threshold: Option<Decimal>,
+) -> Trend {
+    let threshold = threshold.unwrap_or(Decimal::from(2) / Decimal::from(3));
+
+    let full_height = full.high - full.low;
+    if full_height.is_zero() {
+        return Trend::Unknown;
+    }
+
+    let body_height = body.high - body.low;
+
+    if body_height / full_height >= threshold {
+        match direction {
+            Some(true) => Trend::Up,
+            Some(false) => Trend::Down,
+            None => Trend::Unknown,
+        }
+    } else if shadow.above / full_height >= threshold {
+        Trend::Down
+    } else if shadow.below / full_height >= threshold {
+        Trend::Up
+    } else {
+        Trend::Unknown
     }
 }
 
