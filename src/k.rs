@@ -47,6 +47,7 @@ pub struct PriceBar {
     pub high: Decimal,
     pub low: Decimal,
     pub mid: Decimal,
+    pub height: Decimal,
 }
 
 impl From<(Decimal, Decimal)> for PriceBar {
@@ -63,6 +64,7 @@ impl PriceBar {
             high,
             low,
             mid: (high + low) / Decimal::TWO,
+            height: high - low,
         }
     }
 
@@ -156,22 +158,21 @@ fn kinfo_trend(
 ) -> Trend {
     let threshold = threshold.unwrap_or(Decimal::from(2) / Decimal::from(3));
 
-    let full_height = full.high - full.low;
-    if full_height.is_zero() {
+    if full.height.is_zero() {
         return Trend::Unknown;
     }
 
     let body_height = body.high - body.low;
 
-    if body_height / full_height >= threshold {
+    if body_height / full.height >= threshold {
         match direction {
             Some(true) => Trend::Up,
             Some(false) => Trend::Down,
             None => Trend::Unknown,
         }
-    } else if shadow.above / full_height >= threshold {
+    } else if shadow.above / full.height >= threshold {
         Trend::Down
-    } else if shadow.below / full_height >= threshold {
+    } else if shadow.below / full.height >= threshold {
         Trend::Up
     } else {
         Trend::Unknown
