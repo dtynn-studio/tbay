@@ -107,16 +107,16 @@ impl Touch {
             "{}/{}:{}{}",
             self.args.val_kind.as_str_short(),
             self.args.calc_kind.as_str_short(),
-            dir_str,
             self.args.ma,
+            dir_str,
         );
 
         let tty = format!(
             "{}/{}:{}{}",
             self.args.val_kind.as_str_short(),
             self.args.calc_kind.as_str_short(),
-            dir_str.with(color),
             self.args.ma,
+            dir_str.with(color),
         );
 
         Msg { normal, tty }
