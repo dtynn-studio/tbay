@@ -39,7 +39,7 @@ impl Args for MacdMonitorArgs {
         let key = self.0.key();
 
         Ok(MacdMonitor {
-            args: self,
+            _args: self,
             key,
             macd_key,
             current: None,
@@ -53,7 +53,7 @@ impl Args for MacdMonitorArgs {
 impl_builder!(MacdMonitorBuilder: MacdMonitorArgs => MacdMonitor);
 
 pub struct MacdMonitor {
-    args: MacdMonitorArgs,
+    _args: MacdMonitorArgs,
     key: String,
     macd_key: String,
     current: Option<MacdValue>,
@@ -76,21 +76,9 @@ impl MacdMonitor {
             ("↘", colors.down)
         };
 
-        let normal = format!(
-            "(macd/{}/{}/{}):{}",
-            self.args.0.fast,
-            self.args.0.slow,
-            self.args.0.dea_period,
-            dir_flag
-        );
+        let normal = format!("macd:{}", dir_flag);
 
-        let tty = format!(
-            "(macd/{}/{}/{}):{}",
-            self.args.0.fast,
-            self.args.0.slow,
-            self.args.0.dea_period,
-            dir_flag.with(color),
-        );
+        let tty = format!("macd:{}", dir_flag.with(color),);
 
         Msg { normal, tty }
     }
