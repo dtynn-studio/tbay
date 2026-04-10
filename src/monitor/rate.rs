@@ -220,7 +220,7 @@ impl Rate {
 
     fn format_msg(&self, rate: Decimal, colors: ColorTable) -> Msg {
         let (rate_str, color) = match self.args.mode {
-            RateMode::Abs => (format!("{}", rate.round_dp(3)), colors.normal),
+            RateMode::Abs => (format!("{}", rate.round_dp(2)), colors.normal),
             RateMode::Dif => {
                 let pct = rate * self.hundred;
                 let (sign, sign_color) = if rate.is_sign_negative() {
