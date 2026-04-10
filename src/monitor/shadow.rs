@@ -67,8 +67,8 @@ pub struct Shadow {
 }
 
 impl Shadow {
-    fn check_ratio(&self, kctx: &KCtx) -> Option<(Decimal, bool)> {
-        let full = kctx.info.full.high - kctx.info.full.low;
+    fn check_ratio(&self, kctx: &KCtx) -> Option<(Decimal, Decimal, bool)> {
+        let full = kctx.info.full.height;
         if full.is_zero() {
             return None;
         }
@@ -79,8 +79,9 @@ impl Shadow {
         let shadow_len = if is_above { above } else { below };
 
         let ratio = shadow_len / full;
+
         if ratio >= self.args.threshold {
-            Some((ratio, is_above))
+            Some((shadow_len, ratio, is_above))
         } else {
             None
         }
@@ -88,15 +89,17 @@ impl Shadow {
 
     fn event_msg(
         &self,
+        val: Decimal,
         ratio: Decimal,
         is_above: bool,
         colors: ColorTable,
     ) -> Msg {
+        let val_rounded = val.round_dp(2);
         let ratio_rounded = ratio.round_dp(2);
         let (shadow_desc, shadow_color) = if is_above {
-            (format!("┴{ratio_rounded}"), colors.down)
+            (format!("┴{ratio_rounded}({val_rounded})"), colors.down)
         } else {
-            (format!("┬{ratio_rounded}"), colors.up)
+            (format!("┬{ratio_rounded}({val_rounded})"), colors.up)
         };
 
         let normal = shadow_desc.clone();
@@ -117,10 +120,10 @@ impl Monitor for Shadow {
     }
 
     fn apply(&mut self, kctx: &KCtx) {
-        let msg_opt = self.check_ratio(kctx).map(|(ratio, is_above)| {
+        let msg_opt = self.check_ratio(kctx).map(|(val, ratio, is_above)| {
             (
                 kctx.info.raw.time_begin,
-                self.event_msg(ratio, is_above, kctx.colors),
+                self.event_msg(val, ratio, is_above, kctx.colors),
             )
         });
 
