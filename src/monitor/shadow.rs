@@ -90,7 +90,6 @@ impl Shadow {
         &self,
         ratio: Decimal,
         is_above: bool,
-        dir: Option<bool>,
         colors: ColorTable,
     ) -> Msg {
         let ratio_rounded = ratio.round_dp(2);
@@ -100,19 +99,9 @@ impl Shadow {
             (format!("┬{ratio_rounded}"), colors.up)
         };
 
-        let (dir_str, dir_color) = match dir {
-            Some(true) => ("↑", colors.up),
-            Some(false) => ("↓", colors.down),
-            None => ("-", colors.normal),
-        };
+        let normal = shadow_desc.clone();
 
-        let normal = format!("shadow:{}/{}", shadow_desc, dir_str);
-
-        let tty = format!(
-            "shadow:{}/{}",
-            shadow_desc.with(shadow_color),
-            dir_str.with(dir_color),
-        );
+        let tty = shadow_desc.with(shadow_color).to_string();
 
         Msg { normal, tty }
     }
@@ -131,12 +120,7 @@ impl Monitor for Shadow {
         let msg_opt = self.check_ratio(kctx).map(|(ratio, is_above)| {
             (
                 kctx.info.raw.time_begin,
-                self.event_msg(
-                    ratio,
-                    is_above,
-                    kctx.info.direction,
-                    kctx.colors,
-                ),
+                self.event_msg(ratio, is_above, kctx.colors),
             )
         });
 
