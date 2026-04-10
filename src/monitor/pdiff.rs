@@ -151,9 +151,9 @@ impl Diff {
         };
 
         let desc = format!("{sign}{diff_pct}%({diff_abs})");
-        let normal = format!("pdiff:{desc}");
+        let normal = format!("$:{desc}");
 
-        let tty = format!("pdiff:{}", desc.with(color));
+        let tty = format!("$:{}", desc.with(color));
 
         Msg { normal, tty }
     }
