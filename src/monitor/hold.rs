@@ -117,7 +117,7 @@ impl Hold {
         };
 
         let normal = format!(
-            "{}/{}:{}{pos_str}{}",
+            "{}/{}{}:{pos_str}{}",
             self.args.val_kind.as_str_short(),
             self.args.calc_kind.as_str_short(),
             self.args.ma,
@@ -125,7 +125,7 @@ impl Hold {
         );
 
         let tty = format!(
-            "{}/{}:{}{}{}",
+            "{}/{}{}:{}{}",
             self.args.val_kind.as_str_short(),
             self.args.calc_kind.as_str_short(),
             self.args.ma,

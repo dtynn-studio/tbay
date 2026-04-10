@@ -80,7 +80,7 @@ impl Cross {
             ("↘", colors.down)
         };
         let normal = format!(
-            "{}/{}:{}{dir_flag}{}",
+            "{}/{}{}:{dir_flag}{}",
             self.args.0.val_kind.as_str_short(),
             self.args.0.calc_kind.as_str_short(),
             self.args.0.fast,
@@ -88,7 +88,7 @@ impl Cross {
         );
 
         let tty = format!(
-            "{}/{}:{}{}{}",
+            "{}/{}{}:{}{}",
             self.args.0.val_kind.as_str_short(),
             self.args.0.calc_kind.as_str_short(),
             self.args.0.fast,

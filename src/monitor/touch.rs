@@ -104,7 +104,7 @@ impl Touch {
         };
 
         let normal = format!(
-            "{}/{}:{}{}",
+            "{}/{}{}:{}",
             self.args.val_kind.as_str_short(),
             self.args.calc_kind.as_str_short(),
             self.args.ma,
@@ -112,7 +112,7 @@ impl Touch {
         );
 
         let tty = format!(
-            "{}/{}:{}{}",
+            "{}/{}{}:{}",
             self.args.val_kind.as_str_short(),
             self.args.calc_kind.as_str_short(),
             self.args.ma,
