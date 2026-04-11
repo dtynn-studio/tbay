@@ -157,7 +157,7 @@ impl Args for FBQArgs {
 
             trend_single_threshold: Decimal::from_f64(0.6)
                 .required("trend single threshold")?,
-            trend_mixed_threshold: Decimal::from_f64(0.6)
+            trend_mixed_threshold: Decimal::from_f64(0.7)
                 .required("trend mixed threshold")?,
 
             state: Default::default(),
