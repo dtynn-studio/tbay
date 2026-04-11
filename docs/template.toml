@@ -11,9 +11,9 @@ monitors = [
     "touch:close,ema,240",
 
     "cross:close,ema,5,20",
-    "cross:close,ema,5,60",
+    "cross:close,ema,20,60",
     "cross:close,ema,20,80",
-    "cross:close,ema,20,240",
+    "cross:close,ema,80,240",
 
     "hold:close,ema,20,3",
     "hold:close,ema,60,3",
@@ -44,7 +44,7 @@ monitors = [
     # "touch:close,ema,200",
     "touch:close,ema,240",
 
-    "cross:close,ema,5,60",
+    "cross:close,ema,20,60",
     "cross:close,ema,20,80",
     "cross:close,ema,80,240",
 
