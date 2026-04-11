@@ -24,27 +24,31 @@ pub struct Strength {
 }
 
 impl Strength {
-    fn detect(&self, next: Decimal, ma: Decimal) -> Option<(Decimal, bool)> {
+    fn detect(
+        &self,
+        next: Decimal,
+        ma: Decimal,
+    ) -> Option<(Decimal, Decimal, bool)> {
         if ma.is_zero() {
             return None;
         }
 
         let ratio = next / ma;
         if ratio >= self.threshold.strong {
-            Some((ratio, true))
+            Some((next, ratio, true))
         } else if ratio <= self.threshold.weak {
-            Some((ratio, false))
+            Some((next, ratio, false))
         } else {
             None
         }
     }
 
-    fn calc(&self, next: Decimal) -> Option<(Decimal, bool)> {
+    fn calc(&self, next: Decimal) -> Option<(Decimal, Decimal, bool)> {
         let ma = self.ma.calc(next)?;
         self.detect(next, ma)
     }
 
-    fn update(&mut self, next: Decimal) -> Option<(Decimal, bool)> {
+    fn update(&mut self, next: Decimal) -> Option<(Decimal, Decimal, bool)> {
         let ma = self.ma.update(next)?;
         self.detect(next, ma)
     }
@@ -70,7 +74,7 @@ impl FromStr for FBQArgs {
         let mut qw = 0.0f64;
         let mut qs = 0.0f64;
 
-        sscanf!(s, "fbg:{period},{fw}/{fs},{bw}/{bs},{qw}/{qs}").with_context(
+        sscanf!(s, "fbq:{period},{fw}/{fs},{bw}/{bs},{qw}/{qs}").with_context(
             |_| ParseCtx {
                 raw: s.to_owned(),
                 usage: Cow::from("parse fbq args"),
@@ -185,7 +189,7 @@ impl FBQ {
     fn generate_msg(
         &self,
         trend: Trend,
-        strengths: [Option<(Decimal, bool)>; 3],
+        strengths: [Option<(Decimal, Decimal, bool)>; 3],
         colors: ColorTable,
     ) -> Option<(Msg, u8)> {
         const SHORTS: [&str; 3] = ["f", "b", "q"];
@@ -203,7 +207,7 @@ impl FBQ {
         let mut tty = String::new();
 
         let mut strong_flags = 0;
-        for (n, ((ratio, dir), short)) in items.into_iter().enumerate() {
+        for (n, ((_abs, ratio, dir), short)) in items.into_iter().enumerate() {
             if !normal.is_empty() {
                 normal.push('|');
                 tty.push('|');
@@ -214,6 +218,7 @@ impl FBQ {
             }
 
             let ratio_rounded = ratio.round_dp(2);
+            // let abs_rounded = abs.round_dp(2);
             let (flag, color) = if dir {
                 ("<", colors.up)
             } else {
