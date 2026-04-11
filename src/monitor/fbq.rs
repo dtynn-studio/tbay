@@ -162,7 +162,7 @@ impl Args for FBQArgs {
 
             state: Default::default(),
             alerts: Default::default(),
-            prev_temp_strong_flags: 0,
+            prev_temp_alert_strong_flags: None,
         })
     }
 }
@@ -182,7 +182,7 @@ pub struct FBQ {
     state: State,
     alerts: AlertManager,
 
-    prev_temp_strong_flags: u8,
+    prev_temp_alert_strong_flags: Option<(OffsetDateTime, u8)>,
 }
 
 impl FBQ {
@@ -281,16 +281,15 @@ impl Monitor for FBQ {
         let msg_opt = self.generate_msg(trend, strengths, kctx.colors);
 
         self.state.temp.take();
-        let prev_temp_strong_flags =
-            std::mem::replace(&mut self.prev_temp_strong_flags, 0);
 
         if let Some((msg, strong_flags)) = msg_opt {
             if kctx.info.raw.finalized {
                 self.alerts.add(t, msg.clone());
                 self.state.perm.replace((t, msg));
             } else {
-                self.prev_temp_strong_flags = strong_flags;
-                if strong_flags > 0 && strong_flags != prev_temp_strong_flags {
+                let alert_flags = (t, strong_flags);
+                if self.prev_temp_alert_strong_flags != Some(alert_flags) {
+                    self.prev_temp_alert_strong_flags.replace(alert_flags);
                     self.alerts.add(t, msg.clone());
                 }
 
