@@ -1,3 +1,5 @@
+#![feature(duration_constructors)]
+
 pub mod cmd;
 pub mod common;
 pub mod config;

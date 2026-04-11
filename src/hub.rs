@@ -18,7 +18,7 @@ use crate::{
     },
     notifier::Notifier,
     prelude::*,
-    util::time::{TBDuration as Duration, format_hhmm},
+    util::time::{TBDuration as Duration, compact_format},
 };
 
 pub type HubIndicator = Box<dyn Indicator<Output = Box<dyn Any>>>;
@@ -208,7 +208,7 @@ impl Hub {
                     temp_msgs.push(format!(
                         "{}/{d}@{}: {}",
                         hstate.symbol,
-                        format_hhmm(&t),
+                        compact_format(&t, d),
                         msgs.join("  ")
                     ));
                 }
@@ -217,7 +217,7 @@ impl Hub {
                     perm_msgs.push(format!(
                         "{}/{d}@{}: {}",
                         hstate.symbol,
-                        format_hhmm(&t),
+                        compact_format(&t, d),
                         msgs.join("  ")
                     ));
                 }
@@ -260,7 +260,7 @@ impl Hub {
                 read_msgs.push(format!(
                     "{}/{d}@{}:{content}",
                     item.symbol,
-                    format_hhmm(t),
+                    compact_format(t, *d),
                 ));
             }
         }
@@ -317,7 +317,7 @@ impl Hub {
                 for (t, amsgs) in normal_alerts {
                     normal_formatted_alerts.push(format!(
                         "@{}:{}",
-                        format_hhmm(&t),
+                        compact_format(&t, *d),
                         amsgs.join(" ")
                     ));
                 }
@@ -335,7 +335,7 @@ impl Hub {
                 for (t, amsgs) in tty_alerts {
                     tty_formatted_alerts.push(format!(
                         "@{}:{}",
-                        format_hhmm(&t),
+                        compact_format(&t, *d),
                         amsgs.join(" ")
                     ));
                 }

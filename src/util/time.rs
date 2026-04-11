@@ -8,6 +8,8 @@ mod duration;
 
 pub use duration::TBDuration;
 
+const DAY: TBDuration = TBDuration::new(Duration::from_days(1));
+
 pub const MILLI_SEC: i64 = 1000;
 
 pub static LOCAL_OFFSET: LazyLock<UtcOffset> = LazyLock::new(|| {
@@ -39,6 +41,10 @@ pub fn truncate(
         .map(|t| t.to_offset(*LOCAL_OFFSET))
 }
 
-pub fn format_hhmm(t: &OffsetDateTime) -> String {
-    format!("{:02}:{:02}", t.hour(), t.minute())
+pub fn compact_format(t: &OffsetDateTime, interval: TBDuration) -> String {
+    if interval < DAY {
+        format!("{:02}:{:02}", t.hour(), t.minute())
+    } else {
+        format!("{:02}/{:02}", u8::from(t.month()), t.day())
+    }
 }

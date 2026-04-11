@@ -5,6 +5,12 @@ use std::{fmt, time::Duration};
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TBDuration(Duration);
 
+impl TBDuration {
+    pub const fn new(d: Duration) -> Self {
+        Self(d)
+    }
+}
+
 impl fmt::Debug for TBDuration {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{self}")
