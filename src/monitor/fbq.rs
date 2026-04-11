@@ -288,7 +288,9 @@ impl Monitor for FBQ {
                 self.state.perm.replace((t, msg));
             } else {
                 let alert_flags = (t, strong_flags);
-                if self.prev_temp_alert_strong_flags != Some(alert_flags) {
+                if strong_flags > 0
+                    && self.prev_temp_alert_strong_flags != Some(alert_flags)
+                {
                     self.prev_temp_alert_strong_flags.replace(alert_flags);
                     self.alerts.add(t, msg.clone());
                 }
