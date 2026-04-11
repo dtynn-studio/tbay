@@ -237,7 +237,7 @@ impl FBQ {
             Trend::Unknown => colors.normal,
         };
 
-        let trend_desc = format!("@{}", trend.as_str());
+        let trend_desc = format!("|{}", trend.as_str());
         normal.push_str(&trend_desc);
         tty.push_str(&trend_desc.with(trend_color).to_string());
 
