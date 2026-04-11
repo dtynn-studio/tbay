@@ -42,6 +42,7 @@ reads = [5, 20, 60, 80, 200, 240]
 name = "3m"
 monitors = [
     # "touch:close,ema,200",
+    "touch:close,ema,80",
     "touch:close,ema,240",
 
     "cross:close,ema,20,60",
