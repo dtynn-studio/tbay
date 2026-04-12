@@ -283,18 +283,17 @@ impl Monitor for FBQ {
         self.state.temp.take();
 
         if let Some((msg, strong_flags)) = msg_opt {
-            if kctx.info.raw.finalized {
+            let alert_flags = (t, strong_flags);
+            if self.prev_temp_alert_strong_flags != Some(alert_flags)
+                && (kctx.info.raw.finalized || strong_flags > 0)
+            {
+                self.prev_temp_alert_strong_flags.replace(alert_flags);
                 self.alerts.add(t, msg.clone());
+            }
+
+            if kctx.info.raw.finalized {
                 self.state.perm.replace((t, msg));
             } else {
-                let alert_flags = (t, strong_flags);
-                if strong_flags > 0
-                    && self.prev_temp_alert_strong_flags != Some(alert_flags)
-                {
-                    self.prev_temp_alert_strong_flags.replace(alert_flags);
-                    self.alerts.add(t, msg.clone());
-                }
-
                 self.state.temp.replace((t, msg));
             }
         } else {
