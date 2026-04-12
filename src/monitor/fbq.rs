@@ -162,7 +162,7 @@ impl Args for FBQArgs {
 
             state: Default::default(),
             alerts: Default::default(),
-            // prev_temp_alert_strong_flags: None,
+            prev_temp_alert_strong_flags: None,
         })
     }
 }
@@ -181,7 +181,7 @@ pub struct FBQ {
 
     state: State,
     alerts: AlertManager,
-    // prev_temp_alert_strong_flags: Option<(OffsetDateTime, u8, u8)>,
+    prev_temp_alert_strong_flags: Option<(OffsetDateTime, u8, u8)>,
 }
 
 impl FBQ {
@@ -286,7 +286,7 @@ impl Monitor for FBQ {
 
         self.state.temp.take();
 
-        if let Some((msg, _strong_flags, _weak_flags)) = msg_opt {
+        if let Some((msg, strong_flags, weak_flags)) = msg_opt {
             // let alert_flags = (t, strong_flags, weak_flags);
             // if self.prev_temp_alert_strong_flags != Some(alert_flags)
             //     && (kctx.info.raw.finalized || strong_flags > 0)
@@ -295,11 +295,39 @@ impl Monitor for FBQ {
             //     self.alerts.add(t, msg.clone());
             // }
 
+            let mut alert_msg = None;
+            // K 线已经终结
             if kctx.info.raw.finalized {
-                self.alerts.add(t, msg.clone());
+                // 信息flag和之前不一样，则需要告警
+                if self.prev_temp_alert_strong_flags
+                    != Some((t, strong_flags, weak_flags))
+                {
+                    alert_msg.replace(msg.clone());
+                }
+
                 self.state.perm.replace((t, msg));
             } else {
+                // 只看能确认的部分
+                const TEMP_FLAGS_MASK: u8 = 0b101;
+                let current_flags = strong_flags & TEMP_FLAGS_MASK;
+                let prev_flags = self
+                    .prev_temp_alert_strong_flags
+                    .map(|(t, sf, _wf)| (t, sf & TEMP_FLAGS_MASK));
+
+                if prev_flags != Some((t, current_flags)) {
+                    alert_msg.replace(msg.clone());
+                }
+
                 self.state.temp.replace((t, msg));
+            }
+
+            if let Some(msg) = alert_msg {
+                self.prev_temp_alert_strong_flags.replace((
+                    t,
+                    strong_flags,
+                    weak_flags,
+                ));
+                self.alerts.add(t, msg);
             }
         } else {
             self.state.perm.take();
