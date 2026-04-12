@@ -3,7 +3,7 @@ name = "*"
 
 [[pairs.intervals]]
 monitors = [
-    # "touch:close,ema,5",
+    "touch:close,ema,5",
     "touch:close,ema,20",
     "touch:close,ema,60",
     "touch:close,ema,80",
@@ -76,24 +76,24 @@ name = "15m"
 
 [[pairs.intervals]]
 name = "1h"
-monitors = [
+# monitors = [
     # "pdiff:perm,1.5",
-    "touch:close,ema,5",
-]
+    # "touch:close,ema,5",
+# ]
 
 [[pairs.intervals]]
 name = "4h"
-monitors = [
+# monitors = [
     # "pdiff:perm,2.5",
-    "touch:close,ema,5",
-]
+    # "touch:close,ema,5",
+# ]
 
 [[pairs.intervals]]
 name = "1d"
-monitors = [
+# monitors = [
     # "pdiff:perm,5.0",
-    "touch:close,ema,5",
-]
+    # "touch:close,ema,5",
+# ]
 
 [[pairs]]
 name = "ethusdt"
