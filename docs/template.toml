@@ -36,7 +36,7 @@ monitors = [
     # "cross:qty,ema,5,20",
     # "hold:qty,ema,20,3",
 ]
-reads = [5, 20, 60, 80, 200, 240]
+reads = [5, 20, 60, 80, 240]
 
 [[pairs.intervals]]
 name = "3m"
@@ -64,7 +64,7 @@ monitors = [
     # "pdiff:temp,0.15",
     # "pdiff:perm,0.15",
 ]
-reads = [20, 60, 80, 200, 240]
+reads = [5, 20, 60, 80, 240]
 no_wildcard = true
 
 [[pairs.intervals]]
