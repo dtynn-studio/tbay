@@ -182,7 +182,7 @@ pub struct FBQ {
     state: State,
     alerts: AlertManager,
 
-    prev_temp_alert_strong_flags: Option<(OffsetDateTime, u8)>,
+    prev_temp_alert_strong_flags: Option<(OffsetDateTime, u8, u8)>,
 }
 
 impl FBQ {
@@ -191,12 +191,13 @@ impl FBQ {
         trend: Trend,
         strengths: [Option<(Decimal, Decimal, bool)>; 3],
         colors: ColorTable,
-    ) -> Option<(Msg, u8)> {
+    ) -> Option<(Msg, u8, u8)> {
         const SHORTS: [&str; 3] = ["f", "b", "q"];
         let items = strengths
             .into_iter()
             .zip(SHORTS)
-            .filter_map(|(s_opt, short)| s_opt.map(|s| (s, short)))
+            .enumerate()
+            .filter_map(|(n, (s_opt, short))| s_opt.map(|s| (n, s, short)))
             .collect::<Vec<_>>();
 
         if items.is_empty() {
@@ -207,14 +208,18 @@ impl FBQ {
         let mut tty = String::new();
 
         let mut strong_flags = 0;
-        for (n, ((_abs, ratio, dir), short)) in items.into_iter().enumerate() {
+        let mut weak_flags = 0;
+        for (n, (_abs, ratio, dir), short) in items.into_iter() {
             if !normal.is_empty() {
                 normal.push('|');
                 tty.push('|');
             }
 
+            let shift = 2 - n;
             if dir {
-                strong_flags |= 1 << n
+                strong_flags |= 1 << shift
+            } else {
+                weak_flags |= 1 << shift
             }
 
             let ratio_rounded = ratio.round_dp(2);
@@ -241,7 +246,7 @@ impl FBQ {
         normal.push_str(&trend_desc);
         tty.push_str(&trend_desc.with(trend_color).to_string());
 
-        Some((Msg { normal, tty }, strong_flags))
+        Some((Msg { normal, tty }, strong_flags, weak_flags))
     }
 }
 
@@ -282,8 +287,8 @@ impl Monitor for FBQ {
 
         self.state.temp.take();
 
-        if let Some((msg, strong_flags)) = msg_opt {
-            let alert_flags = (t, strong_flags);
+        if let Some((msg, strong_flags, weak_flags)) = msg_opt {
+            let alert_flags = (t, strong_flags, weak_flags);
             if self.prev_temp_alert_strong_flags != Some(alert_flags)
                 && (kctx.info.raw.finalized || strong_flags > 0)
             {
