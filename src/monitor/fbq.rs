@@ -314,7 +314,7 @@ impl Monitor for FBQ {
                     .prev_temp_alert_strong_flags
                     .map(|(t, sf, _wf)| (t, sf & TEMP_FLAGS_MASK));
 
-                if prev_flags != Some((t, current_flags)) {
+                if current_flags > 0 && prev_flags != Some((t, current_flags)) {
                     alert_msg.replace(msg.clone());
                 }
 
