@@ -309,12 +309,14 @@ impl Monitor for FBQ {
             } else {
                 // 只看能确认的部分
                 const TEMP_FLAGS_MASK: u8 = 0b101;
-                let current_flags = strong_flags & TEMP_FLAGS_MASK;
-                let prev_flags = self
+                let masked_flags = strong_flags & TEMP_FLAGS_MASK;
+                let prev_masked_flags = self
                     .prev_temp_alert_strong_flags
                     .map(|(t, sf, _wf)| (t, sf & TEMP_FLAGS_MASK));
 
-                if current_flags > 0 && prev_flags != Some((t, current_flags)) {
+                if strong_flags > 0
+                    && prev_masked_flags != Some((t, masked_flags))
+                {
                     alert_msg.replace(msg.clone());
                 }
 
