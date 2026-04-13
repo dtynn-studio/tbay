@@ -119,11 +119,11 @@ impl Read {
             .filter_map(|(key, p)| {
                 let v = kctx.get_val::<Decimal>(key).copied()?;
                 let (dir, color) = if close > v {
-                    ("↑", kctx.colors.up)
+                    ("[↑]", kctx.colors.up)
                 } else if close < v {
-                    ("↓", kctx.colors.down)
+                    ("[↓]", kctx.colors.down)
                 } else {
-                    ("-", kctx.colors.normal)
+                    ("[~]", kctx.colors.normal)
                 };
 
                 Some((v, p, dir, color))
@@ -148,7 +148,7 @@ impl Read {
                 tty_vals.push('|');
             }
 
-            let normal_piece = format!("{period}:{rounded}{dir}");
+            let normal_piece = format!("{period}:{dir}{rounded}");
             normal_vals.push_str(&normal_piece);
 
             let colored = format!("{period}:{rounded}").with(color).to_string();

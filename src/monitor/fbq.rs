@@ -205,13 +205,21 @@ impl FBQ {
         let mut normal = String::new();
         let mut tty = String::new();
 
+        let trend_color = match trend {
+            Trend::Up => colors.up,
+            Trend::Down => colors.down,
+            Trend::Unknown => colors.normal,
+        };
+
+        let trend_desc = format!("[{}]", trend.as_str());
+        normal.push_str(&trend_desc);
+        tty.push_str(&trend_desc.with(trend_color).to_string());
+
         let mut strong_flags = 0;
         let mut weak_flags = 0;
         for (n, (abs, ratio, strong), short, show_val) in items.into_iter() {
-            if !normal.is_empty() {
-                normal.push('|');
-                tty.push('|');
-            }
+            normal.push('|');
+            tty.push('|');
 
             let shift = 2 - n;
             if strong {
@@ -228,9 +236,9 @@ impl FBQ {
                 "".to_owned()
             };
             let (flag, color) = if strong {
-                ("<", colors.up)
+                ("[↗]", colors.up)
             } else {
-                (">", colors.down)
+                ("[↘]", colors.down)
             };
 
             normal.push_str(&format!("{short}{flag}{ratio_rounded}{abs_desc}"));
@@ -240,16 +248,6 @@ impl FBQ {
                     .to_string(),
             );
         }
-
-        let trend_color = match trend {
-            Trend::Up => colors.up,
-            Trend::Down => colors.down,
-            Trend::Unknown => colors.normal,
-        };
-
-        let trend_desc = format!("|{}", trend.as_str());
-        normal.push_str(&trend_desc);
-        tty.push_str(&trend_desc.with(trend_color).to_string());
 
         Some((Msg { normal, tty }, strong_flags, weak_flags))
     }

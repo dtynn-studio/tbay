@@ -140,8 +140,8 @@ pub struct Touch {
 impl Touch {
     fn event_msg(&self, dir: bool, colors: ColorTable) -> Msg {
         let (dir_str, color) = match dir {
-            true => ("↑", colors.up),
-            false => ("↓", colors.down),
+            true => ("[↑]", colors.up),
+            false => ("[↓]", colors.down),
         };
 
         let normal = format!(

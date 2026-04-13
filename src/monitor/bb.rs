@@ -100,9 +100,9 @@ impl Bb {
 
     fn event_msg(&self, direction: bool, colors: ColorTable) -> Msg {
         let (dir_str, color) = if direction {
-            ("↑", colors.up)
+            ("[↑]", colors.up)
         } else {
-            ("↓", colors.down)
+            ("[↓]", colors.down)
         };
 
         let normal = format!("bb:{}", dir_str,);

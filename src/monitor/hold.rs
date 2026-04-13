@@ -111,9 +111,9 @@ pub struct Hold {
 impl Hold {
     fn event_msg(&self, pos: bool, colors: ColorTable) -> Msg {
         let (pos_str, color) = if pos {
-            ("▲", colors.up)
+            ("[▲]", colors.up)
         } else {
-            ("▼", colors.down)
+            ("[▼]", colors.down)
         };
 
         let normal = format!(

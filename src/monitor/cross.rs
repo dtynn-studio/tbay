@@ -75,9 +75,9 @@ impl Cross {
 
     fn cross_event_msg(&self, direction: bool, colors: ColorTable) -> Msg {
         let (dir_flag, color) = if direction {
-            ("↗", colors.up)
+            ("[↗]", colors.up)
         } else {
-            ("↘", colors.down)
+            ("[↘]", colors.down)
         };
         let normal = format!(
             "{}/{}{}:{dir_flag}{}",
