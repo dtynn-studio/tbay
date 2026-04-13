@@ -193,12 +193,15 @@ impl FBQ {
         strengths: [Option<(Decimal, Decimal, bool)>; 3],
         colors: ColorTable,
     ) -> Option<(Msg, u8, u8)> {
-        const SHORTS: [&str; 3] = ["f", "b", "q"];
+        const SHORTS: [(&str, bool); 3] =
+            [("f", true), ("b", true), ("q", false)];
         let items = strengths
             .into_iter()
             .zip(SHORTS)
             .enumerate()
-            .filter_map(|(n, (s_opt, short))| s_opt.map(|s| (n, s, short)))
+            .filter_map(|(n, (s_opt, (short, show_val)))| {
+                s_opt.map(|s| (n, s, short, show_val))
+            })
             .collect::<Vec<_>>();
 
         if items.is_empty() {
@@ -210,7 +213,7 @@ impl FBQ {
 
         let mut strong_flags = 0;
         let mut weak_flags = 0;
-        for (n, (_abs, ratio, dir), short) in items.into_iter() {
+        for (n, (abs, ratio, dir), short, show_val) in items.into_iter() {
             if !normal.is_empty() {
                 normal.push('|');
                 tty.push('|');
@@ -224,16 +227,23 @@ impl FBQ {
             }
 
             let ratio_rounded = ratio.round_dp(2);
-            // let abs_rounded = abs.round_dp(2);
+            let abs_desc = if show_val {
+                let abs_rounded = abs.round_dp(2);
+                format!("({abs_rounded})")
+            } else {
+                "".to_owned()
+            };
             let (flag, color) = if dir {
                 ("<", colors.up)
             } else {
                 (">", colors.down)
             };
 
-            normal.push_str(&format!("{short}{flag}{ratio_rounded}"));
+            normal.push_str(&format!("{short}{flag}{ratio_rounded}{abs_desc}"));
             tty.push_str(
-                &format!("{short}{ratio_rounded}").with(color).to_string(),
+                &format!("{short}{ratio_rounded}{abs_desc}")
+                    .with(color)
+                    .to_string(),
             );
         }
 
