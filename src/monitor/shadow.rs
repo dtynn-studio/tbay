@@ -6,51 +6,80 @@ use scanf::sscanf;
 use crate::{
     config::ColorTable,
     impl_builder,
+    indicator::base::{BaseExtractorArgs, CalcKind, ExtractKind},
+    k::StrengthChecker,
     monitor::{Msg, alert::AlertManager},
     prelude::*,
 };
 
 #[derive(Debug, Clone, Copy)]
 pub struct ShadowArgs {
-    threshold: Decimal,
+    threshold: f64,
+    full_thres: f64,
 }
 
 impl FromStr for ShadowArgs {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut threshold_f = 0.0f64;
+        let mut threshold = 0.0f64;
+        let mut full_thres = 0.0f64;
 
-        sscanf!(s, "shadow:{threshold_f}").with_context(|_| ParseCtx {
-            raw: s.to_owned(),
-            usage: Cow::from("parse shadow args"),
-        })?;
+        if sscanf!(s, "shadow:{threshold},{full_thres}").is_err() {
+            sscanf!(s, "shadow:{threshold}").with_context(|_| ParseCtx {
+                raw: s.to_owned(),
+                usage: Cow::from("parse shadow args"),
+            })?;
+        }
 
-        let threshold =
-            Decimal::from_f64(threshold_f).required("shadow threshold")?;
-
-        Ok(Self { threshold })
+        Ok(Self {
+            threshold,
+            full_thres,
+        })
     }
 }
 
 impl Args for ShadowArgs {
-    type Type = Decimal;
+    type Type = (f64, f64);
     type Target = Shadow;
 
-    fn new(threshold: Self::Type) -> Self {
-        Self { threshold }
+    fn new(args: Self::Type) -> Self {
+        Self {
+            threshold: args.0,
+            full_thres: args.1,
+        }
     }
 
     fn key(&self) -> String {
-        format!("shadow:{}", self.threshold)
+        if self.full_thres > 0.0 {
+            format!("shadow:{},{}", self.threshold, self.full_thres)
+        } else {
+            format!("shadow:{}", self.threshold)
+        }
     }
 
     fn build(self) -> Result<Self::Target> {
+        let threshold =
+            Decimal::from_f64(self.threshold).required("shadow threshold")?;
+
         let key = self.key();
 
+        let checker = if self.full_thres > 0.0 {
+            let val_kind = ExtractKind::PriceFull;
+            let key =
+                BaseExtractorArgs::new((val_kind, CalcKind::Ema, 20)).key();
+            let thres = Decimal::from_f64(self.full_thres)
+                .required("full threshold")?;
+            Some(StrengthChecker::new(val_kind, key, thres))
+        } else {
+            None
+        };
+
         Ok(Shadow {
-            args: self,
+            _args: self,
             key,
+            threshold,
+            checker,
             state: Default::default(),
             alerts: Default::default(),
         })
@@ -60,8 +89,10 @@ impl Args for ShadowArgs {
 impl_builder!(ShadowBuilder: ShadowArgs => Shadow);
 
 pub struct Shadow {
-    args: ShadowArgs,
+    _args: ShadowArgs,
     key: String,
+    threshold: Decimal,
+    checker: Option<StrengthChecker>,
     state: State,
     alerts: AlertManager,
 }
@@ -80,7 +111,7 @@ impl Shadow {
 
         let ratio = shadow_len / full;
 
-        if ratio >= self.args.threshold {
+        if ratio >= self.threshold {
             Some((ratio, is_above))
         } else {
             None
@@ -116,10 +147,20 @@ impl Monitor for Shadow {
     }
 
     fn deps(&self) -> Vec<&str> {
-        vec![]
+        if let Some(c) = self.checker.as_ref() {
+            vec![&c.key]
+        } else {
+            vec![]
+        }
     }
 
     fn apply(&mut self, kctx: &KCtx) {
+        if let Some(c) = self.checker.as_ref()
+            && !c.check(kctx)
+        {
+            return;
+        }
+
         let msg_opt = self.check_ratio(kctx).map(|(ratio, is_above)| {
             (
                 kctx.info.raw.time_begin,
