@@ -191,10 +191,7 @@ pub struct Rate {
 
 impl Rate {
     fn val(&self, kctx: &KCtx) -> Decimal {
-        match self.args.val_kind {
-            ExtractKind::PriceClose => kctx.info.raw.price_close,
-            ExtractKind::Qty => kctx.info.raw.quantity,
-        }
+        self.args.val_kind.extractor()(&kctx.info)
     }
 
     fn calc(&self, kctx: &KCtx) -> Option<Msg> {

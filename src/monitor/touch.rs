@@ -66,6 +66,11 @@ impl Args for TouchArgs {
     }
 
     fn build(self) -> Result<Self::Target> {
+        if !matches!(self.val_kind, ExtractKind::PriceClose | ExtractKind::Qty)
+        {
+            return Err(self.val_kind.unexpected("val kind for touch"));
+        }
+
         let ma_args =
             BaseExtractorArgs::new((self.val_kind, self.calc_kind, self.ma));
         let ma_key = ma_args.key();
@@ -128,6 +133,8 @@ impl Touch {
             ExtractKind::PriceClose => self.close_touched(kctx, val),
 
             ExtractKind::Qty => self.qty_touched(kctx, val),
+
+            ExtractKind::PriceFull | ExtractKind::PriceBody => None,
         }
     }
 
