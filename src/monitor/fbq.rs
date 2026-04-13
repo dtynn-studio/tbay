@@ -188,7 +188,7 @@ impl FBQ {
         colors: ColorTable,
     ) -> Option<(Msg, u8, u8)> {
         const SHORTS: [(&str, bool); 3] =
-            [("f", true), ("b", true), ("q", false)];
+            [("F", true), ("B", true), ("Q", false)];
         let items = strengths
             .into_iter()
             .zip(SHORTS)
@@ -236,14 +236,15 @@ impl FBQ {
                 "".to_owned()
             };
             let (flag, color) = if strong {
-                ("[↗]", colors.up)
+                ("↗", colors.up)
             } else {
-                ("[↘]", colors.down)
+                ("↘", colors.down)
             };
 
-            normal.push_str(&format!("{short}{flag}{ratio_rounded}{abs_desc}"));
+            normal
+                .push_str(&format!("[{short}{flag}]{ratio_rounded}{abs_desc}"));
             tty.push_str(
-                &format!("{short}{ratio_rounded}{abs_desc}")
+                &format!("[{short}]{ratio_rounded}{abs_desc}")
                     .with(color)
                     .to_string(),
             );
