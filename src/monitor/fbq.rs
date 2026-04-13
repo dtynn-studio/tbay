@@ -207,27 +207,27 @@ impl FBQ {
 
         let mut strong_flags = 0;
         let mut weak_flags = 0;
-        for (n, (abs, ratio, dir), short, show_val) in items.into_iter() {
+        for (n, (abs, ratio, strong), short, show_val) in items.into_iter() {
             if !normal.is_empty() {
                 normal.push('|');
                 tty.push('|');
             }
 
             let shift = 2 - n;
-            if dir {
+            if strong {
                 strong_flags |= 1 << shift
             } else {
                 weak_flags |= 1 << shift
             }
 
             let ratio_rounded = ratio.round_dp(2);
-            let abs_desc = if show_val {
+            let abs_desc = if show_val && strong {
                 let abs_rounded = abs.round_dp(2);
                 format!("({abs_rounded})")
             } else {
                 "".to_owned()
             };
-            let (flag, color) = if dir {
+            let (flag, color) = if strong {
                 ("<", colors.up)
             } else {
                 (">", colors.down)
