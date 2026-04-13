@@ -3,8 +3,8 @@ name = "*"
 
 [[pairs.intervals]]
 monitors = [
-    "touch:close,ema,5",
-    "touch:close,ema,20",
+    "touch:close,ema,5,0.2",
+    "touch:close,ema,20,0.2",
     "touch:close,ema,60",
     "touch:close,ema,80",
     # "touch:close,ema,200",
@@ -29,7 +29,7 @@ monitors = [
     # "bb:20,2",
     "macd:12,26,9",
 
-    "shadow:0.5",
+    "shadow:0.5,0.4",
 
     # "read:close,ema,5,20,60,80,200,240",
     # qty
@@ -42,8 +42,10 @@ reads = [5, 20, 60, 80, 240]
 name = "3m"
 monitors = [
     # "touch:close,ema,200",
-    "touch:close,ema,80",
-    "touch:close,ema,240",
+    "touch:close,ema,20,0.4",
+    "touch:close,ema,60,0.4",
+    "touch:close,ema,80,0.4",
+    "touch:close,ema,240,0.4",
 
     "cross:close,ema,20,60",
     "cross:close,ema,20,80",
@@ -53,7 +55,7 @@ monitors = [
     "hold:close,ema,80,3",
     "hold:close,ema,240,3",
 
-    "shadow:0.7",
+    "shadow:0.7,0.4",
 
     "fbq:20,0.2/1.5,0.2/1.5,0.2/1.8",
 
