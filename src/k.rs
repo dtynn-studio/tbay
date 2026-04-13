@@ -2,6 +2,7 @@ use std::{any::Any, cmp::Ordering, collections::HashMap};
 
 use crate::{
     config::ColorTable,
+    indicator::base::ExtractKind,
     prelude::{Decimal, OffsetDateTime},
 };
 
@@ -237,5 +238,35 @@ impl KCtx {
 
     pub fn set_val(&mut self, key: &str, val: Box<dyn Any>) -> bool {
         self.vals.insert(key.to_owned(), val).is_some()
+    }
+}
+
+#[derive(Debug)]
+pub struct StrengthChecker {
+    val_kind: ExtractKind,
+    pub key: String,
+    thres: Decimal,
+}
+
+impl StrengthChecker {
+    pub fn new(val_kind: ExtractKind, key: String, thres: Decimal) -> Self {
+        Self {
+            val_kind,
+            key,
+            thres,
+        }
+    }
+
+    pub fn check(&self, kctx: &KCtx) -> bool {
+        let Some(ma) = kctx.get_val::<Decimal>(&self.key) else {
+            return false;
+        };
+
+        if ma.is_zero() {
+            return false;
+        }
+
+        let next = self.val_kind.extractor()(&kctx.info);
+        (next / ma) > self.thres
     }
 }
