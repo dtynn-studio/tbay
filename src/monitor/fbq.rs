@@ -12,8 +12,9 @@ use crate::{
     prelude::*,
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Threshold {
+    pub key: String,
     pub strong: Decimal,
     pub weak: Decimal,
 }
@@ -103,50 +104,46 @@ impl Args for FBQArgs {
 
     fn build(self) -> Result<Self::Target> {
         let full_thres = Threshold {
+            key: BaseExtractorArgs::new((
+                ExtractKind::PriceFull,
+                CalcKind::Ema,
+                self.period,
+            ))
+            .key(),
             weak: Decimal::from_f64(self.full.0)
                 .required("full weak threshold")?,
             strong: Decimal::from_f64(self.full.1)
                 .required("full strong threshold")?,
         };
-        let full_key = BaseExtractorArgs::new((
-            ExtractKind::PriceFull,
-            CalcKind::Ema,
-            self.period,
-        ))
-        .key();
 
         let body_thres = Threshold {
+            key: BaseExtractorArgs::new((
+                ExtractKind::PriceBody,
+                CalcKind::Ema,
+                self.period,
+            ))
+            .key(),
             weak: Decimal::from_f64(self.body.0)
                 .required("body weak threshold")?,
             strong: Decimal::from_f64(self.body.1)
                 .required("body strong threshold")?,
         };
-        let body_key = BaseExtractorArgs::new((
-            ExtractKind::PriceBody,
-            CalcKind::Ema,
-            self.period,
-        ))
-        .key();
 
         let qty_thres = Threshold {
+            key: BaseExtractorArgs::new((
+                ExtractKind::Qty,
+                CalcKind::Ema,
+                self.period,
+            ))
+            .key(),
             weak: Decimal::from_f64(self.qty.0)
                 .required("qty weak threshold")?,
             strong: Decimal::from_f64(self.qty.1)
                 .required("qty strong threshold")?,
         };
-        let qty_key = BaseExtractorArgs::new((
-            ExtractKind::Qty,
-            CalcKind::Ema,
-            self.period,
-        ))
-        .key();
 
         Ok(FBQ {
             key: self.key(),
-
-            full_key,
-            body_key,
-            qty_key,
 
             full_thres,
             body_thres,
@@ -169,13 +166,10 @@ impl_builder!(FBQBuilder: FBQArgs => FBQ);
 pub struct FBQ {
     key: String,
 
-    full_key: String,
     full_thres: Threshold,
 
-    body_key: String,
     body_thres: Threshold,
 
-    qty_key: String,
     qty_thres: Threshold,
 
     trend_single_threshold: Decimal,
@@ -267,18 +261,22 @@ impl Monitor for FBQ {
     }
 
     fn deps(&self) -> Vec<&str> {
-        vec![&self.full_key, &self.body_key, &self.qty_key]
+        vec![
+            &self.full_thres.key,
+            &self.body_thres.key,
+            &self.qty_thres.key,
+        ]
     }
 
     fn apply(&mut self, kctx: &KCtx) {
         let full_next = ExtractKind::PriceFull.extractor()(&kctx.info);
-        let full_ma = kctx.get_val::<Decimal>(&self.full_key).copied();
+        let full_ma = kctx.get_val::<Decimal>(&self.full_thres.key).copied();
 
         let body_next = ExtractKind::PriceBody.extractor()(&kctx.info);
-        let body_ma = kctx.get_val::<Decimal>(&self.body_key).copied();
+        let body_ma = kctx.get_val::<Decimal>(&self.body_thres.key).copied();
 
         let qty_next = ExtractKind::Qty.extractor()(&kctx.info);
-        let qty_ma = kctx.get_val::<Decimal>(&self.qty_key).copied();
+        let qty_ma = kctx.get_val::<Decimal>(&self.qty_thres.key).copied();
 
         let strengths = [
             full_ma.and_then(|ma| self.full_thres.detect(full_next, ma)),
