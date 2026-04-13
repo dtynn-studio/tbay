@@ -6,7 +6,7 @@ use scanf::sscanf;
 use crate::{
     config::ColorTable,
     impl_builder,
-    indicator::{Calculator, ma::Ema},
+    indicator::base::{BaseExtractorArgs, CalcKind, ExtractKind},
     k::Trend,
     monitor::{Msg, alert::AlertManager},
     prelude::*,
@@ -18,12 +18,7 @@ pub struct Threshold {
     pub weak: Decimal,
 }
 
-pub struct Strength {
-    ma: Ema,
-    threshold: Threshold,
-}
-
-impl Strength {
+impl Threshold {
     fn detect(
         &self,
         next: Decimal,
@@ -34,23 +29,13 @@ impl Strength {
         }
 
         let ratio = next / ma;
-        if ratio >= self.threshold.strong {
+        if ratio >= self.strong {
             Some((next, ratio, true))
-        } else if ratio <= self.threshold.weak {
+        } else if ratio <= self.weak {
             Some((next, ratio, false))
         } else {
             None
         }
-    }
-
-    fn calc(&self, next: Decimal) -> Option<(Decimal, Decimal, bool)> {
-        let ma = self.ma.calc(next)?;
-        self.detect(next, ma)
-    }
-
-    fn update(&mut self, next: Decimal) -> Option<(Decimal, Decimal, bool)> {
-        let ma = self.ma.update(next)?;
-        self.detect(next, ma)
     }
 }
 
@@ -123,6 +108,12 @@ impl Args for FBQArgs {
             strong: Decimal::from_f64(self.full.1)
                 .required("full strong threshold")?,
         };
+        let full_key = BaseExtractorArgs::new((
+            ExtractKind::PriceFull,
+            CalcKind::Ema,
+            self.period,
+        ))
+        .key();
 
         let body_thres = Threshold {
             weak: Decimal::from_f64(self.body.0)
@@ -130,6 +121,12 @@ impl Args for FBQArgs {
             strong: Decimal::from_f64(self.body.1)
                 .required("body strong threshold")?,
         };
+        let body_key = BaseExtractorArgs::new((
+            ExtractKind::PriceBody,
+            CalcKind::Ema,
+            self.period,
+        ))
+        .key();
 
         let qty_thres = Threshold {
             weak: Decimal::from_f64(self.qty.0)
@@ -137,23 +134,23 @@ impl Args for FBQArgs {
             strong: Decimal::from_f64(self.qty.1)
                 .required("qty strong threshold")?,
         };
+        let qty_key = BaseExtractorArgs::new((
+            ExtractKind::Qty,
+            CalcKind::Ema,
+            self.period,
+        ))
+        .key();
 
         Ok(FBQ {
             key: self.key(),
-            full: Strength {
-                ma: Ema::new(self.period),
-                threshold: full_thres,
-            },
 
-            body: Strength {
-                ma: Ema::new(self.period),
-                threshold: body_thres,
-            },
+            full_key,
+            body_key,
+            qty_key,
 
-            qty: Strength {
-                ma: Ema::new(self.period),
-                threshold: qty_thres,
-            },
+            full_thres,
+            body_thres,
+            qty_thres,
 
             trend_single_threshold: Decimal::from_f64(0.6)
                 .required("trend single threshold")?,
@@ -172,9 +169,14 @@ impl_builder!(FBQBuilder: FBQArgs => FBQ);
 pub struct FBQ {
     key: String,
 
-    full: Strength,
-    body: Strength,
-    qty: Strength,
+    full_key: String,
+    full_thres: Threshold,
+
+    body_key: String,
+    body_thres: Threshold,
+
+    qty_key: String,
+    qty_thres: Threshold,
 
     trend_single_threshold: Decimal,
     trend_mixed_threshold: Decimal,
@@ -255,27 +257,24 @@ impl Monitor for FBQ {
     }
 
     fn deps(&self) -> Vec<&str> {
-        vec![]
+        vec![&self.full_key, &self.body_key, &self.qty_key]
     }
 
     fn apply(&mut self, kctx: &KCtx) {
-        let full = kctx.info.full.height;
-        let body = kctx.info.body.height;
-        let qty = kctx.info.raw.quantity;
+        let full_next = ExtractKind::PriceFull.extractor()(&kctx.info);
+        let full_ma = kctx.get_val::<Decimal>(&self.full_key).copied();
 
-        let strengths = if kctx.info.raw.finalized {
-            [
-                self.full.update(full),
-                self.body.update(body),
-                self.qty.update(qty),
-            ]
-        } else {
-            [
-                self.full.calc(full),
-                self.body.calc(body),
-                self.qty.calc(qty),
-            ]
-        };
+        let body_next = ExtractKind::PriceBody.extractor()(&kctx.info);
+        let body_ma = kctx.get_val::<Decimal>(&self.body_key).copied();
+
+        let qty_next = ExtractKind::Qty.extractor()(&kctx.info);
+        let qty_ma = kctx.get_val::<Decimal>(&self.qty_key).copied();
+
+        let strengths = [
+            full_ma.and_then(|ma| self.full_thres.detect(full_next, ma)),
+            body_ma.and_then(|ma| self.body_thres.detect(body_next, ma)),
+            qty_ma.and_then(|ma| self.qty_thres.detect(qty_next, ma)),
+        ];
 
         let t = kctx.info.raw.time_begin;
         let trend = kctx
