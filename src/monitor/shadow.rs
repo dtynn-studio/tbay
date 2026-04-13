@@ -155,11 +155,8 @@ impl Monitor for Shadow {
     }
 
     fn apply(&mut self, kctx: &KCtx) {
-        if let Some(c) = self.checker.as_ref()
-            && !c.check(kctx)
-        {
-            return;
-        }
+        let checked =
+            self.checker.as_ref().map(|c| c.check(kctx)).unwrap_or(true);
 
         let msg_opt = self.check_ratio(kctx).map(|(ratio, is_above)| {
             (
@@ -176,7 +173,9 @@ impl Monitor for Shadow {
         if kctx.info.raw.finalized {
             self.state.temp.take();
 
-            if let Some((t, m)) = msg_opt.clone() {
+            if let Some((t, m)) = msg_opt.clone()
+                && checked
+            {
                 self.alerts.add(t, m);
             }
 

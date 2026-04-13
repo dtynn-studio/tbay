@@ -230,11 +230,8 @@ impl Monitor for Touch {
     }
 
     fn apply(&mut self, kctx: &KCtx) {
-        if let Some(c) = self.checker.as_ref()
-            && !c.check(kctx)
-        {
-            return;
-        }
+        let checked =
+            self.checker.as_ref().map(|c| c.check(kctx)).unwrap_or(true);
 
         if kctx.info.raw.finalized {
             self.state.temp.take();
@@ -246,7 +243,9 @@ impl Monitor for Touch {
                 self.state.temp =
                     self.calc(kctx).map(|msg| (kctx.info.raw.time_begin, msg));
 
-                if let Some((t, msg)) = self.state.temp.as_ref().cloned() {
+                if let Some((t, msg)) = self.state.temp.as_ref().cloned()
+                    && checked
+                {
                     self.alerts.add(t, msg);
                 }
             }
