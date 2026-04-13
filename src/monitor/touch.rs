@@ -7,6 +7,7 @@ use crate::{
     config::ColorTable,
     impl_builder,
     indicator::base::{BaseExtractorArgs, CalcKind, ExtractKind},
+    k::StrengthChecker,
     monitor::{Msg, alert::AlertManager},
     prelude::*,
 };
@@ -16,6 +17,7 @@ pub struct TouchArgs {
     val_kind: ExtractKind,
     calc_kind: CalcKind,
     ma: usize,
+    full_threshold: f64,
 }
 
 impl FromStr for TouchArgs {
@@ -25,13 +27,20 @@ impl FromStr for TouchArgs {
         let mut val_kind_str = String::new();
         let mut calc_kind_str = String::new();
         let mut ma = 0usize;
+        let mut full_threshold = 0.0;
 
-        sscanf!(s, "touch:{val_kind_str},{calc_kind_str},{ma}").with_context(
-            |_| ParseCtx {
-                raw: s.to_owned(),
-                usage: Cow::from("parse touch args"),
-            },
-        )?;
+        if sscanf!(
+            s,
+            "touch:{val_kind_str},{calc_kind_str},{ma},{full_threshold}"
+        )
+        .is_err()
+        {
+            sscanf!(s, "touch:{val_kind_str},{calc_kind_str},{ma}")
+                .with_context(|_| ParseCtx {
+                    raw: s.to_owned(),
+                    usage: Cow::from("parse touch args"),
+                })?;
+        }
 
         let val_kind = val_kind_str.parse()?;
         let calc_kind = calc_kind_str.parse()?;
@@ -40,12 +49,13 @@ impl FromStr for TouchArgs {
             val_kind,
             calc_kind,
             ma,
+            full_threshold,
         })
     }
 }
 
 impl Args for TouchArgs {
-    type Type = (ExtractKind, CalcKind, usize);
+    type Type = (ExtractKind, CalcKind, usize, f64);
     type Target = Touch;
 
     fn new(args: Self::Type) -> Self {
@@ -53,16 +63,27 @@ impl Args for TouchArgs {
             val_kind: args.0,
             calc_kind: args.1,
             ma: args.2,
+            full_threshold: args.3,
         }
     }
 
     fn key(&self) -> String {
-        format!(
-            "touch:{},{},{}",
-            self.val_kind.as_str(),
-            self.calc_kind.as_str(),
-            self.ma
-        )
+        if self.full_threshold > 0.0 {
+            format!(
+                "touch:{},{},{},{}",
+                self.val_kind.as_str(),
+                self.calc_kind.as_str(),
+                self.ma,
+                self.full_threshold,
+            )
+        } else {
+            format!(
+                "touch:{},{},{}",
+                self.val_kind.as_str(),
+                self.calc_kind.as_str(),
+                self.ma
+            )
+        }
     }
 
     fn build(self) -> Result<Self::Target> {
@@ -76,10 +97,25 @@ impl Args for TouchArgs {
         let ma_key = ma_args.key();
         let key = self.key();
 
+        let checker = if self.full_threshold > 0.0 {
+            let thres = Decimal::from_f64(self.full_threshold)
+                .required("full threshold")?;
+            let key = BaseExtractorArgs::new((
+                ExtractKind::PriceFull,
+                CalcKind::Ema,
+                20,
+            ))
+            .key();
+            Some(StrengthChecker::new(ExtractKind::PriceFull, key, thres))
+        } else {
+            None
+        };
+
         Ok(Touch {
             args: self,
             key,
             ma_key,
+            checker,
             prev_touched: None,
             state: Default::default(),
             alerts: Default::default(),
@@ -94,6 +130,7 @@ pub struct Touch {
     args: TouchArgs,
     key: String,
     ma_key: String,
+    checker: Option<StrengthChecker>,
     prev_touched: Option<bool>,
     state: State,
     alerts: AlertManager,
@@ -185,10 +222,20 @@ impl Monitor for Touch {
     }
 
     fn deps(&self) -> Vec<&str> {
-        vec![&self.ma_key]
+        if let Some(c) = self.checker.as_ref() {
+            vec![&self.ma_key, &c.key]
+        } else {
+            vec![&self.ma_key]
+        }
     }
 
     fn apply(&mut self, kctx: &KCtx) {
+        if let Some(c) = self.checker.as_ref()
+            && !c.check(kctx)
+        {
+            return;
+        }
+
         if kctx.info.raw.finalized {
             self.state.temp.take();
             self.state.perm =
