@@ -106,6 +106,8 @@ impl WatchArgs {
         let mut watch_period = interval(self.watch.into());
         let mut read_period = interval(self.reads.into());
 
+        info!(watch = %self.watch, reads = %self.reads, "loop start");
+
         let mut state_lines = 0usize;
         let mut latest_price = None;
         let mut latest_price_color = colors.normal;
