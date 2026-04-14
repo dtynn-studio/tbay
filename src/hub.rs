@@ -282,10 +282,20 @@ impl Hub {
         line_count
     }
 
-    pub fn notify_read_msgs(&self, latest: Option<Decimal>) {
+    pub fn notify_read_msgs(&self, latest: &BTreeMap<String, Decimal>) {
         let mut read_lines = self.collect_read_msgs(false);
-        if let Some(latest) = latest {
-            read_lines.push(format!("Latest: {}", latest.round_dp(2)));
+        let mut latest_line = String::new();
+        if !latest.is_empty() {
+            latest_line.push_str("Latest: ");
+            for (n, (s, p)) in latest.iter().enumerate() {
+                if n != 0 {
+                    latest_line.push_str("| ");
+                }
+
+                latest_line.push_str(&format!("{s}@{}", p.round_dp(2)));
+            }
+
+            read_lines.push(latest_line);
         }
 
         for n in self.notifiers.iter() {
@@ -353,9 +363,9 @@ impl Hub {
         (normal_lines, tty_lines)
     }
 
-    pub fn show_alerts(&mut self) -> usize {
+    pub fn show_alerts(&mut self, skip: bool) -> usize {
         let (normal_alert_lines, tty_alert_lines) = self.collect_alert_msgs();
-        if normal_alert_lines.is_empty() {
+        if normal_alert_lines.is_empty() || skip {
             return 0;
         }
 

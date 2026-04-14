@@ -1,7 +1,6 @@
-use std::{io::IsTerminal, path::PathBuf};
+use std::{collections::BTreeMap, io::IsTerminal, path::PathBuf};
 
 use clap::Parser;
-use crossterm::style::Stylize;
 use humantime::Duration;
 use time::format_description::well_known::{
     Iso8601,
@@ -68,7 +67,6 @@ impl WatchArgs {
         let _span = warn_span!("watch").entered();
         info!(file=?self.config, "load config");
         let cfg = load_config(self.config)?;
-        let colors = cfg.colors;
 
         let mut hub = Hub::default();
 
@@ -88,11 +86,14 @@ impl WatchArgs {
             proxy: self.proxy,
         })?;
 
+        let mut latest_price = BTreeMap::new();
         for target in targets.iter() {
             match client.load_k_history(target).await {
                 Ok(ks) => {
                     debug!(s = target.symbol, i = %target.interval, n = ks.len(), "klines loaded");
                     for k in ks {
+                        latest_price
+                            .insert(k.symbol.clone(), k.raw.price_close);
                         hub.apply_k(k);
                     }
                 }
@@ -109,8 +110,7 @@ impl WatchArgs {
         info!(watch = %self.watch, reads = %self.reads, "loop start");
 
         let mut state_lines = 0usize;
-        let mut latest_price = None;
-        let mut latest_price_color = colors.normal;
+        let mut first_watch_tick = true;
 
         loop {
             tokio::select! {
@@ -122,21 +122,7 @@ impl WatchArgs {
                     match evt {
                         Event::K(k) => {
                             let current = k.raw.price_close;
-                            if latest_price != Some(current) {
-                                let prev = latest_price.replace(current);
-                                latest_price_color = match prev {
-                                    Some(p) => if current > p {
-                                        colors.up
-                                    } else if current < p{
-                                        colors.down
-                                    } else {
-                                        colors.normal
-                                    },
-
-                                    None => colors.normal,
-                                };
-                            }
-
+                            latest_price.insert(k.symbol.clone(), current);
                             hub.apply_k(k);
                         },
 
@@ -152,6 +138,7 @@ impl WatchArgs {
                 },
 
                 _ = watch_period.tick() => {
+                    let is_first = std::mem::replace(&mut first_watch_tick, false);
                     trace!("watch period tick");
 
                     if state_lines > 0 {
@@ -165,21 +152,26 @@ impl WatchArgs {
                         state_lines += 1;
                     }
 
-                    if let Some(price) = latest_price {
-                        println!("LATEST PRICE: {}", price.round_dp(2).to_string().with(latest_price_color));
-                        state_lines += 1;
+                    let latest_price_count = latest_price.len();
+                    if latest_price_count > 0 {
+                        println!("LATEST PRICE:");
+                        for (s, p) in latest_price.iter() {
+                            println!("\t{s}: {}", p.round_dp(2));
+                        }
+
+                        state_lines += latest_price_count + 1;
                     }
 
                     state_lines += hub.print_state_msgs(true, true);
                     state_lines += hub.print_read_msgs();
-                    state_lines += hub.show_alerts();
+                    state_lines += hub.show_alerts(is_first);
                 }
 
                 _ = read_period.tick() => {
                     trace!("read period tick");
 
                     if !self.disable_notify_reads {
-                        hub.notify_read_msgs(latest_price);
+                        hub.notify_read_msgs(&latest_price);
                     }
                 }
 
