@@ -3,7 +3,10 @@ use std::borrow::Cow;
 use dioxus::{
     cli_config::fullstack_address_or_localhost,
     prelude::*,
-    server::{ServeConfig, axum::Router},
+    server::{
+        ServeConfig,
+        axum::{Extension, Router},
+    },
 };
 use serde::{Deserialize, Serialize};
 use tokio::{
@@ -12,6 +15,11 @@ use tokio::{
 };
 
 use crate::prelude::{NetworkCtx, Result, ResultExt};
+
+#[derive(Clone)]
+pub struct AppCtx {
+    pub req_tx: mpsc::UnboundedSender<(Request, oneshot::Sender<Response>)>,
+}
 
 #[component]
 pub fn App() -> Element {
@@ -74,14 +82,17 @@ impl Response {
 
 #[cfg(feature = "server")]
 pub async fn serve(
-    rx: mpsc::UnboundedSender<(Request, oneshot::Sender<Response>)>,
+    req_tx: mpsc::UnboundedSender<(Request, oneshot::Sender<Response>)>,
 ) -> Result<()> {
     let listen = fullstack_address_or_localhost();
     let listener =
         ResultExt::context(TcpListener::bind(listen).await, NetworkCtx)?;
 
-    let router =
-        Router::new().serve_dioxus_application(ServeConfig::new(), App);
+    let ctx = AppCtx { req_tx };
+
+    let router = Router::new()
+        .serve_dioxus_application(ServeConfig::new(), App)
+        .layer(Extension(ctx));
 
     ResultExt::context(
         dioxus::fullstack::axum::serve(listener, router.into_make_service())
