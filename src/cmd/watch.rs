@@ -21,6 +21,7 @@ use crate::{
     hub::Hub,
     prelude::*,
     util::term::clean_up_rows,
+    web::serve,
 };
 
 const TIME_CFG: EncodedConfig = Iso8601Config::DEFAULT
@@ -56,10 +57,14 @@ pub struct WatchArgs {
     pub reads: Duration,
 
     #[arg(long, default_value_t = false)]
-    pub disable_notify_reads: bool,
+    pub enable_notify_reads: bool,
+
+    #[arg(long, default_value_t = false)]
+    pub enable_server: bool,
 }
 
 impl WatchArgs {
+    #[cfg(feature = "server")]
     pub async fn run(self) -> Result<()> {
         let mut sout = std::io::stdout();
         let is_tty = sout.is_terminal();
@@ -79,6 +84,11 @@ impl WatchArgs {
         if self.dry {
             info!("dry run, stopped");
             return Ok(());
+        }
+
+        if self.enable_server {
+            info!("start server");
+            tokio::spawn(serve());
         }
 
         let client = BnClient::new(Config {
@@ -170,7 +180,7 @@ impl WatchArgs {
                 _ = read_period.tick() => {
                     trace!("read period tick");
 
-                    if !self.disable_notify_reads {
+                    if self.enable_notify_reads {
                         hub.notify_read_msgs(&latest_price);
                     }
                 }

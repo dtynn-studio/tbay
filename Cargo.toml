@@ -35,7 +35,7 @@ dingtalk-sdk = "1.0.9"
 reqx = "=0.1.27"
 
 clap = { workspace = true }
-dioxus = { version = "0.7.5", features = ["fullstack"] }
+dioxus = { version = "=0.7.3", features = ["fullstack"] }
 
 [features]
 default = ["server"]

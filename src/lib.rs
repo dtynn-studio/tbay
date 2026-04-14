@@ -13,5 +13,6 @@ pub mod notifier;
 pub mod prelude;
 pub mod res;
 pub mod util;
+pub mod web;
 
 use common::impl_builder;

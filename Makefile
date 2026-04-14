@@ -12,3 +12,6 @@ test:
 
 lint:
 	cargo clippy --all
+
+web:
+	dx build --release
