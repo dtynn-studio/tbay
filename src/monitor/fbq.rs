@@ -91,7 +91,7 @@ impl Args for FBQArgs {
 
     fn key(&self) -> String {
         format!(
-            "fbg:{},{}/{},{}/{},{}/{}",
+            "fbq:{},{}/{},{}/{},{}/{}",
             self.period,
             self.full.0,
             self.full.1,
