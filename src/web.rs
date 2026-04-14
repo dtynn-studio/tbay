@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use dioxus::{
     cli_config::fullstack_address_or_localhost,
     prelude::*,
@@ -8,7 +6,6 @@ use dioxus::{
         axum::{Extension, Router},
     },
 };
-use serde::{Deserialize, Serialize};
 use tokio::{
     net::TcpListener,
     sync::{mpsc, oneshot},
@@ -18,7 +15,7 @@ use crate::prelude::{NetworkCtx, Result, ResultExt};
 
 #[derive(Clone)]
 pub struct AppCtx {
-    pub req_tx: mpsc::UnboundedSender<(Request, oneshot::Sender<Response>)>,
+    pub req_tx: mpsc::UnboundedSender<Request>,
 }
 
 #[component]
@@ -53,37 +50,12 @@ pub fn App() -> Element {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Request {
-    States,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Response {
-    pub err: Cow<'static, str>,
-    pub data: Cow<'static, str>,
-}
-
-impl Response {
-    pub fn new(data: impl Into<Cow<'static, str>>) -> Self {
-        Self {
-            err: "".into(),
-            data: data.into(),
-        }
-    }
-
-    pub fn err(err: impl Into<Cow<'static, str>>) -> Self {
-        Self {
-            err: err.into(),
-            data: "".into(),
-        }
-    }
+    States(oneshot::Sender<Result<Vec<String>, String>>),
 }
 
 #[cfg(feature = "server")]
-pub async fn serve(
-    req_tx: mpsc::UnboundedSender<(Request, oneshot::Sender<Response>)>,
-) -> Result<()> {
+pub async fn serve(req_tx: mpsc::UnboundedSender<Request>) -> Result<()> {
     let listen = fullstack_address_or_localhost();
     let listener =
         ResultExt::context(TcpListener::bind(listen).await, NetworkCtx)?;

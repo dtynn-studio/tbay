@@ -21,7 +21,7 @@ use crate::{
     hub::Hub,
     prelude::*,
     util::term::clean_up_rows,
-    web::{Request, Response, serve},
+    web::{Request, serve},
 };
 
 const TIME_CFG: EncodedConfig = Iso8601Config::DEFAULT
@@ -144,17 +144,15 @@ impl WatchArgs {
                 },
 
                 req = req_rx.recv() => {
-                    let Some((req, resp_tx)) = req else {
+                    let Some(req) = req else {
                         break;
                     };
 
                     let resp = match req {
-                        Request::States => {
-                            Response::new("states")
+                        Request::States(resp_tx) => {
                         },
                     };
 
-                    _ = resp_tx.send(resp);
                 }
 
                 _ = watch_period.tick() => {
