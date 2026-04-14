@@ -115,7 +115,7 @@ impl WatchArgs {
 
         let (mut stream, stopper) = client.subscribe_klines(&targets).await?;
         let mut watch_period = interval(self.watch.into());
-        let mut read_period = interval(self.reads.into());
+        let mut reads_period = interval(self.reads.into());
 
         info!(watch = %self.watch, reads = %self.reads, "loop start");
 
@@ -188,8 +188,8 @@ impl WatchArgs {
                     lines.clear();
                 }
 
-                _ = read_period.tick() => {
-                    trace!("read period tick");
+                _ = reads_period.tick() => {
+                    trace!("reads period tick");
 
                     if self.enable_notify_reads {
                         hub.notify_read_msgs(&latest_price);
