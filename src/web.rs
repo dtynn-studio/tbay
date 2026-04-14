@@ -10,7 +10,32 @@ use crate::prelude::{NetworkCtx, Result, ResultExt};
 #[component]
 pub fn App() -> Element {
     rsx! {
-        "TBay"
+        Stylesheet { href: asset!("/assets/tailwind.css") }
+
+        meta {
+            charset: "utf-8",
+        }
+
+        meta {
+            name: "viewport",
+            content: "width=device-width, initial-scale=1.0",
+        },
+
+        div {
+            class: "h-screen w-full bg-gray-50 flex flex-col",
+
+            main {
+                class: "flex-1 overflow-hidden",
+
+                "Mian"
+            }
+
+            div {
+                class: "h-14 flex-shrink-0 bg-white border-t border-gray-200 flex items-center",
+
+                "Footer"
+            }
+        }
     }
 }
 
