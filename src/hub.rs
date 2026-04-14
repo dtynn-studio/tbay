@@ -21,6 +21,10 @@ use crate::{
     util::time::{TBDuration as Duration, compact_format},
 };
 
+fn line_indent(is_tty: bool) -> &'static str {
+    if is_tty { "\t" } else { "    " }
+}
+
 pub type HubIndicator = Box<dyn Indicator<Output = Box<dyn Any>>>;
 pub type HubIndicatorBuilder = Box<dyn Builder<Target = HubIndicator>>;
 pub type HubMonitor = Box<dyn Monitor>;
@@ -173,6 +177,8 @@ impl Hub {
 
         let states = self.states();
 
+        let indent = line_indent(is_tty);
+
         for hstate in states {
             for (d, sts) in hstate.states {
                 let mut temp_combined: BTreeMap<OffsetDateTime, Vec<String>> =
@@ -204,7 +210,7 @@ impl Hub {
 
                 for (t, msgs) in temp_combined {
                     temp_msgs.push(format!(
-                        "\t{}/{d}@{}: {}",
+                        "{indent}{}/{d}@{}: {}",
                         hstate.symbol,
                         compact_format(&t, d),
                         msgs.join("  ")
@@ -213,7 +219,7 @@ impl Hub {
 
                 for (t, msgs) in perm_combined {
                     perm_msgs.push(format!(
-                        "\t{}/{d}@{}: {}",
+                        "{indent}{}/{d}@{}: {}",
                         hstate.symbol,
                         compact_format(&t, d),
                         msgs.join("  ")
@@ -235,6 +241,7 @@ impl Hub {
 
     pub fn collect_read_msgs(&self, lines: &mut Vec<String>, is_tty: bool) {
         let mut read_msgs = Vec::new();
+        let indent = line_indent(is_tty);
 
         for item in self.items.iter() {
             for (d, read) in item.reads.iter() {
@@ -246,7 +253,7 @@ impl Hub {
                 let content = if is_tty { &msg.tty } else { &msg.normal };
 
                 read_msgs.push(format!(
-                    "\t{}/{d}@{}:{content}",
+                    "{indent}{}/{d}@{}:{content}",
                     item.symbol,
                     compact_format(t, *d),
                 ));
@@ -291,6 +298,7 @@ impl Hub {
     ) {
         let mut normal_lines = Vec::new();
         let mut print_lines = Vec::new();
+        let indent = line_indent(is_tty);
         for item in self.items.iter_mut() {
             for (d, hubms) in item.monitors.iter_mut() {
                 let mut normal_alerts: BTreeMap<OffsetDateTime, Vec<String>> =
@@ -319,7 +327,7 @@ impl Hub {
 
                 if !normal_formatted_alerts.is_empty() {
                     normal_lines.push(format!(
-                        "\t{}/{d}: {}",
+                        "{indent}{}/{d}: {}",
                         item.symbol,
                         normal_formatted_alerts.join("  ")
                     ));
@@ -338,7 +346,7 @@ impl Hub {
 
                     if !tty_formatted_alerts.is_empty() {
                         print_lines.push(format!(
-                            "\t{}/{d}: {}",
+                            "{indent}{}/{d}: {}",
                             item.symbol,
                             tty_formatted_alerts.join("  ")
                         ));
