@@ -30,9 +30,9 @@ impl Threshold {
         }
 
         let ratio = next / ma;
-        if ratio >= self.strong {
+        if ratio > self.strong {
             Some((next, ratio, true))
-        } else if ratio <= self.weak {
+        } else if ratio < self.weak {
             Some((next, ratio, false))
         } else {
             None
