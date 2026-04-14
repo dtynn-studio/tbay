@@ -1,27 +1,13 @@
-use dioxus::{
-    cli_config::fullstack_address_or_localhost,
-    prelude::*,
-    server::{
-        ServeConfig,
-        axum::{Extension, Router},
-    },
-};
-use tokio::{
-    net::TcpListener,
-    sync::{mpsc, oneshot},
-};
-
-use crate::prelude::{NetworkCtx, Result, ResultExt};
+use dioxus::prelude::*;
 
 pub mod handler;
-
-#[derive(Clone)]
-pub struct AppCtx {
-    pub req_tx: mpsc::UnboundedSender<Request>,
-}
+#[cfg(feature = "server")]
+pub mod serve;
 
 #[component]
 pub fn App() -> Element {
+    let mut state_resource = use_resource(handler::get_states);
+
     rsx! {
         Stylesheet { href: asset!("/assets/tailwind.css") }
 
@@ -40,7 +26,41 @@ pub fn App() -> Element {
             main {
                 class: "flex-1 overflow-hidden",
 
-                "Mian"
+                match &*state_resource.read() {
+                    Some(Ok(lines)) => {
+                        rsx! {
+                            for line in lines {
+                                p {
+                                    "{line}"
+                                }
+                            }
+                        }
+                    },
+
+                    Some(Err(e)) => {
+                        rsx! {
+                            p {
+                                "Error:",
+                                span {
+                                    "{e}"
+                                },
+                            }
+                        }
+                    },
+                    None => {
+                        rsx! {
+                            p { "Loading" }
+                        }
+                    }
+                }
+            }
+
+            div {
+                class: "h-14 flex-shrink-0 bg-white border-t border-gray-200 flex items-center",
+
+                onclick: move |_| { state_resource.restart(); },
+
+                "Refresh"
             }
 
             div {
@@ -50,30 +70,4 @@ pub fn App() -> Element {
             }
         }
     }
-}
-
-pub enum Request {
-    States(oneshot::Sender<Vec<String>>),
-}
-
-#[cfg(feature = "server")]
-pub async fn serve(req_tx: mpsc::UnboundedSender<Request>) -> Result<()> {
-    let listen = fullstack_address_or_localhost();
-    let listener =
-        ResultExt::context(TcpListener::bind(listen).await, NetworkCtx)?;
-
-    let ctx = AppCtx { req_tx };
-
-    let router = Router::new()
-        .serve_dioxus_application(ServeConfig::new(), App)
-        .layer(Extension(ctx));
-
-    ResultExt::context(
-        dioxus::fullstack::axum::serve(listener, router.into_make_service())
-        // .with_graceful_shutdown(shutdown())
-        .await,
-        NetworkCtx,
-    )?;
-
-    Ok(())
 }

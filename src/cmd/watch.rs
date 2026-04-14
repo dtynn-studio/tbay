@@ -21,7 +21,7 @@ use crate::{
     hub::Hub,
     prelude::*,
     util::term::clean_up_rows,
-    web::{Request, serve},
+    web::serve::{Request, serve},
 };
 
 const TIME_CFG: EncodedConfig = Iso8601Config::DEFAULT
@@ -64,7 +64,6 @@ pub struct WatchArgs {
 }
 
 impl WatchArgs {
-    #[cfg(feature = "server")]
     pub async fn run(self) -> Result<()> {
         let mut sout = std::io::stdout();
         let is_tty = sout.is_terminal();
