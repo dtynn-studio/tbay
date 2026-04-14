@@ -289,7 +289,7 @@ impl Hub {
             latest_line.push_str("Latest: ");
             for (n, (s, p)) in latest.iter().enumerate() {
                 if n != 0 {
-                    latest_line.push_str("| ");
+                    latest_line.push_str(" | ");
                 }
 
                 latest_line.push_str(&format!("{s}@{}", p.round_dp(2)));
