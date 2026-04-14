@@ -319,13 +319,13 @@ impl Monitor for FBQ {
                     .prev_temp_alert_strong_flags
                     .map(|(t, sf, _wf)| (t, sf & TEMP_FLAGS_MASK));
 
-                if strong_flags > 0
-                    && prev_masked_flags != Some((t, masked_flags))
-                {
-                    alert_msg.replace(msg.clone());
-                }
+                if strong_flags > 0 {
+                    if prev_masked_flags != Some((t, masked_flags)) {
+                        alert_msg.replace(msg.clone());
+                    }
 
-                self.state.temp.replace((t, msg));
+                    self.state.temp.replace((t, msg));
+                }
             }
 
             if let Some(msg) = alert_msg {
