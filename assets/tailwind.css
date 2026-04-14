@@ -188,8 +188,11 @@
   .items-center {
     align-items: center;
   }
-  .overflow-hidden {
-    overflow: hidden;
+  .overflow-x-hidden {
+    overflow-x: hidden;
+  }
+  .overflow-y-auto {
+    overflow-y: auto;
   }
   .rounded {
     border-radius: 0.25rem;

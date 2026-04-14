@@ -24,13 +24,14 @@ pub fn App() -> Element {
             class: "h-screen w-full bg-gray-50 flex flex-col",
 
             main {
-                class: "flex-1 overflow-hidden",
+                class: "flex-1 overflow-x-hidden overflow-y-auto",
 
                 match &*state_resource.read() {
                     Some(Ok(lines)) => {
                         rsx! {
                             for line in lines {
                                 p {
+                                    style: "white-space: pre-wrap; word-wrap: break-word;",
                                     "{line}"
                                 }
                             }
@@ -61,12 +62,6 @@ pub fn App() -> Element {
                 onclick: move |_| { state_resource.restart(); },
 
                 "Refresh"
-            }
-
-            div {
-                class: "h-14 flex-shrink-0 bg-white border-t border-gray-200 flex items-center",
-
-                "Footer"
             }
         }
     }
