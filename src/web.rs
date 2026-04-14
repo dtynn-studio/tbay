@@ -1,9 +1,15 @@
+use std::borrow::Cow;
+
 use dioxus::{
     cli_config::fullstack_address_or_localhost,
     prelude::*,
     server::{ServeConfig, axum::Router},
 };
-use tokio::net::TcpListener;
+use serde::{Deserialize, Serialize};
+use tokio::{
+    net::TcpListener,
+    sync::{mpsc, oneshot},
+};
 
 use crate::prelude::{NetworkCtx, Result, ResultExt};
 
@@ -39,8 +45,37 @@ pub fn App() -> Element {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum Request {
+    States,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Response {
+    pub err: Cow<'static, str>,
+    pub data: Cow<'static, str>,
+}
+
+impl Response {
+    pub fn new(data: impl Into<Cow<'static, str>>) -> Self {
+        Self {
+            err: "".into(),
+            data: data.into(),
+        }
+    }
+
+    pub fn err(err: impl Into<Cow<'static, str>>) -> Self {
+        Self {
+            err: err.into(),
+            data: "".into(),
+        }
+    }
+}
+
 #[cfg(feature = "server")]
-pub async fn serve() -> Result<()> {
+pub async fn serve(
+    rx: mpsc::UnboundedSender<(Request, oneshot::Sender<Response>)>,
+) -> Result<()> {
     let listen = fullstack_address_or_localhost();
     let listener =
         ResultExt::context(TcpListener::bind(listen).await, NetworkCtx)?;

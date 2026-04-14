@@ -9,7 +9,7 @@ use time::format_description::well_known::{
         TimePrecision,
     },
 };
-use tokio::{signal, time::interval};
+use tokio::{signal, sync::mpsc, time::interval};
 use tracing::{debug, error, info, trace, warn_span};
 
 use crate::{
@@ -21,7 +21,7 @@ use crate::{
     hub::Hub,
     prelude::*,
     util::term::clean_up_rows,
-    web::serve,
+    web::{Request, Response, serve},
 };
 
 const TIME_CFG: EncodedConfig = Iso8601Config::DEFAULT
@@ -58,9 +58,6 @@ pub struct WatchArgs {
 
     #[arg(long, default_value_t = false)]
     pub enable_notify_reads: bool,
-
-    #[arg(long, default_value_t = false)]
-    pub enable_server: bool,
 }
 
 impl WatchArgs {
@@ -86,10 +83,9 @@ impl WatchArgs {
             return Ok(());
         }
 
-        if self.enable_server {
-            info!("start server");
-            tokio::spawn(serve());
-        }
+        let (req_tx, mut req_rx) = mpsc::unbounded_channel();
+        info!("start server");
+        tokio::spawn(async { serve(req_tx).await });
 
         let client = BnClient::new(Config {
             testnet: self.testnet,
@@ -146,6 +142,20 @@ impl WatchArgs {
                         },
                     }
                 },
+
+                req = req_rx.recv() => {
+                    let Some((req, resp_tx)) = req else {
+                        break;
+                    };
+
+                    let resp = match req {
+                        Request::States => {
+                            Response::new("states")
+                        },
+                    };
+
+                    _ = resp_tx.send(resp);
+                }
 
                 _ = watch_period.tick() => {
                     let is_first = std::mem::replace(&mut first_watch_tick, false);
