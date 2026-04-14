@@ -154,12 +154,15 @@ impl WatchArgs {
                     };
 
                     match req {
-                        Request::States(resp_tx) => {
+                        Request::States(load_states, resp_tx) => {
                             let mut state_lines = Vec::new();
                             collect_now_lines(&mut state_lines);
                             collect_latest_price_lines(&mut state_lines, &latest_price, false);
-                            hub.collect_state_msgs(&mut state_lines, false);
-                            hub.collect_read_msgs(&mut state_lines, false);
+                            if load_states {
+                                hub.collect_state_msgs(&mut state_lines, false);
+                            } else {
+                                hub.collect_read_msgs(&mut state_lines, false);
+                            }
                             _ = resp_tx.send(state_lines);
                         },
                     };

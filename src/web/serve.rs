@@ -19,7 +19,7 @@ pub struct AppCtx {
 }
 
 pub enum Request {
-    States(oneshot::Sender<Vec<String>>),
+    States(bool, oneshot::Sender<Vec<String>>),
 }
 
 pub async fn serve(req_tx: mpsc::UnboundedSender<Request>) -> Result<()> {

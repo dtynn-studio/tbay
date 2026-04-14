@@ -6,7 +6,11 @@ pub mod serve;
 
 #[component]
 pub fn App() -> Element {
-    let mut state_resource = use_resource(handler::get_states);
+    let mut load_states = use_signal(|| true);
+    let state_resource = use_resource(move || async move {
+        let is_states = *load_states.read();
+        handler::get_states(is_states).await
+    });
 
     rsx! {
         Stylesheet { href: asset!("/assets/tailwind.css") }
@@ -57,11 +61,34 @@ pub fn App() -> Element {
             }
 
             div {
-                class: "h-14 flex-shrink-0 bg-white border-t border-gray-200 flex items-center",
+                class: "h-14 flex-shrink-0 bg-white border-t border-gray-200 flex",
 
-                onclick: move |_| { state_resource.restart(); },
+                button {
+                    onclick: move |_| {
+                        let is_states = *load_states.read();
+                        if !is_states {
+                            *load_states.write() = true;
+                        }
+                    },
+                    class: "flex-1 text-center",
+                    "状态"
+                }
 
-                "Refresh"
+                button {
+                    onclick: move |_| {
+                        let is_states = *load_states.read();
+                        if is_states {
+                            *load_states.write() = false;
+                        }
+                    },
+                    class: "flex-1 text-center",
+                    "均线"
+                }
+
+                button {
+                    class: "flex-1 text-center",
+                    "添加"
+                }
             }
         }
     }

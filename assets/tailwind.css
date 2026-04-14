@@ -185,9 +185,6 @@
   .flex-col {
     flex-direction: column;
   }
-  .items-center {
-    align-items: center;
-  }
   .overflow-x-hidden {
     overflow-x: hidden;
   }
@@ -209,6 +206,9 @@
   }
   .bg-white {
     background-color: var(--color-white);
+  }
+  .text-center {
+    text-align: center;
   }
   .shadow {
     --tw-shadow: 0 1px 3px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 1px 2px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
