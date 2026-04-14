@@ -122,6 +122,7 @@ impl WatchArgs {
 
         let mut state_lines = 0usize;
         let mut first_watch_tick = true;
+        let mut lines = Vec::new();
 
         loop {
             tokio::select! {
@@ -153,11 +154,16 @@ impl WatchArgs {
                         break;
                     };
 
-                    let resp = match req {
+                    match req {
                         Request::States(resp_tx) => {
+                            let mut state_lines = Vec::new();
+                            collect_now_lines(&mut state_lines);
+                            collect_latest_price_lines(&mut state_lines, &latest_price);
+                            hub.collect_state_msgs(&mut state_lines, false);
+                            hub.collect_read_msgs(&mut state_lines, false);
+                            _ = resp_tx.send(state_lines);
                         },
                     };
-
                 }
 
                 _ = watch_period.tick() => {
@@ -168,7 +174,6 @@ impl WatchArgs {
                         _ = clean_up_rows(&mut sout, state_lines as u16);
                     }
 
-                    let mut lines = Vec::new();
 
                     collect_now_lines(&mut lines);
                     collect_latest_price_lines(&mut lines, &latest_price);
@@ -178,6 +183,7 @@ impl WatchArgs {
 
                     println!("{}", lines.join("\n"));
                     state_lines = lines.len();
+                    lines.clear();
                 }
 
                 _ = read_period.tick() => {

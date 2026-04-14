@@ -51,7 +51,7 @@ pub fn App() -> Element {
 }
 
 pub enum Request {
-    States(oneshot::Sender<Result<Vec<String>, String>>),
+    States(oneshot::Sender<Vec<String>>),
 }
 
 #[cfg(feature = "server")]
