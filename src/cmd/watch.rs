@@ -50,7 +50,7 @@ pub struct WatchArgs {
     #[arg(from_global)]
     pub proxy: Option<String>,
 
-    #[arg(long, default_value_t = Duration::from(std::time::Duration::from_secs(30)))]
+    #[arg(long, default_value_t = Duration::from(std::time::Duration::from_secs(10)))]
     pub watch: Duration,
 
     #[arg(long, default_value_t = Duration::from(std::time::Duration::from_secs(600)))]
@@ -58,6 +58,9 @@ pub struct WatchArgs {
 
     #[arg(long, default_value_t = false)]
     pub enable_notify_reads: bool,
+
+    #[arg(long, default_value_t = false)]
+    pub enable_server: bool,
 }
 
 impl WatchArgs {
@@ -73,7 +76,7 @@ impl WatchArgs {
         let mut hub = Hub::default();
 
         info!(tty = is_tty, "setup hub");
-        hub.apply_config(cfg, is_tty)?;
+        hub.apply_config(cfg)?;
 
         let targets = hub.targets();
         info!(?targets, "collected");
@@ -84,8 +87,10 @@ impl WatchArgs {
         }
 
         let (req_tx, mut req_rx) = mpsc::unbounded_channel();
-        info!("start server");
-        tokio::spawn(async { serve(req_tx).await });
+        if self.enable_server {
+            info!("start server");
+            tokio::spawn(async { serve(req_tx).await });
+        }
 
         let client = BnClient::new(Config {
             testnet: self.testnet,
@@ -163,26 +168,16 @@ impl WatchArgs {
                         _ = clean_up_rows(&mut sout, state_lines as u16);
                     }
 
-                    state_lines = 0;
+                    let mut lines = Vec::new();
 
-                    if let Ok(t) = OffsetDateTime::now_local() && let Ok(f) = t.format(&TIME_FMT) {
-                        println!("TIME: {f}");
-                        state_lines += 1;
-                    }
+                    collect_now_lines(&mut lines);
+                    collect_latest_price_lines(&mut lines, &latest_price);
+                    hub.collect_state_msgs(&mut lines, is_tty);
+                    hub.collect_read_msgs(&mut lines, is_tty);
+                    hub.collect_alert_msgs(&mut lines, is_tty, is_first);
 
-                    let latest_price_count = latest_price.len();
-                    if latest_price_count > 0 {
-                        println!("LATEST PRICE:");
-                        for (s, p) in latest_price.iter() {
-                            println!("\t{s}: {}", p.round_dp(2));
-                        }
-
-                        state_lines += latest_price_count + 1;
-                    }
-
-                    state_lines += hub.print_state_msgs(true, true);
-                    state_lines += hub.print_read_msgs();
-                    state_lines += hub.show_alerts(is_first);
+                    println!("{}", lines.join("\n"));
+                    state_lines = lines.len();
                 }
 
                 _ = read_period.tick() => {
@@ -204,5 +199,27 @@ impl WatchArgs {
         _ = stopper.send(WebsocketControl::Disconnect);
 
         Ok(())
+    }
+}
+
+fn collect_now_lines(lines: &mut Vec<String>) {
+    if let Ok(t) = OffsetDateTime::now_local()
+        && let Ok(f) = t.format(&TIME_FMT)
+    {
+        lines.push(format!("TIME: {f}"));
+    }
+}
+
+fn collect_latest_price_lines(
+    lines: &mut Vec<String>,
+    latest_prices: &BTreeMap<String, Decimal>,
+) {
+    if latest_prices.is_empty() {
+        return;
+    }
+
+    lines.push("LATEST PRICE:".to_owned());
+    for (s, p) in latest_prices.iter() {
+        lines.push(format!("\t{s}: {}", p.round_dp(2)));
     }
 }

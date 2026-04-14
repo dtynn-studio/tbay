@@ -44,7 +44,6 @@ pub struct Hub {
     items: Vec<HubItem>,
     notifiers: Vec<Notifier>,
     colors: ColorTable,
-    is_tty: bool,
 }
 
 impl Default for Hub {
@@ -55,7 +54,6 @@ impl Default for Hub {
             items: Default::default(),
             notifiers: Default::default(),
             colors: Default::default(),
-            is_tty: false,
         };
 
         // indicator builders
@@ -169,7 +167,7 @@ impl Hub {
         states
     }
 
-    pub fn collect_state_msgs(&self) -> (Vec<String>, Vec<String>) {
+    pub fn collect_state_msgs(&self, lines: &mut Vec<String>, is_tty: bool) {
         let mut temp_msgs = Vec::new();
         let mut perm_msgs = Vec::new();
 
@@ -184,7 +182,7 @@ impl Hub {
 
                 for st in sts {
                     if let Some((t, msg)) = st.temp.as_ref() {
-                        let msg = if self.is_tty {
+                        let msg = if is_tty {
                             msg.tty.clone()
                         } else {
                             msg.normal.clone()
@@ -194,7 +192,7 @@ impl Hub {
                     }
 
                     if let Some((t, msg)) = st.perm.as_ref() {
-                        let msg = if self.is_tty {
+                        let msg = if is_tty {
                             msg.tty.clone()
                         } else {
                             msg.normal.clone()
@@ -206,7 +204,7 @@ impl Hub {
 
                 for (t, msgs) in temp_combined {
                     temp_msgs.push(format!(
-                        "{}/{d}@{}: {}",
+                        "\t{}/{d}@{}: {}",
                         hstate.symbol,
                         compact_format(&t, d),
                         msgs.join("  ")
@@ -215,7 +213,7 @@ impl Hub {
 
                 for (t, msgs) in perm_combined {
                     perm_msgs.push(format!(
-                        "{}/{d}@{}: {}",
+                        "\t{}/{d}@{}: {}",
                         hstate.symbol,
                         compact_format(&t, d),
                         msgs.join("  ")
@@ -224,28 +222,18 @@ impl Hub {
             }
         }
 
-        (temp_msgs, perm_msgs)
-    }
-
-    pub fn print_state_msgs(&self, temp: bool, perm: bool) -> usize {
-        let mut line_count = 0;
-        let (temp_msgs, perm_msgs) = self.collect_state_msgs();
-        if temp && !temp_msgs.is_empty() {
-            line_count += temp_msgs.len() + 2;
-            let lines = temp_msgs.join("\n\t");
-            println!("TEMP STATES:\n\t{lines}\n");
+        if !temp_msgs.is_empty() {
+            lines.push("TEMP STATES:".to_owned());
+            lines.extend(temp_msgs);
         }
 
-        if perm && !perm_msgs.is_empty() {
-            line_count += perm_msgs.len() + 2;
-            let lines = perm_msgs.join("\n\t");
-            println!("PERM STATES:\n\t{lines}\n");
+        if !perm_msgs.is_empty() {
+            lines.push("PERM STATES:".to_owned());
+            lines.extend(perm_msgs);
         }
-
-        line_count
     }
 
-    fn collect_read_msgs(&self, for_tty: bool) -> Vec<String> {
+    pub fn collect_read_msgs(&self, lines: &mut Vec<String>, is_tty: bool) {
         let mut read_msgs = Vec::new();
 
         for item in self.items.iter() {
@@ -255,57 +243,54 @@ impl Hub {
                     continue;
                 };
 
-                let content = if for_tty { &msg.tty } else { &msg.normal };
+                let content = if is_tty { &msg.tty } else { &msg.normal };
 
                 read_msgs.push(format!(
-                    "{}/{d}@{}:{content}",
+                    "\t{}/{d}@{}:{content}",
                     item.symbol,
                     compact_format(t, *d),
                 ));
             }
         }
 
-        read_msgs
-    }
-
-    pub fn print_read_msgs(&self) -> usize {
-        let read_msgs = self.collect_read_msgs(self.is_tty);
-        if read_msgs.is_empty() {
-            return 0;
+        if !read_msgs.is_empty() {
+            lines.push("READ:".to_owned());
+            lines.extend(read_msgs);
         }
-
-        let line_count = read_msgs.len() + 2;
-
-        let lines = read_msgs.join("\n\t");
-        println!("READ:\n\t{lines}\n");
-
-        line_count
     }
 
     pub fn notify_read_msgs(&self, latest: &BTreeMap<String, Decimal>) {
-        let mut read_lines = self.collect_read_msgs(false);
-        let mut latest_line = String::new();
-        if !latest.is_empty() {
-            latest_line.push_str("Latest: ");
-            for (n, (s, p)) in latest.iter().enumerate() {
-                if n != 0 {
-                    latest_line.push_str(" | ");
-                }
+        let mut read_lines = Vec::new();
+        self.collect_read_msgs(&mut read_lines, false);
+        if read_lines.is_empty() {
+            return;
+        }
 
-                latest_line.push_str(&format!("{s}@{}", p.round_dp(2)));
+        let mut latest_line = String::new();
+        latest_line.push_str("Latest: ");
+        for (n, (s, p)) in latest.iter().enumerate() {
+            if n != 0 {
+                latest_line.push_str(" | ");
             }
 
-            read_lines.push(latest_line);
+            latest_line.push_str(&format!("{s}@{}", p.round_dp(2)));
         }
+
+        read_lines.push(latest_line);
 
         for n in self.notifiers.iter() {
             _ = n.process("reads", &read_lines);
         }
     }
 
-    pub fn collect_alert_msgs(&mut self) -> (Vec<String>, Vec<String>) {
+    pub fn collect_alert_msgs(
+        &mut self,
+        lines: &mut Vec<String>,
+        is_tty: bool,
+        skip: bool,
+    ) {
         let mut normal_lines = Vec::new();
-        let mut tty_lines = Vec::new();
+        let mut print_lines = Vec::new();
         for item in self.items.iter_mut() {
             for (d, hubms) in item.monitors.iter_mut() {
                 let mut normal_alerts: BTreeMap<OffsetDateTime, Vec<String>> =
@@ -334,51 +319,48 @@ impl Hub {
 
                 if !normal_formatted_alerts.is_empty() {
                     normal_lines.push(format!(
-                        "{}/{d}: {}",
+                        "\t{}/{d}: {}",
                         item.symbol,
                         normal_formatted_alerts.join("  ")
                     ));
                 }
 
-                let mut tty_formatted_alerts = Vec::new();
+                if is_tty {
+                    let mut tty_formatted_alerts = Vec::new();
 
-                for (t, amsgs) in tty_alerts {
-                    tty_formatted_alerts.push(format!(
-                        "@{}:{}",
-                        compact_format(&t, *d),
-                        amsgs.join(" ")
-                    ));
-                }
+                    for (t, amsgs) in tty_alerts {
+                        tty_formatted_alerts.push(format!(
+                            "@{}:{}",
+                            compact_format(&t, *d),
+                            amsgs.join(" ")
+                        ));
+                    }
 
-                if !tty_formatted_alerts.is_empty() {
-                    tty_lines.push(format!(
-                        "{}/{d}: {}",
-                        item.symbol,
-                        tty_formatted_alerts.join("  ")
-                    ));
+                    if !tty_formatted_alerts.is_empty() {
+                        print_lines.push(format!(
+                            "\t{}/{d}: {}",
+                            item.symbol,
+                            tty_formatted_alerts.join("  ")
+                        ));
+                    }
                 }
             }
         }
 
-        (normal_lines, tty_lines)
-    }
-
-    pub fn show_alerts(&mut self, skip: bool) -> usize {
-        let (normal_alert_lines, tty_alert_lines) = self.collect_alert_msgs();
-        if normal_alert_lines.is_empty() || skip {
-            return 0;
+        if normal_lines.is_empty() || skip {
+            return;
         }
 
         for n in self.notifiers.iter() {
-            _ = n.process("alerts", &normal_alert_lines);
+            _ = n.process("alerts", &normal_lines);
         }
 
-        let line_num = tty_alert_lines.len() + 2;
-        let lines = tty_alert_lines.join("\n\t");
-        print!("\x07");
-        println!("ALERTS:\n\t{lines}\n");
-
-        line_num
+        lines.push("\x07ALERTS:".to_owned());
+        if print_lines.is_empty() {
+            lines.extend(normal_lines);
+        } else {
+            lines.extend(print_lines);
+        }
     }
 
     fn has_indicator(
@@ -581,7 +563,7 @@ impl Hub {
         Ok(true)
     }
 
-    pub fn apply_config(&mut self, cfg: Config, is_tty: bool) -> Result<()> {
+    pub fn apply_config(&mut self, cfg: Config) -> Result<()> {
         let mut for_all_pairs = None;
         let mut all_pairs = vec![];
 
@@ -609,7 +591,6 @@ impl Hub {
             self.notifiers.push(noti);
         }
 
-        self.is_tty = is_tty;
         self.colors = cfg.colors;
 
         Ok(())
