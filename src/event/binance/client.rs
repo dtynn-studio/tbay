@@ -348,7 +348,7 @@ fn kline_summary_to_k(
 
     Ok(K {
         symbol: pair.to_lowercase(),
-        interval,
+        interval: interval.into(),
         source: "h",
         raw: kraw,
     })
@@ -573,7 +573,7 @@ impl BnClient {
                 let finalized = summary.close_time < now_milli;
                 kline_summary_to_k(
                     &target.symbol,
-                    target.interval,
+                    target.interval.into(),
                     summary,
                     finalized,
                 )

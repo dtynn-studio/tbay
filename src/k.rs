@@ -2,14 +2,32 @@ use std::{any::Any, cmp::Ordering, collections::HashMap};
 
 use crate::{
     config::ColorTable,
+    indicator::base::ExtractKind,
     prelude::{Decimal, OffsetDateTime},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RelativePosition {
     Above,
     Below,
     At,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Trend {
+    Up,
+    Down,
+    Unknown,
+}
+
+impl Trend {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Trend::Up => "↑",
+            Trend::Down => "↓",
+            Trend::Unknown => "~",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -30,6 +48,7 @@ pub struct PriceBar {
     pub high: Decimal,
     pub low: Decimal,
     pub mid: Decimal,
+    pub height: Decimal,
 }
 
 impl From<(Decimal, Decimal)> for PriceBar {
@@ -46,6 +65,7 @@ impl PriceBar {
             high,
             low,
             mid: (high + low) / Decimal::TWO,
+            height: high - low,
         }
     }
 
@@ -139,6 +159,53 @@ impl KInfo {
     pub fn is_not_below(&self, base: Decimal) -> bool {
         !matches!(self.relative_position(base), RelativePosition::Below)
     }
+
+    pub fn trend(
+        &self,
+        single_threshold: Decimal,
+        mixed_threshold: Decimal,
+    ) -> Trend {
+        if self.full.height.is_zero() {
+            return Trend::Unknown;
+        }
+
+        let body_ratio = self.body.height / self.full.height;
+        let above_ratio = self.shadow.above / self.full.height;
+        let below_ratio = self.shadow.below / self.full.height;
+
+        if body_ratio >= single_threshold {
+            match self.direction {
+                Some(true) => Trend::Up,
+                Some(false) => Trend::Down,
+                None => Trend::Unknown,
+            }
+        } else if above_ratio >= single_threshold {
+            Trend::Down
+        } else if below_ratio >= single_threshold {
+            Trend::Up
+        } else {
+            // 没有单个部分满足占比
+            match self.direction {
+                Some(true) => {
+                    if (below_ratio + body_ratio) >= mixed_threshold {
+                        Trend::Up
+                    } else {
+                        Trend::Unknown
+                    }
+                }
+
+                Some(false) => {
+                    if (above_ratio + body_ratio) >= mixed_threshold {
+                        Trend::Down
+                    } else {
+                        Trend::Unknown
+                    }
+                }
+
+                None => Trend::Unknown,
+            }
+        }
+    }
 }
 
 pub struct KCtx {
@@ -171,5 +238,35 @@ impl KCtx {
 
     pub fn set_val(&mut self, key: &str, val: Box<dyn Any>) -> bool {
         self.vals.insert(key.to_owned(), val).is_some()
+    }
+}
+
+#[derive(Debug)]
+pub struct StrengthChecker {
+    val_kind: ExtractKind,
+    pub key: String,
+    thres: Decimal,
+}
+
+impl StrengthChecker {
+    pub fn new(val_kind: ExtractKind, key: String, thres: Decimal) -> Self {
+        Self {
+            val_kind,
+            key,
+            thres,
+        }
+    }
+
+    pub fn check(&self, kctx: &KCtx) -> bool {
+        let Some(ma) = kctx.get_val::<Decimal>(&self.key) else {
+            return false;
+        };
+
+        if ma.is_zero() {
+            return false;
+        }
+
+        let next = self.val_kind.extractor()(&kctx.info);
+        (next / ma) > self.thres
     }
 }

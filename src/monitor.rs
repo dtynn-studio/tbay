@@ -3,10 +3,13 @@ use crate::prelude::*;
 pub mod alert;
 pub mod bb;
 pub mod cross;
+pub mod fbq;
 pub mod hold;
 pub mod macd;
+pub mod pdiff;
 pub mod rate;
 pub mod read;
+pub mod shadow;
 pub mod touch;
 
 #[derive(Debug, Clone)]

@@ -75,12 +75,12 @@ impl Cross {
 
     fn cross_event_msg(&self, direction: bool, colors: ColorTable) -> Msg {
         let (dir_flag, color) = if direction {
-            ("↗", colors.up)
+            ("[↗]", colors.up)
         } else {
-            ("↘", colors.down)
+            ("[↘]", colors.down)
         };
         let normal = format!(
-            "({}/{}):{}{dir_flag}{}",
+            "{}/{}{}:{dir_flag}{}",
             self.args.0.val_kind.as_str_short(),
             self.args.0.calc_kind.as_str_short(),
             self.args.0.fast,
@@ -88,7 +88,7 @@ impl Cross {
         );
 
         let tty = format!(
-            "({}/{}):{}{}{}",
+            "{}/{}{}:{}{}",
             self.args.0.val_kind.as_str_short(),
             self.args.0.calc_kind.as_str_short(),
             self.args.0.fast,

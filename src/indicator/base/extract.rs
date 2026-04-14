@@ -16,12 +16,24 @@ use crate::{
     },
 };
 
-fn close_extractor(info: &KInfo) -> Decimal {
-    info.raw.price_close
-}
+pub mod extractor {
+    use crate::prelude::{Decimal, KInfo};
 
-fn qty_extractor(info: &KInfo) -> Decimal {
-    info.raw.quantity
+    pub fn close(info: &KInfo) -> Decimal {
+        info.raw.price_close
+    }
+
+    pub fn qty(info: &KInfo) -> Decimal {
+        info.raw.quantity
+    }
+
+    pub fn full(info: &KInfo) -> Decimal {
+        info.full.height
+    }
+
+    pub fn body(info: &KInfo) -> Decimal {
+        info.body.height
+    }
 }
 
 pub struct BaseExtractor {
@@ -55,16 +67,22 @@ impl Indicator for BaseExtractor {
 #[derive(Debug, Clone, Copy)]
 pub enum ExtractKind {
     PriceClose,
+    PriceFull,
+    PriceBody,
     Qty,
 }
 
 impl ExtractKind {
     pub const PRICE_CLOSE_STR: &str = "close";
+    pub const PRICE_FULL_STR: &str = "full";
+    pub const PRICE_BODY_STR: &str = "body";
     pub const QTY_STR: &str = "qty";
 
     pub const fn as_str(&self) -> &'static str {
         match self {
             Self::PriceClose => Self::PRICE_CLOSE_STR,
+            Self::PriceFull => Self::PRICE_FULL_STR,
+            Self::PriceBody => Self::PRICE_BODY_STR,
             Self::Qty => Self::QTY_STR,
         }
     }
@@ -72,7 +90,18 @@ impl ExtractKind {
     pub const fn as_str_short(&self) -> &'static str {
         match self {
             Self::PriceClose => "C",
+            Self::PriceFull => "F",
+            Self::PriceBody => "B",
             Self::Qty => "Q",
+        }
+    }
+
+    pub const fn extractor(self) -> fn(&KInfo) -> Decimal {
+        match self {
+            Self::PriceClose => extractor::close,
+            Self::PriceFull => extractor::full,
+            Self::PriceBody => extractor::body,
+            Self::Qty => extractor::qty,
         }
     }
 }
@@ -83,9 +112,17 @@ impl FromStr for ExtractKind {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             Self::PRICE_CLOSE_STR => Ok(Self::PriceClose),
+            Self::PRICE_FULL_STR => Ok(Self::PriceFull),
+            Self::PRICE_BODY_STR => Ok(Self::PriceBody),
             Self::QTY_STR => Ok(Self::Qty),
             other => Err(other.unexpected("parse extract kind")),
         }
+    }
+}
+
+impl std::fmt::Display for ExtractKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
     }
 }
 
@@ -191,11 +228,6 @@ impl Args for BaseExtractorArgs {
     }
 
     fn build(self) -> Result<Self::Target> {
-        let extractor = match self.extract {
-            ExtractKind::PriceClose => close_extractor,
-            ExtractKind::Qty => qty_extractor,
-        };
-
         let calculator = match self.calc {
             CalcKind::Sma => BaseCalculator::Sma(Sma::new(self.period)),
             CalcKind::Ema => BaseCalculator::Ema(Ema::new(self.period)),
@@ -208,7 +240,7 @@ impl Args for BaseExtractorArgs {
 
         Ok(BaseExtractor {
             key,
-            extractor,
+            extractor: self.extract.extractor(),
             calculator,
         })
     }

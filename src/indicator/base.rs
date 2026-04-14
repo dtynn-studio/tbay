@@ -11,7 +11,7 @@ mod extract;
 
 pub use extract::{
     BaseExtractor, BaseExtractorArgs, BaseExtractorBuilder, CalcKind,
-    ExtractKind,
+    ExtractKind, extractor,
 };
 
 pub enum BaseCalculator {

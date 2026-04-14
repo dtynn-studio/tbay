@@ -34,6 +34,8 @@ pub struct Interval {
     pub monitors: Vec<String>,
     #[serde(default)]
     pub no_wildcard: bool,
+    #[serde(default)]
+    pub reads: Vec<usize>,
 }
 
 #[derive(Deserialize)]

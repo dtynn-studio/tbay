@@ -1,4 +1,4 @@
-#![feature(map_try_insert)]
+#![feature(duration_constructors)]
 
 pub mod cmd;
 pub mod common;

@@ -28,7 +28,7 @@ impl SimpleArgs {
 
         let target = Target {
             symbol: self.pair,
-            interval: self.interval,
+            interval: self.interval.into(),
         };
 
         let client = BnClient::new(Config {

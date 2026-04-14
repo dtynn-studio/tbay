@@ -3,16 +3,22 @@ use std::{
     collections::{BTreeMap, HashMap, HashSet},
 };
 
-use humantime::Duration;
 use tracing::{debug, warn_span};
 
 use crate::{
     config::{ColorTable, Config, Interval, Pair},
     event::K,
-    indicator, monitor,
+    indicator::{
+        self,
+        base::{CalcKind, ExtractKind},
+    },
+    monitor::{
+        self,
+        read::{Read, ReadArgs},
+    },
     notifier::Notifier,
     prelude::*,
-    util::time::format_hhmm,
+    util::time::{TBDuration as Duration, compact_format},
 };
 
 pub type HubIndicator = Box<dyn Indicator<Output = Box<dyn Any>>>;
@@ -24,6 +30,7 @@ pub struct HubItem {
     pub symbol: String,
     pub indicators: BTreeMap<Duration, Vec<HubIndicator>>,
     pub monitors: BTreeMap<Duration, Vec<HubMonitor>>,
+    pub reads: BTreeMap<Duration, Read>,
 }
 
 pub struct HubState<'s> {
@@ -60,6 +67,7 @@ impl Default for Hub {
         hub.register_indicator_builder(indicator::cross::MaCrossBuilder);
         hub.register_indicator_builder(indicator::distance::DistanceBuilder);
         hub.register_indicator_builder(indicator::position::PositionBuilder);
+        hub.register_indicator_builder(indicator::hl::HlBuilder);
 
         // monitor builders
         hub.register_monitor_builder(monitor::cross::CrossBuilder);
@@ -69,6 +77,9 @@ impl Default for Hub {
         hub.register_monitor_builder(monitor::rate::RateBuilder);
         hub.register_monitor_builder(monitor::bb::BbBuilder);
         hub.register_monitor_builder(monitor::macd::MacdMonitorBuilder);
+        hub.register_monitor_builder(monitor::shadow::ShadowBuilder);
+        hub.register_monitor_builder(monitor::pdiff::DiffBuilder);
+        hub.register_monitor_builder(monitor::fbq::FBQBuilder);
 
         hub
     }
@@ -83,12 +94,13 @@ impl Hub {
                 .indicators
                 .keys()
                 .chain(item.monitors.keys())
+                .copied()
                 .collect::<HashSet<_>>();
 
             for d in durations {
                 target_set.insert(Target {
                     symbol: item.symbol.clone(),
-                    interval: *d,
+                    interval: d,
                 });
             }
         }
@@ -123,17 +135,18 @@ impl Hub {
             }
         }
 
-        let Some(monitors) = self
-            .items
-            .iter_mut()
-            .find(|item| item.symbol == k.symbol)
-            .and_then(|item| item.monitors.get_mut(&k.interval))
-        else {
-            return;
-        };
+        if let Some(item) =
+            self.items.iter_mut().find(|item| item.symbol == k.symbol)
+        {
+            if let Some(monitors) = item.monitors.get_mut(&k.interval) {
+                for monitor in monitors {
+                    monitor.apply(&kctx);
+                }
+            }
 
-        for monitor in monitors {
-            monitor.apply(&kctx);
+            if let Some(reads) = item.reads.get_mut(&k.interval) {
+                reads.apply(&kctx);
+            }
         }
     }
 
@@ -195,7 +208,7 @@ impl Hub {
                     temp_msgs.push(format!(
                         "{}/{d}@{}: {}",
                         hstate.symbol,
-                        format_hhmm(&t),
+                        compact_format(&t, d),
                         msgs.join("  ")
                     ));
                 }
@@ -204,7 +217,7 @@ impl Hub {
                     perm_msgs.push(format!(
                         "{}/{d}@{}: {}",
                         hstate.symbol,
-                        format_hhmm(&t),
+                        compact_format(&t, d),
                         msgs.join("  ")
                     ));
                 }
@@ -232,6 +245,64 @@ impl Hub {
         line_count
     }
 
+    fn collect_read_msgs(&self, for_tty: bool) -> Vec<String> {
+        let mut read_msgs = Vec::new();
+
+        for item in self.items.iter() {
+            for (d, read) in item.reads.iter() {
+                let st = read.state();
+                let Some((t, msg)) = st.temp.as_ref() else {
+                    continue;
+                };
+
+                let content = if for_tty { &msg.tty } else { &msg.normal };
+
+                read_msgs.push(format!(
+                    "{}/{d}@{}:{content}",
+                    item.symbol,
+                    compact_format(t, *d),
+                ));
+            }
+        }
+
+        read_msgs
+    }
+
+    pub fn print_read_msgs(&self) -> usize {
+        let read_msgs = self.collect_read_msgs(self.is_tty);
+        if read_msgs.is_empty() {
+            return 0;
+        }
+
+        let line_count = read_msgs.len() + 2;
+
+        let lines = read_msgs.join("\n\t");
+        println!("READ:\n\t{lines}\n");
+
+        line_count
+    }
+
+    pub fn notify_read_msgs(&self, latest: &BTreeMap<String, Decimal>) {
+        let mut read_lines = self.collect_read_msgs(false);
+        let mut latest_line = String::new();
+        if !latest.is_empty() {
+            latest_line.push_str("Latest: ");
+            for (n, (s, p)) in latest.iter().enumerate() {
+                if n != 0 {
+                    latest_line.push_str("| ");
+                }
+
+                latest_line.push_str(&format!("{s}@{}", p.round_dp(2)));
+            }
+
+            read_lines.push(latest_line);
+        }
+
+        for n in self.notifiers.iter() {
+            _ = n.process("reads", &read_lines);
+        }
+    }
+
     pub fn collect_alert_msgs(&mut self) -> (Vec<String>, Vec<String>) {
         let mut normal_lines = Vec::new();
         let mut tty_lines = Vec::new();
@@ -256,7 +327,7 @@ impl Hub {
                 for (t, amsgs) in normal_alerts {
                     normal_formatted_alerts.push(format!(
                         "@{}:{}",
-                        format_hhmm(&t),
+                        compact_format(&t, *d),
                         amsgs.join(" ")
                     ));
                 }
@@ -274,7 +345,7 @@ impl Hub {
                 for (t, amsgs) in tty_alerts {
                     tty_formatted_alerts.push(format!(
                         "@{}:{}",
-                        format_hhmm(&t),
+                        compact_format(&t, *d),
                         amsgs.join(" ")
                     ));
                 }
@@ -292,9 +363,9 @@ impl Hub {
         (normal_lines, tty_lines)
     }
 
-    pub fn show_alerts(&mut self) -> usize {
+    pub fn show_alerts(&mut self, skip: bool) -> usize {
         let (normal_alert_lines, tty_alert_lines) = self.collect_alert_msgs();
-        if normal_alert_lines.is_empty() {
+        if normal_alert_lines.is_empty() || skip {
             return 0;
         }
 
@@ -339,6 +410,15 @@ impl Hub {
         };
 
         monitors.iter().any(|i| i.key() == key)
+    }
+
+    fn has_read(&self, symbol: &str, interval: Duration) -> bool {
+        let Some(item) = self.items.iter().find(|item| item.symbol == symbol)
+        else {
+            return false;
+        };
+
+        item.reads.contains_key(&interval)
     }
 
     pub fn register_indicator_builder<
@@ -386,6 +466,7 @@ impl Hub {
                     symbol: symbol.to_owned(),
                     indicators: Default::default(),
                     monitors: Default::default(),
+                    reads: Default::default(),
                 }),
             };
 
@@ -443,10 +524,57 @@ impl Hub {
                     symbol: symbol.to_owned(),
                     indicators: Default::default(),
                     monitors: Default::default(),
+                    reads: Default::default(),
                 }),
             };
 
         slots.monitors.entry(interval).or_default().push(monitor);
+
+        debug!("added");
+
+        Ok(true)
+    }
+
+    pub fn register_reads(
+        &mut self,
+        symbol: &str,
+        interval: Duration,
+        periods: &[usize],
+    ) -> Result<bool> {
+        if periods.is_empty() {
+            return Ok(false);
+        }
+
+        let _span = warn_span!("reads", symbol, ?interval, ?periods).entered();
+
+        if self.has_read(symbol, interval) {
+            return Ok(false);
+        }
+
+        let read_monitor = ReadArgs::new((
+            ExtractKind::PriceClose,
+            CalcKind::Ema,
+            periods.to_vec(),
+        ))
+        .build()?;
+
+        let deps = read_monitor.deps();
+        for dep in deps {
+            self.register_indicator(symbol, interval, dep)?;
+        }
+
+        let slots =
+            match self.items.iter_mut().find(|item| item.symbol == symbol) {
+                Some(i) => i,
+                None => self.items.push_mut(HubItem {
+                    symbol: symbol.to_owned(),
+                    indicators: Default::default(),
+                    monitors: Default::default(),
+                    reads: Default::default(),
+                }),
+            };
+
+        slots.reads.insert(interval, read_monitor);
 
         debug!("added");
 
@@ -523,6 +651,8 @@ impl Hub {
         for m in cfg.monitors.iter() {
             self.register_monitor(pair, interval, m)?;
         }
+
+        self.register_reads(pair, interval, &cfg.reads)?;
         Ok(())
     }
 }

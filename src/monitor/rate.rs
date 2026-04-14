@@ -41,12 +41,50 @@ impl FromStr for RateMode {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Op {
+    Gt,
+    Lt,
+}
+
+impl Op {
+    pub const GT_STR: &str = ">";
+    pub const LT_STR: &str = "<";
+
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            Self::Gt => Self::GT_STR,
+            Self::Lt => Self::LT_STR,
+        }
+    }
+
+    pub fn check(&self, rate: Decimal, threshold: Decimal) -> bool {
+        match self {
+            Self::Gt => rate > threshold,
+            Self::Lt => rate < threshold,
+        }
+    }
+}
+
+impl FromStr for Op {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            Self::GT_STR => Ok(Self::Gt),
+            Self::LT_STR => Ok(Self::Lt),
+            other => Err(other.unexpected("parse op")),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct RateArgs {
     pub val_kind: ExtractKind,
     pub calc_kind: CalcKind,
     pub period: u32,
     pub mode: RateMode,
+    pub op: Op,
     pub threshold: f64,
 }
 
@@ -58,9 +96,10 @@ impl FromStr for RateArgs {
         let mut calc_kind_str = String::new();
         let mut period = 0u32;
         let mut mode_str = String::new();
+        let mut op_str = String::new();
         let mut threshold = 0.0f64;
 
-        sscanf!(s, "rate:{val_kind_str},{calc_kind_str},{period},{mode_str},{threshold}").with_context(
+        sscanf!(s, "rate:{val_kind_str},{calc_kind_str},{period},{mode_str},{op_str},{threshold}").with_context(
             |_| ParseCtx {
                 raw: s.to_owned(),
                 usage: Cow::from("parse rate args"),
@@ -70,19 +109,21 @@ impl FromStr for RateArgs {
         let val_kind = val_kind_str.parse()?;
         let calc_kind = calc_kind_str.parse()?;
         let mode = mode_str.parse()?;
+        let op = op_str.parse()?;
 
         Ok(Self {
             val_kind,
             calc_kind,
             period,
             mode,
+            op,
             threshold,
         })
     }
 }
 
 impl Args for RateArgs {
-    type Type = (ExtractKind, CalcKind, u32, RateMode, f64);
+    type Type = (ExtractKind, CalcKind, u32, RateMode, Op, f64);
     type Target = Rate;
 
     fn new(args: Self::Type) -> Self {
@@ -91,17 +132,19 @@ impl Args for RateArgs {
             calc_kind: args.1,
             period: args.2,
             mode: args.3,
-            threshold: args.4,
+            op: args.4,
+            threshold: args.5,
         }
     }
 
     fn key(&self) -> String {
         format!(
-            "rate:{},{},{},{},{}",
+            "rate:{},{},{},{},{},{}",
             self.val_kind.as_str(),
             self.calc_kind.as_str(),
             self.period,
             self.mode.as_str(),
+            self.op.as_str(),
             self.threshold
         )
     }
@@ -127,6 +170,7 @@ impl Args for RateArgs {
             state: Default::default(),
             alerts: Default::default(),
             temp_t: None,
+            perm_t: None,
         })
     }
 }
@@ -142,17 +186,15 @@ pub struct Rate {
     state: State,
     alerts: AlertManager,
     temp_t: Option<OffsetDateTime>,
+    perm_t: Option<OffsetDateTime>,
 }
 
 impl Rate {
     fn val(&self, kctx: &KCtx) -> Decimal {
-        match self.args.val_kind {
-            ExtractKind::PriceClose => kctx.info.raw.price_close,
-            ExtractKind::Qty => kctx.info.raw.quantity,
-        }
+        self.args.val_kind.extractor()(&kctx.info)
     }
 
-    fn calc_rate(&self, kctx: &KCtx) -> Option<(Decimal, Msg)> {
+    fn calc(&self, kctx: &KCtx) -> Option<Msg> {
         let val = self.val(kctx);
         let base: Decimal = *kctx.get_val::<Decimal>(&self.base_key)?;
 
@@ -162,20 +204,20 @@ impl Rate {
 
         let rate = match self.args.mode {
             RateMode::Abs => val / base,
-            RateMode::Dif => (val - base) / base,
+            RateMode::Dif => (val - base).abs() / base,
         };
 
-        if rate.abs() < self.threshold {
+        if !self.args.op.check(rate, self.threshold) {
             return None;
         }
 
         let msg = self.format_msg(rate, kctx.colors);
-        Some((rate, msg))
+        Some(msg)
     }
 
     fn format_msg(&self, rate: Decimal, colors: ColorTable) -> Msg {
         let (rate_str, color) = match self.args.mode {
-            RateMode::Abs => (format!("{}x", rate.round_dp(3)), colors.normal),
+            RateMode::Abs => (format!("{}x", rate.round_dp(2)), colors.normal),
             RateMode::Dif => {
                 let pct = rate * self.hundred;
                 let (sign, sign_color) = if rate.is_sign_negative() {
@@ -183,12 +225,12 @@ impl Rate {
                 } else {
                     ("+", colors.up)
                 };
-                (format!("{}{}", sign, pct.round_dp(2)), sign_color)
+                (format!("{}{}%", sign, pct.round_dp(2)), sign_color)
             }
         };
 
         let normal = format!(
-            "({}/{}{}):{}",
+            "{}/{}{}:{}",
             self.args.val_kind.as_str_short(),
             self.args.calc_kind.as_str_short(),
             self.args.period,
@@ -196,7 +238,7 @@ impl Rate {
         );
 
         let tty = format!(
-            "({}/{}{}):{}",
+            "{}/{}{}:{}",
             self.args.val_kind.as_str_short(),
             self.args.calc_kind.as_str_short(),
             self.args.period,
@@ -204,10 +246,6 @@ impl Rate {
         );
 
         Msg { normal, tty }
-    }
-
-    fn calc(&self, kctx: &KCtx) -> Option<Msg> {
-        self.calc_rate(kctx).map(|(_, msg)| msg)
     }
 }
 
@@ -221,20 +259,38 @@ impl Monitor for Rate {
     }
 
     fn apply(&mut self, kctx: &KCtx) {
-        if kctx.info.raw.finalized {
-            self.state.temp.take();
-            self.state.perm =
-                self.calc(kctx).map(|msg| (kctx.info.raw.time_begin, msg));
-        } else {
-            let prev_temp_t = self.temp_t.replace(kctx.info.raw.time_begin);
-            if prev_temp_t != self.temp_t || self.state.temp.is_none() {
-                self.state.temp =
-                    self.calc(kctx).map(|msg| (kctx.info.raw.time_begin, msg));
+        let msg_opt = self.calc(kctx);
+        let t = kctx.info.raw.time_begin;
 
-                if let Some((t, msg)) = self.state.temp.as_ref().cloned() {
-                    self.alerts.add(t, msg);
-                }
-            }
+        let (target, prev_t, should_update) = if kctx.info.raw.finalized {
+            self.state.temp.take();
+            (
+                &mut self.state.perm,
+                &mut self.perm_t,
+                self.args.op == Op::Lt,
+            )
+        } else {
+            (
+                &mut self.state.temp,
+                &mut self.temp_t,
+                self.args.op == Op::Gt,
+            )
+        };
+
+        // 无论如何，更新target
+        if should_update {
+            *target = msg_opt.clone().map(|msg| (t, msg));
+        }
+
+        // 当阈值条件符合
+        //      (finalized && op == Lt) || (!finalized && op == Gt)
+        // 且为初次更新（时间匹配）时，添加告警
+        if let Some(msg) = msg_opt
+            && should_update
+            && Some(t) != *prev_t
+        {
+            prev_t.replace(t);
+            self.alerts.add(t, msg);
         }
     }
 
