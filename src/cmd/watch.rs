@@ -18,7 +18,7 @@ use crate::{
         Event,
         binance::client::{BnClient, Config, WebsocketControl},
     },
-    hub::Hub,
+    hub::{Hub, line_indent},
     prelude::*,
     util::term::clean_up_rows,
     web::serve::{Request, serve},
@@ -232,12 +232,9 @@ fn collect_latest_price_lines(
         return;
     }
 
+    let indent = line_indent(is_tty);
     lines.push("LATEST PRICE:".to_owned());
     for (s, p) in latest_prices.iter() {
-        if is_tty {
-            lines.push(format!("\t{s}: {}", p.round_dp(2)));
-        } else {
-            lines.push(format!("    {s}: {}", p.round_dp(2)));
-        }
+        lines.push(format!("{indent}{s}: {}", p.round_dp(2)));
     }
 }

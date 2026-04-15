@@ -21,7 +21,7 @@ use crate::{
     util::time::{TBDuration as Duration, compact_format},
 };
 
-fn line_indent(is_tty: bool) -> &'static str {
+pub fn line_indent(is_tty: bool) -> &'static str {
     if is_tty { "\t" } else { "    " }
 }
 
