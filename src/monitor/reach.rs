@@ -108,6 +108,11 @@ impl Reach {
 
     fn check_msg(&self, kctx: &KCtx) -> Option<Msg> {
         let (price, direction) = self.check_reached(kctx)?;
+        if let Some(direction_wanted) = self.args.direction
+            && direction_wanted != direction
+        {
+            return None;
+        }
 
         let price_rounded = price.round_dp(2);
         let target_rounded = self.args.target.round_dp(2);
