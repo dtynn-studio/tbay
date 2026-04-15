@@ -169,6 +169,7 @@ pub fn App() -> Element {
 
                 if !v {
                     reset_add_sheet_infos();
+                    add_sheet_msg.write().take();
                 }
 
             },
@@ -277,6 +278,8 @@ pub fn App() -> Element {
 
                         if let Some((msg, _)) = add_sheet_msg.read().as_ref() {
                             {msg.to_owned()}
+                        } else {
+                            " "
                         }
                     }
                 },
