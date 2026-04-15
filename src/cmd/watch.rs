@@ -57,6 +57,9 @@ pub struct WatchArgs {
     pub reads: Duration,
 
     #[arg(long, default_value_t = false)]
+    pub enable_state_reads: bool,
+
+    #[arg(long, default_value_t = false)]
     pub enable_notify_reads: bool,
 
     #[arg(long, default_value_t = false)]
@@ -186,7 +189,9 @@ impl WatchArgs {
                     collect_now_lines(&mut lines);
                     collect_latest_price_lines(&mut lines, &latest_price, is_tty);
                     hub.collect_state_msgs(&mut lines, is_tty);
-                    hub.collect_read_msgs(&mut lines, is_tty);
+                    if self.enable_state_reads {
+                        hub.collect_read_msgs(&mut lines, is_tty);
+                    }
                     hub.collect_alert_msgs(&mut lines, is_tty, is_first);
 
                     println!("{}", lines.join("\n"));
