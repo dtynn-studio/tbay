@@ -207,6 +207,9 @@
   .bg-white {
     background-color: var(--color-white);
   }
+  .pb-2 {
+    padding-bottom: calc(var(--spacing) * 2);
+  }
   .text-center {
     text-align: center;
   }

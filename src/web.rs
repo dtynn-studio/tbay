@@ -1,8 +1,14 @@
 use dioxus::prelude::*;
 
+pub mod components;
 pub mod handler;
 #[cfg(feature = "server")]
 pub mod serve;
+
+use components::sheet::{
+    Sheet, SheetClose, SheetContent, SheetFooter, SheetHeader, SheetSide,
+    SheetTitle,
+};
 
 #[component]
 pub fn App() -> Element {
@@ -12,8 +18,16 @@ pub fn App() -> Element {
         handler::get_states(is_states).await
     });
 
+    let mut add_sheet_show = use_signal(|| false);
+
+    let pairs_resource = use_resource(handler::get_pairs);
+
+    let pairs_loaded =
+        || matches!(&*pairs_resource.value().read(), Some(Ok(_pairs)));
+
     rsx! {
         Stylesheet { href: asset!("/assets/tailwind.css") }
+        Stylesheet { href: asset!("/assets/dx-components-theme.css") }
 
         meta {
             charset: "utf-8",
@@ -86,10 +100,49 @@ pub fn App() -> Element {
                 }
 
                 button {
+                    onclick: move |_| {
+                        add_sheet_show.set(true);
+                    },
+
+                    disabled: !pairs_loaded(),
+
                     class: "flex-1 text-center",
                     "添加"
                 }
             }
+        }
+
+        Sheet {
+            open: add_sheet_show(),
+            on_open_change: move |v| add_sheet_show.set(v),
+            SheetContent {
+                side: SheetSide::Bottom,
+
+                SheetHeader {
+                    SheetTitle {
+                        "添加监控",
+                    }
+                },
+
+                div {
+                    "内容"
+                },
+
+                SheetFooter {
+                    class: "flex pb-8",
+
+                    button {
+                        class: "flex-1",
+                        "提交"
+                    }
+
+                    SheetClose {
+                        class: "flex-1",
+                        "取消"
+                    }
+                },
+            },
+
         }
     }
 }

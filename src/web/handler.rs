@@ -1,10 +1,10 @@
 use std::{collections::BTreeMap, time::Duration};
 
-use dioxus::{CapturedError, prelude::*};
+use dioxus::prelude::*;
 #[cfg(feature = "server")]
 use {
     super::serve::{AppCtx, Request},
-    dioxus::fullstack::axum::Extension,
+    dioxus::{CapturedError, fullstack::axum::Extension},
     tokio::sync::oneshot,
 };
 
