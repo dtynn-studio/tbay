@@ -426,23 +426,25 @@ impl Hub {
         &mut self,
         symbol: &str,
         interval: Duration,
-        key: &str,
+        raw_key: &str,
     ) -> Result<bool> {
-        let _span = warn_span!("indicator", symbol, ?interval, key).entered();
-        if self.has_indicator(symbol, interval, key) {
-            return Ok(false);
-        }
+        let _span = warn_span!("indicator", symbol, ?interval).entered();
 
         let mut indicator = None;
         for builder in self.indicator_builders.values() {
-            if let Ok(instance) = builder.build(key) {
+            if let Ok(instance) = builder.build(raw_key) {
                 indicator.replace(instance);
                 break;
             }
         }
 
         let indicator =
-            indicator.ok_or_else(|| key.unexpected("indicator key"))?;
+            indicator.ok_or_else(|| raw_key.unexpected("indicator key"))?;
+
+        let key = indicator.key();
+        if self.has_indicator(symbol, interval, key) {
+            return Ok(false);
+        }
 
         let deps = indicator.deps();
         for dep in deps {
@@ -460,13 +462,12 @@ impl Hub {
                 }),
             };
 
+        debug!(key, "added");
         slots
             .indicators
             .entry(interval)
             .or_default()
             .push(indicator);
-
-        debug!("added");
 
         Ok(true)
     }
@@ -484,43 +485,51 @@ impl Hub {
         &mut self,
         symbol: &str,
         interval: Duration,
-        key: &str,
+        raw_key: &str,
     ) -> Result<bool> {
-        let _span = warn_span!("monitor", symbol, ?interval, key).entered();
-
-        if self.has_monitor(symbol, interval, key) {
-            return Ok(false);
-        }
+        let _span = warn_span!("monitor", symbol, ?interval).entered();
 
         let mut monitor = None;
         for builder in self.monitor_builders.values() {
-            if let Ok(instance) = builder.build(key) {
+            if let Ok(instance) = builder.build(raw_key) {
                 monitor.replace(instance);
                 break;
             }
         }
 
-        let monitor = monitor.ok_or_else(|| key.unexpected("monitor key"))?;
+        let monitor =
+            monitor.ok_or_else(|| raw_key.unexpected("monitor key"))?;
+
+        if self.has_monitor(symbol, interval, raw_key) {
+            return Ok(false);
+        }
 
         let deps = monitor.deps();
         for dep in deps {
             self.register_indicator(symbol, interval, dep)?;
         }
 
+        let key = monitor.key();
+
         let slots =
             match self.items.iter_mut().find(|item| item.symbol == symbol) {
-                Some(i) => i,
-                None => self.items.push_mut(HubItem {
-                    symbol: symbol.to_owned(),
-                    indicators: Default::default(),
-                    monitors: Default::default(),
-                    reads: Default::default(),
-                }),
+                Some(i) => {
+                    debug!("use exist item");
+                    i
+                }
+                None => {
+                    debug!("add new item");
+                    self.items.push_mut(HubItem {
+                        symbol: symbol.to_owned(),
+                        indicators: Default::default(),
+                        monitors: Default::default(),
+                        reads: Default::default(),
+                    })
+                }
             };
 
+        debug!(key, "added");
         slots.monitors.entry(interval).or_default().push(monitor);
-
-        debug!("added");
 
         Ok(true)
     }
@@ -569,6 +578,21 @@ impl Hub {
         debug!("added");
 
         Ok(true)
+    }
+
+    pub fn show_monitors(&self) {
+        debug!("show monitors");
+        for item in self.items.iter() {
+            for (d, monitors) in item.monitors.iter() {
+                let _span =
+                    warn_span!("monitors", symbol = item.symbol, interval = %d)
+                        .entered();
+
+                let names =
+                    monitors.iter().map(|m| m.key()).collect::<Vec<_>>();
+                debug!("added: {names:?}");
+            }
+        }
     }
 
     pub fn apply_config(&mut self, cfg: Config) -> Result<()> {
