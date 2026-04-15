@@ -6,6 +6,7 @@ use dioxus::{
         axum::{Extension, Router},
     },
 };
+use humantime::Duration;
 use tokio::{
     net::TcpListener,
     sync::{mpsc, oneshot},
@@ -20,6 +21,12 @@ pub struct AppCtx {
 
 pub enum Request {
     States(bool, oneshot::Sender<Vec<String>>),
+    Monitor(
+        String,
+        Duration,
+        String,
+        oneshot::Sender<Result<bool, String>>,
+    ),
 }
 
 pub async fn serve(req_tx: mpsc::UnboundedSender<Request>) -> Result<()> {

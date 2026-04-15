@@ -165,6 +165,11 @@ impl WatchArgs {
                             }
                             _ = resp_tx.send(state_lines);
                         },
+
+                        Request::Monitor(symbol, d, key, resp_tx) => {
+                            let res = hub.register_monitor(&symbol, d.into(), &key);
+                            _ = resp_tx.send(res.map_err(|e| e.to_string()));
+                        },
                     };
                 }
 
