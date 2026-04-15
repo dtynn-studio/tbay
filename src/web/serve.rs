@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use dioxus::{
     cli_config::fullstack_address_or_localhost,
     prelude::*,
@@ -6,7 +8,6 @@ use dioxus::{
         axum::{Extension, Router},
     },
 };
-use humantime::Duration;
 use tokio::{
     net::TcpListener,
     sync::{mpsc, oneshot},
