@@ -33,6 +33,7 @@ pub fn App() -> Element {
     let pairs_loaded =
         || matches!(&*pairs_resource.value().read(), Some(Ok(_pairs)));
 
+    // add monitor
     let mut add_sheet_symbol = use_signal(|| "".to_owned());
     let mut add_sheet_interval = use_signal(|| Option::<Duration>::None);
     let mut add_sheet_key = use_signal(|| "".to_owned());
@@ -43,11 +44,36 @@ pub fn App() -> Element {
             && add_sheet_interval.read().is_some()
     };
 
+    let mut add_monitor_action = use_action(handler::add_monitor);
+
+    let mut add_sheet_msg = use_signal(|| Option::<(String, bool)>::None);
+
     let mut reset_add_sheet_infos = move || {
         add_sheet_symbol.set("".to_owned());
         add_sheet_interval.take();
         add_sheet_key.set("".to_owned());
     };
+
+    use_effect(move || {
+        let Some(res) = add_monitor_action.value() else {
+            return;
+        };
+
+        match res {
+            Ok(added) => {
+                if *added.read() {
+                    add_sheet_msg.set(Some(("已添加".to_owned(), false)));
+                } else {
+                    add_sheet_msg.set(Some(("已存在".to_owned(), false)));
+                }
+
+                reset_add_sheet_infos();
+            }
+            Err(e) => {
+                add_sheet_msg.set(Some((e.to_string(), true)));
+            }
+        }
+    });
 
     rsx! {
         Stylesheet { href: asset!("/assets/tailwind.css") }
@@ -182,6 +208,7 @@ pub fn App() -> Element {
                                         value: symbol.to_owned(),
                                         index: i,
                                         on_select: move |value: String| {
+                                            add_sheet_msg.set(None);
                                             add_sheet_symbol.set(value);
                                         },
                                         {symbol.to_owned()}
@@ -216,6 +243,7 @@ pub fn App() -> Element {
                                         value: *interval,
                                         index: i,
                                         on_select: move |value: Duration| {
+                                            add_sheet_msg.set(None);
                                             add_sheet_interval.set(Some(value));
                                         },
                                         {humantime::Duration::from(*interval).to_string()}
@@ -229,21 +257,53 @@ pub fn App() -> Element {
                         class: "flex-1 w-full px-3 pb-2",
                         input {
                             class: "w-full px-1 h-10 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500",
+                            value: "{add_sheet_key}",
                             oninput: move |evt| {
+                                add_sheet_msg.set(None);
                                 add_sheet_key.set(evt.value());
                             },
-
                             placeholder: "Monitor Key",
+                        }
+                    }
+
+                    p {
+                        style: "white-space: pre-wrap; word-wrap: break-word;",
+                        class: "flex-1 px-4",
+                        class: if let Some((_,true)) = add_sheet_msg.read().as_ref() {
+                            "text-red"
+                        } else {
+                            "text-black"
+                        },
+
+                        if let Some((msg, _)) = add_sheet_msg.read().as_ref() {
+                            {msg.to_owned()}
                         }
                     }
                 },
 
                 SheetFooter {
-                    class: "flex pb-8",
+                    class: "flex h-10 pb-4",
 
                     button {
                         class: "flex-1 bg-blue-500 text-white disabled:bg-blue-300 disabled:text-white-400",
                         disabled: !available_for_add_sheet(),
+                        onclick: move |_| {
+                            let Some(interval) = add_sheet_interval.read().as_ref().copied() else {
+                                return;
+                            };
+
+                            let symbol = add_sheet_symbol.read().trim().to_owned();
+                            if symbol.is_empty() {
+                                return;
+                            }
+
+                            let key = add_sheet_key.read().trim().to_owned();
+                            if key.is_empty() {
+                                return;
+                            }
+
+                            add_monitor_action.call(symbol, interval, key);
+                        },
                         "提交"
                     }
 

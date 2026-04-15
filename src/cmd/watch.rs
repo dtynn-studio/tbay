@@ -79,6 +79,7 @@ impl WatchArgs {
 
         let targets = hub.targets();
         info!(?targets, "collected");
+        hub.show_monitors();
 
         if self.dry {
             info!("dry run, stopped");
