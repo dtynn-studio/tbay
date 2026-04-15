@@ -3,23 +3,18 @@ name = "*"
 
 [[pairs.intervals]]
 monitors = [
-    "touch:close,ema,5,0.5",
     "touch:close,ema,20,0.4",
-    "touch:close,ema,60",
-    "touch:close,ema,80",
-    "touch:close,ema,240",
+    "touch:close,ema,200",
 
     "cross:close,ema,5,20",
-    "cross:close,ema,20,60",
+    "cross:close,ema,5,60",
     "cross:close,ema,20,80",
-    "cross:close,ema,80,240",
+    "cross:close,ema,20,240",
 
-    "hold:close,ema,20,3",
-    "hold:close,ema,60,3",
-    "hold:close,ema,80,3",
-    "hold:close,ema,240,3",
+    "hold:close,ema,20,4",
+    "hold:close,ema,200,3",
 
-    "fbq:20,0.3/1.2,0.2/1.2,0.3/1.5",
+    "fbq:20,0.2/1.2,0.2/1.2,0.2/1.5",
 
     "macd:12,26,9",
 
@@ -30,20 +25,21 @@ reads = [5, 20, 60, 80, 240]
 [[pairs.intervals]]
 name = "3m"
 monitors = [
-    "touch:close,ema,20,0.8",
-    "touch:close,ema,60,0.6",
-    "touch:close,ema,80,0.6",
-    "touch:close,ema,240,0.6",
+    "touch:close,ema,20,1.0",
+    "touch:close,ema,200,0.6",
 
-    "cross:close,ema,20,60",
+    "cross:close,ema,5,60",
     "cross:close,ema,20,80",
-    "cross:close,ema,80,240",
+    "cross:close,ema,20,240",
 
-    "hold:close,ema,60,5",
-    "hold:close,ema,80,5",
-    "hold:close,ema,240,5",
+    "hold:close,ema,20,5",
+    "hold:close,ema,200,5",
 
     "fbq:20,0.2/1.8,0.0/1.8,0.2/1.8",
+
+    "macd:12,26,9",
+
+    "shadow:0.5,0.4",
 ]
 reads = [5, 20, 60, 80, 240]
 no_wildcard = true
