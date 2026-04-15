@@ -371,6 +371,14 @@ impl Hub {
         }
     }
 
+    pub fn clear_terminated_monitors(&mut self) {
+        for item in self.items.iter_mut() {
+            for monitors in item.monitors.values_mut() {
+                monitors.retain(|m| !m.terminated());
+            }
+        }
+    }
+
     fn has_indicator(
         &self,
         symbol: &str,

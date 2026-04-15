@@ -197,6 +197,8 @@ impl WatchArgs {
                     println!("{}", lines.join("\n"));
                     state_lines = lines.len();
                     lines.clear();
+
+                    hub.clear_terminated_monitors();
                 }
 
                 _ = reads_period.tick() => {
