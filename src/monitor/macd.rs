@@ -45,7 +45,6 @@ impl Args for MacdMonitorArgs {
             current: None,
             state: Default::default(),
             alerts: Default::default(),
-            temp_t: None,
         })
     }
 }
@@ -59,7 +58,6 @@ pub struct MacdMonitor {
     current: Option<MacdValue>,
     state: State,
     alerts: AlertManager,
-    temp_t: Option<OffsetDateTime>,
 }
 
 impl MacdMonitor {
@@ -109,16 +107,12 @@ impl Monitor for MacdMonitor {
             self.state.temp.take();
             self.state.perm =
                 self.update(kctx).map(|msg| (kctx.info.raw.time_begin, msg));
-        } else {
-            let prev_temp_t = self.temp_t.replace(kctx.info.raw.time_begin);
-            if prev_temp_t != self.temp_t || self.state.temp.is_none() {
-                self.state.temp =
-                    self.calc(kctx).map(|msg| (kctx.info.raw.time_begin, msg));
-
-                if let Some((t, msg)) = self.state.temp.as_ref().cloned() {
-                    self.alerts.add(t, msg);
-                }
+            if let Some((t, msg)) = self.state.perm.as_ref().cloned() {
+                self.alerts.add(t, msg);
             }
+        } else {
+            self.state.temp =
+                self.calc(kctx).map(|msg| (kctx.info.raw.time_begin, msg));
         }
     }
 
