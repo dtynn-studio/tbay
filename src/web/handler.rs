@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, time::Duration};
+use std::time::Duration;
 
 use dioxus::prelude::*;
 #[cfg(feature = "server")]
@@ -21,8 +21,10 @@ pub async fn get_states(load_states: bool) -> Result<Vec<String>> {
     Ok(lines)
 }
 
-pub async fn get_pairs() -> Result<BTreeMap<String, Vec<Duration>>> {
-    let ds = vec![
+pub async fn get_pairs() -> Result<(Vec<&'static str>, Vec<Duration>)> {
+    let symbols = vec![SYMBOL_ETHUSDT, SYMBOL_BTCUSDT];
+
+    let intervals = vec![
         Duration::from_mins(3),
         Duration::from_mins(15),
         Duration::from_hours(1),
@@ -30,22 +32,17 @@ pub async fn get_pairs() -> Result<BTreeMap<String, Vec<Duration>>> {
         Duration::from_days(1),
     ];
 
-    let pairs = BTreeMap::from_iter([
-        (SYMBOL_ETHUSDT.to_owned(), ds.clone()),
-        (SYMBOL_BTCUSDT.to_owned(), ds),
-    ]);
-
-    Ok(pairs)
+    Ok((symbols, intervals))
 }
 
 #[server(ctx: Extension<AppCtx>)]
 pub async fn add_monitor(
     symbol: String,
-    d: Duration,
+    interval: Duration,
     key: String,
 ) -> Result<bool> {
     let (resp_tx, resp_rx) = oneshot::channel();
-    let req = Request::Monitor(symbol, d, key, resp_tx);
+    let req = Request::Monitor(symbol, interval, key, resp_tx);
     ctx.req_tx.send(req).context("send req via chan")?;
     let res = resp_rx.await.context("recv resp from chan")?;
     res.map_err(CapturedError::msg)
