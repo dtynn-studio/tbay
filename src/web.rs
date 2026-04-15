@@ -89,7 +89,7 @@ pub fn App() -> Element {
         },
 
         div {
-            class: "h-screen w-full bg-gray-50 flex flex-col",
+            class: "h-dvh w-full bg-gray-50 flex flex-col overflow-hidden",
 
             main {
                 class: "flex-1 overflow-x-hidden overflow-y-auto",
@@ -99,6 +99,7 @@ pub fn App() -> Element {
                         rsx! {
                             for line in lines {
                                 p {
+                                    class: "text-gray-900",
                                     style: "white-space: pre-wrap; word-wrap: break-word;",
                                     "{line}"
                                 }
@@ -134,7 +135,7 @@ pub fn App() -> Element {
                             *load_states.write() = true;
                         }
                     },
-                    class: "flex-1 text-center",
+                    class: "flex-1 text-center text-gray-700",
                     "状态"
                 }
 
@@ -145,7 +146,7 @@ pub fn App() -> Element {
                             *load_states.write() = false;
                         }
                     },
-                    class: "flex-1 text-center",
+                    class: "flex-1 text-center text-gray-700",
                     "均线"
                 }
 
@@ -156,7 +157,7 @@ pub fn App() -> Element {
 
                     disabled: !pairs_loaded(),
 
-                    class: "flex-1 text-center",
+                    class: "flex-1 text-center text-gray-700",
                     "添加"
                 }
             }
@@ -270,11 +271,6 @@ pub fn App() -> Element {
                     p {
                         style: "white-space: pre-wrap; word-wrap: break-word;",
                         class: "flex-1 px-4",
-                        class: if let Some((_,true)) = add_sheet_msg.read().as_ref() {
-                            "text-red"
-                        } else {
-                            "text-black"
-                        },
 
                         if let Some((msg, _)) = add_sheet_msg.read().as_ref() {
                             {msg.to_owned()}
