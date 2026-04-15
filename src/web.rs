@@ -44,7 +44,7 @@ pub fn App() -> Element {
             && add_sheet_interval.read().is_some()
     };
 
-    let mut add_monitor_action = use_action(handler::add_monitor);
+    let mut add_once_monitor_action = use_action(handler::add_once_monitor);
 
     let mut add_sheet_msg = use_signal(|| Option::<(String, bool)>::None);
 
@@ -55,7 +55,7 @@ pub fn App() -> Element {
     };
 
     use_effect(move || {
-        let Some(res) = add_monitor_action.value() else {
+        let Some(res) = add_once_monitor_action.value() else {
             return;
         };
 
@@ -301,7 +301,7 @@ pub fn App() -> Element {
                                 return;
                             }
 
-                            add_monitor_action.call(symbol, interval, key);
+                            add_once_monitor_action.call(symbol, interval, key);
                         },
                         "提交"
                     }

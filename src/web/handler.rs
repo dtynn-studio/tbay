@@ -36,13 +36,13 @@ pub async fn get_pairs() -> Result<(Vec<&'static str>, Vec<Duration>)> {
 }
 
 #[server(ctx: Extension<AppCtx>)]
-pub async fn add_monitor(
+pub async fn add_once_monitor(
     symbol: String,
     interval: Duration,
     key: String,
 ) -> Result<bool> {
     let (resp_tx, resp_rx) = oneshot::channel();
-    let req = Request::Monitor(symbol, interval, key, resp_tx);
+    let req = Request::OnceMonitor(symbol, interval, key, resp_tx);
     ctx.req_tx.send(req).context("send req via chan")?;
     let res = resp_rx.await.context("recv resp from chan")?;
     res.map_err(CapturedError::msg)
