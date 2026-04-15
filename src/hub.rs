@@ -82,6 +82,7 @@ impl Default for Hub {
         hub.register_monitor_builder(monitor::shadow::ShadowBuilder);
         hub.register_monitor_builder(monitor::pdiff::DiffBuilder);
         hub.register_monitor_builder(monitor::fbq::FBQBuilder);
+        hub.register_monitor_builder(monitor::reach::ReachBuilder);
 
         hub
     }

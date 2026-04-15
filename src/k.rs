@@ -90,6 +90,10 @@ impl PriceBar {
     pub fn extremum(&self, position: bool) -> Decimal {
         if position { self.high } else { self.low }
     }
+
+    pub fn contains(&self, target: Decimal) -> bool {
+        self.low <= target && self.high >= target
+    }
 }
 
 #[derive(Debug, Clone, Copy)]

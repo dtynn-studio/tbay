@@ -8,6 +8,7 @@ pub mod hold;
 pub mod macd;
 pub mod pdiff;
 pub mod rate;
+pub mod reach;
 pub mod read;
 pub mod shadow;
 pub mod touch;
