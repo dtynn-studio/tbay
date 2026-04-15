@@ -158,4 +158,8 @@ impl Monitor for Bb {
     fn terminated(&self) -> bool {
         false
     }
+
+    fn is_once(&self) -> bool {
+        false
+    }
 }

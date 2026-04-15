@@ -362,4 +362,8 @@ impl Monitor for FBQ {
     fn terminated(&self) -> bool {
         false
     }
+
+    fn is_once(&self) -> bool {
+        false
+    }
 }

@@ -301,4 +301,8 @@ impl Monitor for Touch {
     fn terminated(&self) -> bool {
         false
     }
+
+    fn is_once(&self) -> bool {
+        false
+    }
 }
