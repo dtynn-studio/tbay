@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, collections::VecDeque};
 
 use crossterm::style::Stylize;
 use scanf::sscanf;
@@ -11,6 +11,38 @@ use crate::{
     monitor::{Msg, alert::AlertManager},
     prelude::*,
 };
+
+#[derive(Clone)]
+struct TimeTicks {
+    ts: VecDeque<OffsetDateTime>,
+    cap: usize,
+}
+
+impl TimeTicks {
+    fn new(cap: usize) -> Self {
+        Self {
+            ts: Default::default(),
+            cap,
+        }
+    }
+
+    fn add(&mut self, t: OffsetDateTime) -> bool {
+        if self.ts.back() == Some(&t) {
+            return false;
+        }
+
+        if self.ts.len() >= self.cap {
+            self.ts.pop_front();
+        }
+
+        self.ts.push_back(t);
+        true
+    }
+
+    fn is_recent(&self, t: OffsetDateTime) -> bool {
+        self.ts.iter().any(|pt| pt == &t)
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct TouchArgs {
@@ -119,7 +151,8 @@ impl Args for TouchArgs {
             prev_touched: None,
             state: Default::default(),
             alerts: Default::default(),
-            temp_t: None,
+            prev_alert_time: None,
+            ticks: TimeTicks::new(2),
         })
     }
 }
@@ -134,7 +167,8 @@ pub struct Touch {
     prev_touched: Option<bool>,
     state: State,
     alerts: AlertManager,
-    temp_t: Option<OffsetDateTime>,
+    prev_alert_time: Option<OffsetDateTime>,
+    ticks: TimeTicks,
 }
 
 impl Touch {
@@ -230,25 +264,27 @@ impl Monitor for Touch {
     }
 
     fn apply(&mut self, kctx: &KCtx) {
-        let checked =
-            self.checker.as_ref().map(|c| c.check(kctx)).unwrap_or(true);
+        let t = kctx.info.raw.time_begin;
+        self.ticks.add(t);
 
         if kctx.info.raw.finalized {
             self.state.temp.take();
-            self.state.perm =
-                self.update(kctx).map(|msg| (kctx.info.raw.time_begin, msg));
+            self.state.perm = self.update(kctx).map(|msg| (t, msg));
         } else {
-            let prev_temp_t = self.temp_t.replace(kctx.info.raw.time_begin);
-            if prev_temp_t != self.temp_t || self.state.temp.is_none() {
-                self.state.temp =
-                    self.calc(kctx).map(|msg| (kctx.info.raw.time_begin, msg));
-
-                if let Some((t, msg)) = self.state.temp.as_ref().cloned()
-                    && checked
-                {
-                    self.alerts.add(t, msg);
-                }
+            let msg_opt = self.calc(kctx);
+            // 有新状态，力度确认，且上一个告警没有发生在近期
+            if let Some(msg) = msg_opt.as_ref()
+                && self.checker.as_ref().map(|c| c.check(kctx)).unwrap_or(true)
+                && !self
+                    .prev_alert_time
+                    .map(|pat| self.ticks.is_recent(pat))
+                    .unwrap_or(false)
+            {
+                self.prev_alert_time.replace(t);
+                self.alerts.add(t, msg.clone());
             }
+
+            self.state.temp = msg_opt.map(|m| (t, m));
         }
     }
 
