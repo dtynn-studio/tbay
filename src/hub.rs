@@ -442,6 +442,7 @@ impl Hub {
             indicator.ok_or_else(|| raw_key.unexpected("indicator key"))?;
 
         let key = indicator.key();
+
         if self.has_indicator(symbol, interval, key) {
             return Ok(false);
         }
@@ -500,7 +501,9 @@ impl Hub {
         let monitor =
             monitor.ok_or_else(|| raw_key.unexpected("monitor key"))?;
 
-        if self.has_monitor(symbol, interval, raw_key) {
+        let key = monitor.key();
+
+        if self.has_monitor(symbol, interval, key) {
             return Ok(false);
         }
 
@@ -508,8 +511,6 @@ impl Hub {
         for dep in deps {
             self.register_indicator(symbol, interval, dep)?;
         }
-
-        let key = monitor.key();
 
         let slots =
             match self.items.iter_mut().find(|item| item.symbol == symbol) {
