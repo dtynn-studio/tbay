@@ -144,7 +144,7 @@ impl Read {
             let rounded = val.round_dp(2);
 
             if !normal_vals.is_empty() {
-                normal_vals.push('|');
+                normal_vals.push_str(" | ");
                 tty_vals.push('|');
             }
 

@@ -74,6 +74,10 @@ pub enum Error {
         source: std::io::Error,
     },
 
+    Network {
+        source: std::io::Error,
+    },
+
     DingTalk {
         source: dingtalk_sdk::Error,
     },

@@ -25,11 +25,13 @@ impl FromStr for ShadowArgs {
         let mut threshold = 0.0f64;
         let mut full_thres = 0.0f64;
 
-        if sscanf!(s, "shadow:{threshold},{full_thres}").is_err() {
-            sscanf!(s, "shadow:{threshold}").with_context(|_| ParseCtx {
-                raw: s.to_owned(),
-                usage: Cow::from("parse shadow args"),
-            })?;
+        if sscanf!(s, "shadow:{threshold}").is_err() {
+            sscanf!(s, "shadow:{threshold},{full_thres}").with_context(
+                |_| ParseCtx {
+                    raw: s.to_owned(),
+                    usage: Cow::from("parse shadow args"),
+                },
+            )?;
         }
 
         Ok(Self {

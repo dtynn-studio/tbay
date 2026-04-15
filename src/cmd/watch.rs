@@ -9,7 +9,7 @@ use time::format_description::well_known::{
         TimePrecision,
     },
 };
-use tokio::{signal, time::interval};
+use tokio::{signal, sync::mpsc, time::interval};
 use tracing::{debug, error, info, trace, warn_span};
 
 use crate::{
@@ -18,9 +18,10 @@ use crate::{
         Event,
         binance::client::{BnClient, Config, WebsocketControl},
     },
-    hub::Hub,
+    hub::{Hub, line_indent},
     prelude::*,
     util::term::clean_up_rows,
+    web::serve::{Request, serve},
 };
 
 const TIME_CFG: EncodedConfig = Iso8601Config::DEFAULT
@@ -49,14 +50,17 @@ pub struct WatchArgs {
     #[arg(from_global)]
     pub proxy: Option<String>,
 
-    #[arg(long, default_value_t = Duration::from(std::time::Duration::from_secs(30)))]
+    #[arg(long, default_value_t = Duration::from(std::time::Duration::from_secs(10)))]
     pub watch: Duration,
 
     #[arg(long, default_value_t = Duration::from(std::time::Duration::from_secs(600)))]
     pub reads: Duration,
 
     #[arg(long, default_value_t = false)]
-    pub disable_notify_reads: bool,
+    pub enable_notify_reads: bool,
+
+    #[arg(long, default_value_t = false)]
+    pub enable_server: bool,
 }
 
 impl WatchArgs {
@@ -71,14 +75,21 @@ impl WatchArgs {
         let mut hub = Hub::default();
 
         info!(tty = is_tty, "setup hub");
-        hub.apply_config(cfg, is_tty)?;
+        hub.apply_config(cfg)?;
 
         let targets = hub.targets();
         info!(?targets, "collected");
+        hub.show_monitors();
 
         if self.dry {
             info!("dry run, stopped");
             return Ok(());
+        }
+
+        let (req_tx, mut req_rx) = mpsc::unbounded_channel();
+        if self.enable_server {
+            info!("start server");
+            tokio::spawn(async { serve(req_tx).await });
         }
 
         let client = BnClient::new(Config {
@@ -105,12 +116,13 @@ impl WatchArgs {
 
         let (mut stream, stopper) = client.subscribe_klines(&targets).await?;
         let mut watch_period = interval(self.watch.into());
-        let mut read_period = interval(self.reads.into());
+        let mut reads_period = interval(self.reads.into());
 
         info!(watch = %self.watch, reads = %self.reads, "loop start");
 
         let mut state_lines = 0usize;
         let mut first_watch_tick = true;
+        let mut lines = Vec::new();
 
         loop {
             tokio::select! {
@@ -137,6 +149,31 @@ impl WatchArgs {
                     }
                 },
 
+                req = req_rx.recv() => {
+                    let Some(req) = req else {
+                        break;
+                    };
+
+                    match req {
+                        Request::States(load_states, resp_tx) => {
+                            let mut state_lines = Vec::new();
+                            collect_now_lines(&mut state_lines);
+                            collect_latest_price_lines(&mut state_lines, &latest_price, false);
+                            if load_states {
+                                hub.collect_state_msgs(&mut state_lines, false);
+                            } else {
+                                hub.collect_read_msgs(&mut state_lines, false);
+                            }
+                            _ = resp_tx.send(state_lines);
+                        },
+
+                        Request::Monitor(symbol, d, key, resp_tx) => {
+                            let res = hub.register_monitor(&symbol, d.into(), &key);
+                            _ = resp_tx.send(res.map_err(|e| e.to_string()));
+                        },
+                    };
+                }
+
                 _ = watch_period.tick() => {
                     let is_first = std::mem::replace(&mut first_watch_tick, false);
                     trace!("watch period tick");
@@ -145,32 +182,22 @@ impl WatchArgs {
                         _ = clean_up_rows(&mut sout, state_lines as u16);
                     }
 
-                    state_lines = 0;
 
-                    if let Ok(t) = OffsetDateTime::now_local() && let Ok(f) = t.format(&TIME_FMT) {
-                        println!("TIME: {f}");
-                        state_lines += 1;
-                    }
+                    collect_now_lines(&mut lines);
+                    collect_latest_price_lines(&mut lines, &latest_price, is_tty);
+                    hub.collect_state_msgs(&mut lines, is_tty);
+                    hub.collect_read_msgs(&mut lines, is_tty);
+                    hub.collect_alert_msgs(&mut lines, is_tty, is_first);
 
-                    let latest_price_count = latest_price.len();
-                    if latest_price_count > 0 {
-                        println!("LATEST PRICE:");
-                        for (s, p) in latest_price.iter() {
-                            println!("\t{s}: {}", p.round_dp(2));
-                        }
-
-                        state_lines += latest_price_count + 1;
-                    }
-
-                    state_lines += hub.print_state_msgs(true, true);
-                    state_lines += hub.print_read_msgs();
-                    state_lines += hub.show_alerts(is_first);
+                    println!("{}", lines.join("\n"));
+                    state_lines = lines.len();
+                    lines.clear();
                 }
 
-                _ = read_period.tick() => {
-                    trace!("read period tick");
+                _ = reads_period.tick() => {
+                    trace!("reads period tick");
 
-                    if !self.disable_notify_reads {
+                    if self.enable_notify_reads {
                         hub.notify_read_msgs(&latest_price);
                     }
                 }
@@ -186,5 +213,29 @@ impl WatchArgs {
         _ = stopper.send(WebsocketControl::Disconnect);
 
         Ok(())
+    }
+}
+
+fn collect_now_lines(lines: &mut Vec<String>) {
+    if let Ok(t) = OffsetDateTime::now_local()
+        && let Ok(f) = t.format(&TIME_FMT)
+    {
+        lines.push(format!("TIME: {f}"));
+    }
+}
+
+fn collect_latest_price_lines(
+    lines: &mut Vec<String>,
+    latest_prices: &BTreeMap<String, Decimal>,
+    is_tty: bool,
+) {
+    if latest_prices.is_empty() {
+        return;
+    }
+
+    let indent = line_indent(is_tty);
+    lines.push("LATEST PRICE:".to_owned());
+    for (s, p) in latest_prices.iter() {
+        lines.push(format!("{indent}{s}: {}", p.round_dp(2)));
     }
 }

@@ -30,9 +30,9 @@ impl Threshold {
         }
 
         let ratio = next / ma;
-        if ratio >= self.strong {
+        if ratio > self.strong {
             Some((next, ratio, true))
-        } else if ratio <= self.weak {
+        } else if ratio < self.weak {
             Some((next, ratio, false))
         } else {
             None
@@ -43,6 +43,7 @@ impl Threshold {
 #[derive(Debug, Clone, Copy)]
 pub struct FBQArgs {
     period: usize,
+    alert_threshold: usize,
     full: (f64, f64),
     body: (f64, f64),
     qty: (f64, f64),
@@ -53,6 +54,7 @@ impl FromStr for FBQArgs {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut period = 0usize;
+        let mut alert_threshold = 0usize;
         let mut fw = 0.0f64;
         let mut fs = 0.0f64;
         let mut bw = 0.0f64;
@@ -60,15 +62,18 @@ impl FromStr for FBQArgs {
         let mut qw = 0.0f64;
         let mut qs = 0.0f64;
 
-        sscanf!(s, "fbq:{period},{fw}/{fs},{bw}/{bs},{qw}/{qs}").with_context(
-            |_| ParseCtx {
-                raw: s.to_owned(),
-                usage: Cow::from("parse fbq args"),
-            },
-        )?;
+        sscanf!(
+            s,
+            "fbq:{period},{alert_threshold},{fw}/{fs},{bw}/{bs},{qw}/{qs}"
+        )
+        .with_context(|_| ParseCtx {
+            raw: s.to_owned(),
+            usage: Cow::from("parse fbq args"),
+        })?;
 
         Ok(Self {
             period,
+            alert_threshold,
             full: (fw, fs),
             body: (bw, bs),
             qty: (qw, qs),
@@ -77,22 +82,24 @@ impl FromStr for FBQArgs {
 }
 
 impl Args for FBQArgs {
-    type Type = (usize, (f64, f64), (f64, f64), (f64, f64));
+    type Type = (usize, usize, (f64, f64), (f64, f64), (f64, f64));
     type Target = FBQ;
 
     fn new(args: Self::Type) -> Self {
         Self {
             period: args.0,
-            full: args.1,
-            body: args.2,
-            qty: args.3,
+            alert_threshold: args.1,
+            full: args.2,
+            body: args.3,
+            qty: args.4,
         }
     }
 
     fn key(&self) -> String {
         format!(
-            "fbg:{},{}/{},{}/{},{}/{}",
+            "fbq:{},{},{}/{},{}/{},{}/{}",
             self.period,
+            self.alert_threshold,
             self.full.0,
             self.full.1,
             self.body.0,
@@ -142,8 +149,11 @@ impl Args for FBQArgs {
                 .required("qty strong threshold")?,
         };
 
+        let key = self.key();
+
         Ok(FBQ {
-            key: self.key(),
+            args: self,
+            key,
 
             full_thres,
             body_thres,
@@ -164,6 +174,7 @@ impl Args for FBQArgs {
 impl_builder!(FBQBuilder: FBQArgs => FBQ);
 
 pub struct FBQ {
+    args: FBQArgs,
     key: String,
 
     full_thres: Threshold,
@@ -186,7 +197,7 @@ impl FBQ {
         trend: Trend,
         strengths: [Option<(Decimal, Decimal, bool)>; 3],
         colors: ColorTable,
-    ) -> Option<(Msg, u8, u8)> {
+    ) -> Option<(Msg, usize, u8, u8)> {
         const SHORTS: [(&str, bool); 3] =
             [("F", true), ("B", true), ("Q", false)];
         let items = strengths
@@ -198,10 +209,7 @@ impl FBQ {
             })
             .collect::<Vec<_>>();
 
-        if items.is_empty() {
-            return None;
-        }
-
+        let event_count = items.len();
         let mut normal = String::new();
         let mut tty = String::new();
 
@@ -249,7 +257,7 @@ impl FBQ {
             );
         }
 
-        Some((Msg { normal, tty }, strong_flags, weak_flags))
+        Some((Msg { normal, tty }, event_count, strong_flags, weak_flags))
     }
 }
 
@@ -291,7 +299,7 @@ impl Monitor for FBQ {
 
         self.state.temp.take();
 
-        if let Some((msg, strong_flags, weak_flags)) = msg_opt {
+        if let Some((msg, event_count, strong_flags, weak_flags)) = msg_opt {
             // let alert_flags = (t, strong_flags, weak_flags);
             // if self.prev_temp_alert_strong_flags != Some(alert_flags)
             //     && (kctx.info.raw.finalized || strong_flags > 0)
@@ -300,12 +308,14 @@ impl Monitor for FBQ {
             //     self.alerts.add(t, msg.clone());
             // }
 
+            let allow_alert = event_count >= self.args.alert_threshold;
             let mut alert_msg = None;
             // K 线已经终结
             if kctx.info.raw.finalized {
                 // 信息flag和之前不一样，则需要告警
-                if self.prev_temp_alert_strong_flags
-                    != Some((t, strong_flags, weak_flags))
+                if allow_alert
+                    && self.prev_temp_alert_strong_flags
+                        != Some((t, strong_flags, weak_flags))
                 {
                     alert_msg.replace(msg.clone());
                 }
@@ -319,7 +329,7 @@ impl Monitor for FBQ {
                     .prev_temp_alert_strong_flags
                     .map(|(t, sf, _wf)| (t, sf & TEMP_FLAGS_MASK));
 
-                if strong_flags > 0 {
+                if allow_alert && strong_flags > 0 {
                     if prev_masked_flags != Some((t, masked_flags)) {
                         alert_msg.replace(msg.clone());
                     }
