@@ -118,9 +118,9 @@ impl Reach {
             ("↘", kctx.colors.down)
         };
 
-        let normal = format!("$:{price_rounded}{dir_flag}{target_rounded}");
+        let normal = format!("🚀$:{price_rounded}{dir_flag}{target_rounded}");
         let tty = format!(
-            "$:{price_rounded}{}{target_rounded}",
+            "🚀$:{price_rounded}{}{target_rounded}",
             dir_flag.with(dir_color)
         );
 
