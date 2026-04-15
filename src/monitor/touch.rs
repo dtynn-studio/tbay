@@ -61,17 +61,15 @@ impl FromStr for TouchArgs {
         let mut ma = 0usize;
         let mut full_threshold = 0.0;
 
-        if sscanf!(
-            s,
-            "touch:{val_kind_str},{calc_kind_str},{ma},{full_threshold}"
-        )
-        .is_err()
-        {
-            sscanf!(s, "touch:{val_kind_str},{calc_kind_str},{ma}")
-                .with_context(|_| ParseCtx {
-                    raw: s.to_owned(),
-                    usage: Cow::from("parse touch args"),
-                })?;
+        if sscanf!(s, "touch:{val_kind_str},{calc_kind_str},{ma}").is_err() {
+            sscanf!(
+                s,
+                "touch:{val_kind_str},{calc_kind_str},{ma},{full_threshold}"
+            )
+            .with_context(|_| ParseCtx {
+                raw: s.to_owned(),
+                usage: Cow::from("parse touch args"),
+            })?;
         }
 
         let val_kind = val_kind_str.parse()?;
@@ -132,13 +130,17 @@ impl Args for TouchArgs {
         let checker = if self.full_threshold > 0.0 {
             let thres = Decimal::from_f64(self.full_threshold)
                 .required("full threshold")?;
-            let key = BaseExtractorArgs::new((
+            let check_key = BaseExtractorArgs::new((
                 ExtractKind::PriceFull,
                 CalcKind::Ema,
                 20,
             ))
             .key();
-            Some(StrengthChecker::new(ExtractKind::PriceFull, key, thres))
+            Some(StrengthChecker::new(
+                ExtractKind::PriceFull,
+                check_key,
+                thres,
+            ))
         } else {
             None
         };
