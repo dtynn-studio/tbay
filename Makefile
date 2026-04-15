@@ -14,4 +14,5 @@ lint:
 	cargo clippy --all
 
 web:
+	rm -rf ./target/dx/tbay/release/*
 	dx build --release
