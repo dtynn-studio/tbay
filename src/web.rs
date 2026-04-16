@@ -18,6 +18,9 @@ use components::{
     },
 };
 
+const REACH_DIRECTIONS: [(Option<bool>, &str); 3] =
+    [(None, "无"), (Some(true), "上穿"), (Some(false), "下穿")];
+
 #[component]
 pub fn App() -> Element {
     let mut load_states = use_signal(|| true);
@@ -36,12 +39,15 @@ pub fn App() -> Element {
     // add monitor
     let mut add_sheet_symbol = use_signal(|| "".to_owned());
     let mut add_sheet_interval = use_signal(|| Option::<Duration>::None);
-    let mut add_sheet_key = use_signal(|| "".to_owned());
+    // let mut add_sheet_key = use_signal(|| "".to_owned());
+    let mut add_sheet_reach_dir = use_signal(|| REACH_DIRECTIONS[0]);
+    let mut add_sheet_reach_target = use_signal(|| "".to_owned());
 
     let available_for_add_sheet = || {
         !add_sheet_symbol.read().trim().is_empty()
-            && !add_sheet_key.read().trim().is_empty()
+            // && !add_sheet_key.read().trim().is_empty()
             && add_sheet_interval.read().is_some()
+            && !add_sheet_reach_target.read().trim().is_empty()
     };
 
     let mut add_once_monitor_action = use_action(handler::add_once_monitor);
@@ -51,7 +57,9 @@ pub fn App() -> Element {
     let mut reset_add_sheet_infos = move || {
         add_sheet_symbol.set("".to_owned());
         add_sheet_interval.take();
-        add_sheet_key.set("".to_owned());
+        // add_sheet_key.set("".to_owned());
+        add_sheet_reach_dir.set(REACH_DIRECTIONS[0]);
+        add_sheet_reach_target.set("".to_owned());
     };
 
     use_effect(move || {
@@ -255,16 +263,49 @@ pub fn App() -> Element {
                         }
                     }
 
+                    p {
+                        class: "flex-1 w-full px-3 pb-2",
+                        "价格穿越"
+                    }
+
+                    DropdownMenu {
+                        class: "dropdown-menu flex-1 px-3 pb-2 w-full",
+                        default_open: false,
+
+                        DropdownMenuTrigger {
+                            class: "dropdown-menu-trigger w-full",
+
+                            {add_sheet_reach_dir.read().1}
+                        }
+
+                        DropdownMenuContent {
+                            class: "dropdown-menu-content",
+
+                            for (i, dir) in REACH_DIRECTIONS.into_iter().enumerate() {
+                                DropdownMenuItem::<(Option<bool>, &'static str)> {
+                                    class: "dropdown-menu-item",
+                                    value: dir,
+                                    index: i,
+                                    on_select: move |value: (Option<bool>, &'static str)| {
+                                        add_sheet_msg.set(None);
+                                        add_sheet_reach_dir.set(value);
+                                    },
+                                    {dir.1}
+                                }
+                            }
+                        }
+                    }
+
                     div {
                         class: "flex-1 w-full px-3 pb-2",
                         input {
                             class: "w-full px-1 h-10 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500",
-                            value: "{add_sheet_key}",
+                            value: "{add_sheet_reach_target}",
                             oninput: move |evt| {
                                 add_sheet_msg.set(None);
-                                add_sheet_key.set(evt.value());
+                                add_sheet_reach_target.set(evt.value());
                             },
-                            placeholder: "Monitor Key",
+                            placeholder: "目标价格",
                         }
                     }
 
@@ -296,10 +337,18 @@ pub fn App() -> Element {
                                 return;
                             }
 
-                            let key = add_sheet_key.read().trim().to_owned();
-                            if key.is_empty() {
+                            let reach_target = add_sheet_reach_target.read().trim().to_owned();
+                            if reach_target.is_empty() {
                                 return;
                             }
+
+                            let dir_flag = match add_sheet_reach_dir.read().0 {
+                                Some(true) => ",up",
+                                Some(false) => ",down",
+                                None => ""
+                            };
+
+                            let key = format!("reach:{reach_target}{dir_flag}");
 
                             add_once_monitor_action.call(symbol, interval, key);
                         },
