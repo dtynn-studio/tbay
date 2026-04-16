@@ -57,6 +57,9 @@ pub struct WatchArgs {
     pub reads: Duration,
 
     #[arg(long, default_value_t = false)]
+    pub enable_state_reads: bool,
+
+    #[arg(long, default_value_t = false)]
     pub enable_notify_reads: bool,
 
     #[arg(long, default_value_t = false)]
@@ -167,8 +170,8 @@ impl WatchArgs {
                             _ = resp_tx.send(state_lines);
                         },
 
-                        Request::Monitor(symbol, d, key, resp_tx) => {
-                            let res = hub.register_monitor(&symbol, d.into(), &key);
+                        Request::OnceMonitor(symbol, d, key, resp_tx) => {
+                            let res = hub.register_monitor(&symbol, d.into(), &key, true);
                             _ = resp_tx.send(res.map_err(|e| e.to_string()));
                         },
                     };
@@ -186,12 +189,16 @@ impl WatchArgs {
                     collect_now_lines(&mut lines);
                     collect_latest_price_lines(&mut lines, &latest_price, is_tty);
                     hub.collect_state_msgs(&mut lines, is_tty);
-                    hub.collect_read_msgs(&mut lines, is_tty);
+                    if self.enable_state_reads {
+                        hub.collect_read_msgs(&mut lines, is_tty);
+                    }
                     hub.collect_alert_msgs(&mut lines, is_tty, is_first);
 
                     println!("{}", lines.join("\n"));
                     state_lines = lines.len();
                     lines.clear();
+
+                    hub.clear_terminated_monitors();
                 }
 
                 _ = reads_period.tick() => {

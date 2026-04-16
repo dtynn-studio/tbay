@@ -198,4 +198,8 @@ impl Monitor for Shadow {
     fn terminated(&self) -> bool {
         false
     }
+
+    fn is_once(&self) -> bool {
+        false
+    }
 }

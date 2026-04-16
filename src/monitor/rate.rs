@@ -305,4 +305,8 @@ impl Monitor for Rate {
     fn terminated(&self) -> bool {
         false
     }
+
+    fn is_once(&self) -> bool {
+        false
+    }
 }

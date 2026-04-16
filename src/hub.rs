@@ -82,6 +82,7 @@ impl Default for Hub {
         hub.register_monitor_builder(monitor::shadow::ShadowBuilder);
         hub.register_monitor_builder(monitor::pdiff::DiffBuilder);
         hub.register_monitor_builder(monitor::fbq::FBQBuilder);
+        hub.register_monitor_builder(monitor::reach::ReachBuilder);
 
         hub
     }
@@ -371,6 +372,14 @@ impl Hub {
         }
     }
 
+    pub fn clear_terminated_monitors(&mut self) {
+        for item in self.items.iter_mut() {
+            for monitors in item.monitors.values_mut() {
+                monitors.retain(|m| !m.terminated());
+            }
+        }
+    }
+
     fn has_indicator(
         &self,
         symbol: &str,
@@ -487,6 +496,7 @@ impl Hub {
         symbol: &str,
         interval: Duration,
         raw_key: &str,
+        once_only: bool,
     ) -> Result<bool> {
         let _span = warn_span!("monitor", symbol, ?interval).entered();
 
@@ -500,6 +510,11 @@ impl Hub {
 
         let monitor =
             monitor.ok_or_else(|| raw_key.unexpected("monitor key"))?;
+
+        let is_once = monitor.is_once();
+        if once_only && !is_once {
+            return Err(is_once.unexpected("for once_only"));
+        }
 
         let key = monitor.key();
 
@@ -663,7 +678,7 @@ impl Hub {
         cfg: &Interval,
     ) -> Result<()> {
         for m in cfg.monitors.iter() {
-            self.register_monitor(pair, interval, m)?;
+            self.register_monitor(pair, interval, m, false)?;
         }
 
         self.register_reads(pair, interval, &cfg.reads)?;

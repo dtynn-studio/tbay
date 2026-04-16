@@ -22,7 +22,7 @@ pub struct AppCtx {
 
 pub enum Request {
     States(bool, oneshot::Sender<Vec<String>>),
-    Monitor(
+    OnceMonitor(
         String,
         Duration,
         String,

@@ -8,6 +8,7 @@ pub mod hold;
 pub mod macd;
 pub mod pdiff;
 pub mod rate;
+pub mod reach;
 pub mod read;
 pub mod shadow;
 pub mod touch;
@@ -33,6 +34,8 @@ pub trait Monitor {
     fn state(&self) -> &State;
     fn take_alerts(&mut self) -> Vec<(OffsetDateTime, Msg)>;
     fn terminated(&self) -> bool;
+
+    fn is_once(&self) -> bool;
 }
 
 pub struct BuilderAny<B: Builder> {
