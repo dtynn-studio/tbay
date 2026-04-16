@@ -158,10 +158,7 @@ pub fn App() -> Element {
 
                 button {
                     onclick: move |_| {
-                        let is_states = *load_states.read();
-                        if !is_states {
-                            *load_states.write() = true;
-                        }
+                        *load_states.write() = true;
                     },
                     class: "flex-1 text-center text-gray-700",
                     "状态"
@@ -169,10 +166,7 @@ pub fn App() -> Element {
 
                 button {
                     onclick: move |_| {
-                        let is_states = *load_states.read();
-                        if is_states {
-                            *load_states.write() = false;
-                        }
+                        *load_states.write() = false;
                     },
                     class: "flex-1 text-center text-gray-700",
                     "均线"
