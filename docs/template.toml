@@ -28,11 +28,16 @@ monitors = [
     "cross:close,ema,5,60",
     "cross:close,ema,20,80",
     "cross:close,ema,20,240",
+    "cross:close,ema,80,320",
 
     "hold:close,ema,20,3",
     "hold:close,ema,20,8",
+    "hold:close,ema,80,3",
+    "hold:close,ema,80,8",
     "hold:close,ema,200,3",
     "hold:close,ema,200,8",
+    "hold:close,ema,320,3",
+    "hold:close,ema,320,8",
 
     "fbq:20,2,0.2/1.8,0.0/1.8,0.2/1.8",
 
