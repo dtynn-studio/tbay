@@ -209,6 +209,10 @@ impl FBQ {
             })
             .collect::<Vec<_>>();
 
+        if items.is_empty() {
+            return None;
+        }
+
         let event_count = items.len();
         let mut normal = String::new();
         let mut tty = String::new();
