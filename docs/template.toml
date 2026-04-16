@@ -25,21 +25,18 @@ reads = [5, 20, 60, 80, 240]
 [[pairs.intervals]]
 name = "3m"
 monitors = [
-    "touch:close,ema,20,1.0",
-    "touch:close,ema,200,0.6",
-
     "cross:close,ema,5,60",
     "cross:close,ema,20,80",
     "cross:close,ema,20,240",
 
-    "hold:close,ema,20,5",
-    "hold:close,ema,200,5",
+    "hold:close,ema,20,3",
+    "hold:close,ema,20,8",
+    "hold:close,ema,200,3",
+    "hold:close,ema,200,8",
 
     "fbq:20,2,0.2/1.8,0.0/1.8,0.2/1.8",
 
-    "macd:12,26,9",
-
-    "shadow:0.5,0.4",
+    "shadow:0.7,0.8",
 ]
 reads = [5, 20, 60, 80, 240]
 no_wildcard = true
@@ -59,8 +56,8 @@ name = "1d"
 [[pairs]]
 name = "ethusdt"
 
-[[pairs]]
-name = "btcusdt"
+# [[pairs]]
+# name = "btcusdt"
 
 [[notify]]
 type = "Cmd"
