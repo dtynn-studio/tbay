@@ -174,6 +174,11 @@ impl WatchArgs {
                             let res = hub.register_monitor(&symbol, d.into(), &key, true);
                             _ = resp_tx.send(res.map_err(|e| e.to_string()));
                         },
+
+                        Request::RemoveOnce(resp_tx) => {
+                            let count = hub.remove_once_monitors();
+                            _ = resp_tx.send(count);
+                        }
                     };
                 }
 

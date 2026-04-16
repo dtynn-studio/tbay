@@ -28,6 +28,7 @@ pub enum Request {
         String,
         oneshot::Sender<Result<bool, String>>,
     ),
+    RemoveOnce(oneshot::Sender<usize>),
 }
 
 pub async fn serve(req_tx: mpsc::UnboundedSender<Request>) -> Result<()> {
