@@ -380,6 +380,21 @@ impl Hub {
         }
     }
 
+    pub fn remove_once_monitors(&mut self) -> usize {
+        let mut removed = 0;
+        for item in self.items.iter_mut() {
+            for monitors in item.monitors.values_mut() {
+                let before = monitors.len();
+                monitors.retain(|m| !m.is_once());
+                let after = monitors.len();
+
+                removed += before - after;
+            }
+        }
+
+        removed
+    }
+
     fn has_indicator(
         &self,
         symbol: &str,
