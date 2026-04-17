@@ -64,6 +64,9 @@ pub struct WatchArgs {
 
     #[arg(long, default_value_t = false)]
     pub enable_server: bool,
+
+    #[arg(long, default_value_t = false)]
+    pub disable_states_output: bool,
 }
 
 impl WatchArgs {
@@ -199,8 +202,11 @@ impl WatchArgs {
                     }
                     hub.collect_alert_msgs(&mut lines, is_tty, is_first);
 
-                    println!("{}", lines.join("\n"));
-                    state_lines = lines.len();
+                    if !self.disable_states_output {
+                        println!("{}", lines.join("\n"));
+                        state_lines = lines.len();
+                    }
+
                     lines.clear();
 
                     hub.clear_terminated_monitors();
