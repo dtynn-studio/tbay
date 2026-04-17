@@ -3,7 +3,6 @@ name = "*"
 
 [[pairs.intervals]]
 monitors = [
-    "touch:close,ema,20,0.4",
     "touch:close,ema,200",
 
     "cross:close,ema,5,20",
@@ -48,15 +47,39 @@ no_wildcard = true
 
 [[pairs.intervals]]
 name = "15m"
+monitors = [
+    "touch:close,ema,20,0.5",
+]
 
 [[pairs.intervals]]
 name = "1h"
+monitors = [
+    "touch:close,ema,20",
+]
 
 [[pairs.intervals]]
 name = "4h"
+monitors = [
+    "touch:close,ema,20",
+]
 
 [[pairs.intervals]]
 name = "1d"
+monitors = [
+    "touch:close,ema,20",
+]
+
+[[pairs.intervals]]
+name = "3d"
+monitors = [
+    "touch:close,ema,20",
+]
+
+[[pairs.intervals]]
+name = "1w"
+monitors = [
+    "touch:close,ema,20",
+]
 
 [[pairs]]
 name = "ethusdt"
