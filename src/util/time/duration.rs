@@ -41,24 +41,25 @@ impl From<TBDuration> for humantime::Duration {
     }
 }
 
-fn item_plural(
-    f: &mut fmt::Formatter,
-    started: &mut bool,
-    name: &str,
-    value: u64,
-) -> fmt::Result {
-    if value > 0 {
-        if *started {
-            f.write_str(" ")?;
-        }
-        write!(f, "{}{}", value, name)?;
-        if value > 1 {
-            f.write_str("s")?;
-        }
-        *started = true;
-    }
-    Ok(())
-}
+// fn item_plural(
+//     f: &mut fmt::Formatter,
+//     started: &mut bool,
+//     name: &str,
+//     value: u64,
+// ) -> fmt::Result {
+//     if value > 0 {
+//         if *started {
+//             f.write_str(" ")?;
+//         }
+//         write!(f, "{}{}", value, name)?;
+//         // if value > 1 {
+//         //     f.write_str("s")?;
+//         // }
+//         *started = true;
+//     }
+//     Ok(())
+// }
+
 fn item(
     f: &mut fmt::Formatter,
     started: &mut bool,
@@ -90,6 +91,8 @@ impl fmt::Display for TBDuration {
         let months = ydays / 2_630_016; // 30.44d
         let mdays = ydays % 2_630_016;
         let days = mdays / 86400;
+        let weeks = days / 7;
+        let week_days = days % 7;
         let day_secs = mdays % 86400;
         let hours = day_secs / 3600;
         let minutes = day_secs % 3600 / 60;
@@ -100,9 +103,10 @@ impl fmt::Display for TBDuration {
         let nanosec = nanos % 1000;
 
         let started = &mut false;
-        item_plural(f, started, "y", years)?;
-        item_plural(f, started, "M", months)?;
-        item_plural(f, started, "d", days)?;
+        item(f, started, "y", years as _)?;
+        item(f, started, "M", months as _)?;
+        item(f, started, "w", weeks as _)?;
+        item(f, started, "d", week_days as _)?;
         item(f, started, "h", hours as u32)?;
         item(f, started, "m", minutes as u32)?;
         item(f, started, "s", seconds as u32)?;
