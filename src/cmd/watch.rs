@@ -224,7 +224,7 @@ impl WatchArgs {
                 }
 
                 _ = signal::ctrl_c() => {
-                    info!("sop signal captured");
+                    info!("stop signal captured");
                     break;
                 },
 
