@@ -134,6 +134,7 @@ impl WatchArgs {
             tokio::select! {
                 evt = stream.recv() => {
                     let Some(evt) = evt else {
+                        info!("event stream terminated");
                         break;
                     };
 
@@ -145,18 +146,20 @@ impl WatchArgs {
                         },
 
                         Event::Disconnect(reason) => {
-                            debug!(reason, "event stream disconnected");
+                            info!(reason, "event disconnected");
                             break;
                         },
 
                         Event::Broken(reason) => {
-                            debug!(reason, "event stream broken");
+                            info!(reason, "event broken");
+                            break
                         },
                     }
                 },
 
                 req = req_rx.recv() => {
                     let Some(req) = req else {
+                        info!("request stream terminated");
                         break;
                     };
 
@@ -221,7 +224,7 @@ impl WatchArgs {
                 }
 
                 _ = signal::ctrl_c() => {
-                    debug!("signal captured");
+                    info!("sop signal captured");
                     break;
                 },
 
