@@ -211,7 +211,7 @@ impl Hub {
 
                 for (t, msgs) in temp_combined {
                     temp_msgs.push(format!(
-                        "{indent}{}/{d}@{}: {}",
+                        "{indent}{}_{d}[{}] {}",
                         hstate.symbol,
                         compact_format(&t, d),
                         msgs.join("  ")
@@ -220,7 +220,7 @@ impl Hub {
 
                 for (t, msgs) in perm_combined {
                     perm_msgs.push(format!(
-                        "{indent}{}/{d}@{}: {}",
+                        "{indent}{}_{d}[{}] {}",
                         hstate.symbol,
                         compact_format(&t, d),
                         msgs.join("  ")
@@ -254,7 +254,7 @@ impl Hub {
                 let content = if is_tty { &msg.tty } else { &msg.normal };
 
                 read_msgs.push(format!(
-                    "{indent}{}/{d}@{}:{content}",
+                    "{indent}{}_{d}[{}] {content}",
                     item.symbol,
                     compact_format(t, *d),
                 ));
@@ -320,7 +320,7 @@ impl Hub {
 
                 for (t, amsgs) in normal_alerts {
                     normal_formatted_alerts.push(format!(
-                        "@{}:{}",
+                        "[{}] {}",
                         compact_format(&t, *d),
                         amsgs.join(" ")
                     ));
@@ -328,7 +328,7 @@ impl Hub {
 
                 if !normal_formatted_alerts.is_empty() {
                     normal_lines.push(format!(
-                        "{indent}{}/{d}: {}",
+                        "{indent}{}_{d}: {}",
                         item.symbol,
                         normal_formatted_alerts.join("  ")
                     ));
@@ -339,7 +339,7 @@ impl Hub {
 
                     for (t, amsgs) in tty_alerts {
                         tty_formatted_alerts.push(format!(
-                            "@{}:{}",
+                            "[{}] {}",
                             compact_format(&t, *d),
                             amsgs.join(" ")
                         ));
@@ -347,7 +347,7 @@ impl Hub {
 
                     if !tty_formatted_alerts.is_empty() {
                         print_lines.push(format!(
-                            "{indent}{}/{d}: {}",
+                            "{indent}{}_{d}: {}",
                             item.symbol,
                             tty_formatted_alerts.join("  ")
                         ));
