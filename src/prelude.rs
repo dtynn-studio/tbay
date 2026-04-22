@@ -9,6 +9,6 @@ pub use crate::{
     event::{DataSource, Event, SubscribeStopper, Target},
     indicator::{BuilderAny as IndicatorBuilderAny, Indicator},
     k::{KCtx, KInfo, KRaw, PriceBar},
-    monitor::{BuilderAny as MonitorBuilderAny, Monitor, State},
+    monitor::{BuilderAny as MonitorBuilderAny, Monitor, Msg, State},
     res::prelude::*,
 };
