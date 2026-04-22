@@ -125,9 +125,9 @@ impl Cross2 {
         let ma_val = kctx.get_val::<Decimal>(&self.base_ma_key).copied()?;
 
         let (dir_flag, dir_color) = if direction {
-            (format!("[↗]{}", self.args.slow), kctx.colors.up)
+            ("[↗]", kctx.colors.up)
         } else {
-            (format!("[↘]{}", self.args.slow), kctx.colors.down)
+            ("[↘]", kctx.colors.down)
         };
 
         let cross_point = cross_val.next.slow;
