@@ -5,10 +5,11 @@ name = "*"
 monitors = [
     "touch:close,ema,200",
 
-    "cross:close,ema,5,20",
     "cross:close,ema,5,60",
-    "cross:close,ema,20,80",
     "cross:close,ema,20,240",
+
+    "cross2:close,ema,5,20,60",
+    "cross2:close,ema,20,80,240",
 
     "hold:close,ema,20,4",
     "hold:close,ema,60,3",
@@ -26,18 +27,17 @@ reads = [5, 20, 60, 200]
 name = "3m"
 monitors = [
     "cross:close,ema,5,60",
-    "cross:close,ema,20,80",
     "cross:close,ema,20,240",
-    "cross:close,ema,80,320",
+
+    "cross2:close,ema,5,20,60",
+    "cross2:close,ema,20,80,240",
 
     "hold:close,ema,20,3",
     "hold:close,ema,20,8",
-    "hold:close,ema,80,3",
-    "hold:close,ema,80,8",
+    "hold:close,ema,60,3",
+    "hold:close,ema,60,8",
     "hold:close,ema,200,3",
     "hold:close,ema,200,8",
-    "hold:close,ema,320,3",
-    "hold:close,ema,320,8",
 
     "fbq:20,2,0.2/1.8,0.0/1.8,0.2/1.8",
 
@@ -82,11 +82,11 @@ monitors = [
     "touch:close,ema,20",
 ]
 
-[[pairs]]
-name = "ethusdt"
-
 # [[pairs]]
-# name = "btcusdt"
+# name = "ethusdt"
+
+[[pairs]]
+name = "btcusdt"
 
 [[notify]]
 type = "Cmd"
