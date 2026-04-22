@@ -33,18 +33,14 @@ impl FromStr for Cross2Args {
         let mut slow = 0usize;
         let mut base = 0usize;
 
-        if sscanf!(s, "cross2:{val_kind_str},{calc_kind_str},{fast},{slow}")
-            .is_err()
-        {
-            sscanf!(
-                s,
-                "cross2:{val_kind_str},{calc_kind_str},{fast},{slow},{base}"
-            )
-            .with_context(|_| ParseCtx {
-                raw: s.to_owned(),
-                usage: Cow::from("parse cross2 args"),
-            })?;
-        }
+        sscanf!(
+            s,
+            "cross2:{val_kind_str},{calc_kind_str},{fast},{slow},{base}"
+        )
+        .with_context(|_| ParseCtx {
+            raw: s.to_owned(),
+            usage: Cow::from("parse cross2 args"),
+        })?;
 
         let val_kind = val_kind_str.parse()?;
         let calc_kind = calc_kind_str.parse()?;
