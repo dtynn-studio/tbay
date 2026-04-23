@@ -116,6 +116,7 @@ impl Args for BurstArgs {
             weak_threshold,
             strong_threshold,
             prev: None,
+            prev_alert_t: None,
             state: Default::default(),
             alert: Default::default(),
         })
@@ -168,6 +169,7 @@ pub struct Burst {
     strong_threshold: Decimal,
 
     prev: Option<Effort>,
+    prev_alert_t: Option<OffsetDateTime>,
 
     state: State,
     alert: AlertManager,
@@ -351,18 +353,21 @@ impl Monitor for Burst {
     fn apply(&mut self, kctx: &KCtx) {
         let t = kctx.info.t();
 
-        let effort = if kctx.info.raw.finalized {
-            self.update(kctx)
+        let (allow_alert, effort) = if kctx.info.raw.finalized {
+            (self.alert_for_perm, self.update(kctx))
         } else {
-            self.calc(kctx)
+            (
+                !self.alert_for_perm && self.prev_alert_t != Some(t),
+                self.calc(kctx),
+            )
         };
 
-        let allow_alert = kctx.info.raw.finalized == self.alert_for_perm;
         if let Some(msg) = allow_alert.then_some(()).and_then(|_| {
             effort
                 .as_ref()
                 .and_then(|e| self.generate_msg(kctx, e, true))
         }) {
+            self.prev_alert_t.replace(t);
             self.alert.add(t, msg);
         }
 
