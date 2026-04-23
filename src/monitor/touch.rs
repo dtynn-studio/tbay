@@ -132,7 +132,7 @@ impl Args for TouchArgs {
                 .required("full threshold")?;
             let check_key = BaseExtractorArgs::new((
                 ExtractKind::PriceFull,
-                CalcKind::Ema,
+                CalcKind::Sma,
                 20,
             ))
             .key();
