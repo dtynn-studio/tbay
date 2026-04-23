@@ -94,6 +94,8 @@ impl Args for BurstArgs {
         };
         let key = self.key();
 
+        let min_height = Decimal::from_f64(0.01).required("min height")?;
+
         let shadow_weight =
             Decimal::from_f64(self.shadow_weight).required("shadow weight")?;
 
@@ -112,6 +114,7 @@ impl Args for BurstArgs {
             up_ma,
             down_ma,
             alert_for_perm,
+            min_height,
             shadow_weight,
             weak_threshold,
             strong_threshold,
@@ -164,6 +167,7 @@ pub struct Burst {
     up_ma: Sma,
     down_ma: Sma,
 
+    min_height: Decimal,
     shadow_weight: Decimal,
     weak_threshold: Decimal,
     strong_threshold: Decimal,
@@ -192,8 +196,9 @@ impl Burst {
             None => {}
         }
 
-        let up_effort = kctx.info.raw.quantity / up_height;
-        let down_effort = kctx.info.raw.quantity / down_height;
+        let up_effort = kctx.info.raw.quantity / up_height.max(self.min_height);
+        let down_effort =
+            kctx.info.raw.quantity / down_height.max(self.min_height);
 
         (down_effort, up_effort)
     }
