@@ -129,6 +129,7 @@ impl WatchArgs {
         let mut state_lines = 0usize;
         let mut first_watch_tick = true;
         let mut lines = Vec::new();
+        let mut ticks = 0usize;
 
         loop {
             tokio::select! {
@@ -140,6 +141,7 @@ impl WatchArgs {
 
                     match evt {
                         Event::K(k) => {
+                            ticks += 1;
                             let current = k.raw.price_close;
                             latest_price.insert(k.symbol.clone(), current);
                             hub.apply_k(k);
@@ -166,7 +168,7 @@ impl WatchArgs {
                     match req {
                         Request::States(load_states, resp_tx) => {
                             let mut state_lines = Vec::new();
-                            collect_now_lines(&mut state_lines);
+                            collect_now_lines(&mut state_lines, ticks);
                             collect_latest_price_lines(&mut state_lines, &latest_price, false);
                             if load_states {
                                 hub.collect_state_msgs(&mut state_lines, false);
@@ -197,7 +199,7 @@ impl WatchArgs {
                     }
 
 
-                    collect_now_lines(&mut lines);
+                    collect_now_lines(&mut lines, ticks);
                     collect_latest_price_lines(&mut lines, &latest_price, is_tty);
                     hub.collect_state_msgs(&mut lines, is_tty);
                     if self.enable_state_reads {
@@ -237,11 +239,11 @@ impl WatchArgs {
     }
 }
 
-fn collect_now_lines(lines: &mut Vec<String>) {
+fn collect_now_lines(lines: &mut Vec<String>, ticks: usize) {
     if let Ok(t) = OffsetDateTime::now_local()
         && let Ok(f) = t.format(&TIME_FMT)
     {
-        lines.push(format!("TIME: {f}"));
+        lines.push(format!("TIME: {f}; TICKS: {ticks}"));
     }
 }
 
