@@ -156,13 +156,13 @@ impl Burst {
             None => {}
         }
 
-        let up_effort = if up_height.is_sign_positive() {
+        let up_effort = if up_height > Decimal::ZERO {
             kctx.info.raw.quantity / up_height
         } else {
             Decimal::ZERO
         };
 
-        let down_effort = if down_height.is_sign_positive() {
+        let down_effort = if down_height > Decimal::ZERO {
             kctx.info.raw.quantity / down_height
         } else {
             Decimal::ZERO
@@ -196,13 +196,13 @@ impl Burst {
         (down_effort, down_ma): (Decimal, Decimal),
         (up_effort, up_ma): (Decimal, Decimal),
     ) -> Effort {
-        let down_effort_rate = if down_ma.is_sign_positive() {
+        let down_effort_rate = if down_ma > Decimal::ZERO {
             down_effort / down_ma
         } else {
             Decimal::ZERO
         };
 
-        let up_effort_rate = if up_ma.is_sign_positive() {
+        let up_effort_rate = if up_ma > Decimal::ZERO {
             up_effort / up_ma
         } else {
             Decimal::ZERO
@@ -289,9 +289,9 @@ impl Burst {
         }
 
         let (direction_flag, direction_color) = if direction {
-            ("[⬆]", kctx.colors.up)
+            ("[🚀⬆]", kctx.colors.up)
         } else {
-            ("[⬇]", kctx.colors.down)
+            ("[🚀⬇]", kctx.colors.down)
         };
 
         let rate = rate.round_dp(2);
