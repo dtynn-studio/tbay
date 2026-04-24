@@ -23,8 +23,6 @@ impl AlertManager {
     }
 }
 
-const TEMP_ALERT_GAP: Duration = Duration::from_secs(2);
-
 #[derive(Default)]
 pub struct TempAlertChecker {
     prev_t: Option<OffsetDateTime>,
@@ -41,8 +39,11 @@ impl TempAlertChecker {
             return false;
         };
 
+        let period = kctx.info.raw.time_end - t;
+        let check_duration = period / 3;
+
         let gap = kctx.info.raw.time_end - now;
-        if gap > TEMP_ALERT_GAP {
+        if gap >= check_duration {
             return false;
         }
 
