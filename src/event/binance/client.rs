@@ -23,8 +23,8 @@ use crate::{
 const FUTURES_MAINNET: &str = "https://fapi.binance.com";
 const FUTURES_TESTNET: &str = "https://testnet.binancefuture.com";
 
-const FUTURES_WS_MAINNET: &str = "wss://fstream.binance.com";
-const FUTURES_WS_TESTNET: &str = "wss://fstream.binancefuture.com";
+const FUTURES_WS_MAINNET: &str = "wss://fstream.binance.com/market";
+const FUTURES_WS_TESTNET: &str = "wss://fstream.binancefuture.com/market";
 
 pub struct Config {
     pub testnet: bool,
