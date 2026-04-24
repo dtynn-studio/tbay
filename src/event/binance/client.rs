@@ -10,7 +10,7 @@ use tokio::{
     select,
     sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel},
 };
-use tracing::trace;
+use tracing::{info, trace};
 
 use crate::{
     event::{Event, K},
@@ -453,8 +453,8 @@ fn continuous_kline_event_to_k(event: ContinuousKlineEvent) -> Result<K> {
 #[derive(Clone)]
 pub struct BnClient {
     client: Client,
-    api_base_url: &'static str,
-    ws_base_url: &'static str,
+    api_base_url: String,
+    ws_base_url: String,
 }
 
 impl BnClient {
@@ -467,11 +467,24 @@ impl BnClient {
 
         let client = builder.build()?;
 
+        let (api_endpoint_from_env, ws_endpoint_from_env) = (
+            std::env::var("BN_API_ENDPOINT"),
+            std::env::var("BN_WS_ENDPOINT"),
+        );
+
         let (api_base_url, ws_base_url) = if cfg.testnet {
-            (FUTURES_TESTNET, FUTURES_WS_TESTNET)
+            (
+                api_endpoint_from_env.unwrap_or(FUTURES_TESTNET.to_owned()),
+                ws_endpoint_from_env.unwrap_or(FUTURES_WS_TESTNET.to_owned()),
+            )
         } else {
-            (FUTURES_MAINNET, FUTURES_WS_MAINNET)
+            (
+                api_endpoint_from_env.unwrap_or(FUTURES_MAINNET.to_owned()),
+                ws_endpoint_from_env.unwrap_or(FUTURES_WS_MAINNET.to_owned()),
+            )
         };
+
+        info!(api = api_base_url, ws = ws_base_url, "init bn client");
 
         Ok(Self {
             client,
