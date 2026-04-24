@@ -2,7 +2,7 @@
 //! [参考](https://www.doubao.com/thread/wf1c7cac2ffe5c0b6)
 //! 核心：效率计算： Quantity / (W_body * body_height + W_shadow * shadow_height)
 //! 简化：实体全重为 1，影线全重交给参数定义
-//! 格式：burst:{ma_period},{shadow_weight},{strong_threshold},{alert_point}@{alert_periods}
+//! 格式：burst:{ma_period},{shadow_weight},{strong_threshold},{qty_threshold},{alert_point}@{alert_periods}
 
 use std::{borrow::Cow, fmt::Write};
 
@@ -11,7 +11,11 @@ use scanf::sscanf;
 
 use crate::{
     common::impl_builder,
-    indicator::{Calculator, ma::Sma},
+    indicator::{
+        Calculator,
+        base::{BaseExtractorArgs, CalcKind, ExtractKind},
+        ma::Sma,
+    },
     monitor::alert::AlertManager,
     prelude::*,
 };
@@ -24,6 +28,7 @@ pub struct BurstArgs {
     ma_period: usize,
     shadow_weight: f64,
     strong_threshold: f64,
+    qty_threshold: f64,
     alert_point: String,
     alert_periods: usize,
 }
@@ -35,10 +40,11 @@ impl FromStr for BurstArgs {
         let mut ma_period = 0usize;
         let mut shadow_weight = 0.0f64;
         let mut strong_threshold = 0.0f64;
+        let mut qty_threshold = 0.0f64;
         let mut alert_point = String::new();
         let mut alert_periods = 0usize;
 
-        sscanf!(s, "burst:{ma_period},{shadow_weight},{strong_threshold},{alert_point}@{alert_periods}")
+        sscanf!(s, "burst:{ma_period},{shadow_weight},{strong_threshold},{qty_threshold},{alert_point}@{alert_periods}")
             .with_context(|_| ParseCtx {
                 raw: s.to_owned(),
                 usage: Cow::from("parse burst args"),
@@ -48,6 +54,7 @@ impl FromStr for BurstArgs {
             ma_period,
             shadow_weight,
             strong_threshold,
+            qty_threshold,
             alert_point,
             alert_periods,
         })
@@ -55,7 +62,7 @@ impl FromStr for BurstArgs {
 }
 
 impl Args for BurstArgs {
-    type Type = (usize, f64, f64, String, usize);
+    type Type = (usize, f64, f64, f64, String, usize);
 
     type Target = Burst;
 
@@ -64,17 +71,19 @@ impl Args for BurstArgs {
             ma_period: args.0,
             shadow_weight: args.1,
             strong_threshold: args.2,
-            alert_point: args.3,
-            alert_periods: args.4,
+            qty_threshold: args.3,
+            alert_point: args.4,
+            alert_periods: args.5,
         }
     }
 
     fn key(&self) -> String {
         format!(
-            "burst:{},{},{},{}@{}",
+            "burst:{},{},{},{},{}@{}",
             self.ma_period,
             self.shadow_weight,
             self.strong_threshold,
+            self.qty_threshold,
             self.alert_point,
             self.alert_periods,
         )
@@ -94,6 +103,15 @@ impl Args for BurstArgs {
         let strong_threshold = Decimal::from_f64(self.strong_threshold)
             .required("strong threshold")?;
 
+        let qty_threshold =
+            Decimal::from_f64(self.qty_threshold).required("qty threshold")?;
+        let qty_ma_key = BaseExtractorArgs::new((
+            ExtractKind::Qty,
+            CalcKind::Sma,
+            self.ma_period,
+        ))
+        .key();
+
         let trend_single_threshold =
             Decimal::from_f64(0.6).required("trend single threshold")?;
         let trend_mixed_threshold =
@@ -110,6 +128,8 @@ impl Args for BurstArgs {
             is_perm,
             shadow_weight,
             strong_threshold,
+            qty_ma_key,
+            qty_threshold,
             trend_single_threshold,
             trend_mixed_threshold,
             prev: None,
@@ -138,6 +158,9 @@ pub struct Burst {
 
     shadow_weight: Decimal,
     strong_threshold: Decimal,
+
+    qty_ma_key: String,
+    qty_threshold: Decimal,
 
     trend_single_threshold: Decimal,
     trend_mixed_threshold: Decimal,
@@ -327,10 +350,25 @@ impl Monitor for Burst {
     }
 
     fn deps(&self) -> Vec<&str> {
-        vec![]
+        vec![&self.qty_ma_key]
     }
 
     fn apply(&mut self, kctx: &KCtx) {
+        let qty_next = ExtractKind::Qty.extractor()(&kctx.info);
+        let qty_ma = kctx.get_val::<Decimal>(&self.qty_ma_key).copied();
+        let qty_ok = qty_ma
+            .map(|qma| {
+                qma > Decimal::ZERO && (qty_next / qma) > self.qty_threshold
+            })
+            .unwrap_or(false);
+
+        if !qty_ok {
+            self.prev.take();
+            self.state.temp.take();
+            self.state.perm.take();
+            return;
+        }
+
         let t = kctx.info.t();
 
         let (allow_alert, effort) = if kctx.info.raw.finalized {
