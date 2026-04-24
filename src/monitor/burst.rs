@@ -1,17 +1,16 @@
 //! 实现 Burst Monitor 用以检测突发的动力/阻力
 //! [参考](https://www.doubao.com/thread/wf1c7cac2ffe5c0b6)
-//! 核心：效率计算： V / (W_body * body_height + W_shadow * shadow_height)
+//! 核心：效率计算： Quantity / (W_body * body_height + W_shadow * shadow_height)
 //! 简化：实体全重为 1，影线全重交给参数定义
-//! 格式：burst:{ma_period},{shadow_weight},{weak_threshold}~{strong_threshold},{alert_periods}
+//! 格式：burst:{ma_period},{shadow_weight},{strong_threshold},{alert_point}@{alert_periods}
 
 use std::{borrow::Cow, fmt::Write};
 
-use crossterm::style::{Color, Stylize};
+use crossterm::style::Stylize;
 use scanf::sscanf;
 
 use crate::{
     common::impl_builder,
-    config::ColorTable,
     indicator::{Calculator, ma::Sma},
     monitor::alert::AlertManager,
     prelude::*,
@@ -24,7 +23,6 @@ const ALERT_POINT_PERM: &str = "perm";
 pub struct BurstArgs {
     ma_period: usize,
     shadow_weight: f64,
-    weak_threshold: f64,
     strong_threshold: f64,
     alert_point: String,
     alert_periods: usize,
@@ -36,12 +34,11 @@ impl FromStr for BurstArgs {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut ma_period = 0usize;
         let mut shadow_weight = 0.0f64;
-        let mut weak_threshold = 0.0f64;
         let mut strong_threshold = 0.0f64;
         let mut alert_point = String::new();
         let mut alert_periods = 0usize;
 
-        sscanf!(s, "burst:{ma_period},{shadow_weight},{weak_threshold}~{strong_threshold},{alert_point}@{alert_periods}")
+        sscanf!(s, "burst:{ma_period},{shadow_weight},{strong_threshold},{alert_point}@{alert_periods}")
             .with_context(|_| ParseCtx {
                 raw: s.to_owned(),
                 usage: Cow::from("parse burst args"),
@@ -50,7 +47,6 @@ impl FromStr for BurstArgs {
         Ok(Self {
             ma_period,
             shadow_weight,
-            weak_threshold,
             strong_threshold,
             alert_point,
             alert_periods,
@@ -59,7 +55,7 @@ impl FromStr for BurstArgs {
 }
 
 impl Args for BurstArgs {
-    type Type = (usize, f64, f64, f64, String, usize);
+    type Type = (usize, f64, f64, String, usize);
 
     type Target = Burst;
 
@@ -67,19 +63,17 @@ impl Args for BurstArgs {
         Self {
             ma_period: args.0,
             shadow_weight: args.1,
-            weak_threshold: args.2,
-            strong_threshold: args.3,
-            alert_point: args.4,
-            alert_periods: args.5,
+            strong_threshold: args.2,
+            alert_point: args.3,
+            alert_periods: args.4,
         }
     }
 
     fn key(&self) -> String {
         format!(
-            "burst:{},{},{}~{},{}@{}",
+            "burst:{},{},{},{}@{}",
             self.ma_period,
             self.shadow_weight,
-            self.weak_threshold,
             self.strong_threshold,
             self.alert_point,
             self.alert_periods,
@@ -94,13 +88,8 @@ impl Args for BurstArgs {
         };
         let key = self.key();
 
-        let min_height = Decimal::from_f64(0.01).required("min height")?;
-
         let shadow_weight =
             Decimal::from_f64(self.shadow_weight).required("shadow weight")?;
-
-        let weak_threshold = Decimal::from_f64(self.weak_threshold)
-            .required("weak threshold")?;
 
         let strong_threshold = Decimal::from_f64(self.strong_threshold)
             .required("strong threshold")?;
@@ -114,9 +103,7 @@ impl Args for BurstArgs {
             up_ma,
             down_ma,
             alert_for_perm,
-            min_height,
             shadow_weight,
-            weak_threshold,
             strong_threshold,
             prev: None,
             prev_alert_t: None,
@@ -126,35 +113,10 @@ impl Args for BurstArgs {
     }
 }
 
-#[derive(Clone, Copy, PartialEq)]
-pub enum Strength {
-    Strong, // (strong_threshold, )
-    Normal, // [weak_threshold, strong_threshold]
-    Weak,   // (, weak_threshold)
-}
-
-impl Strength {
-    pub fn flag(self, colors: ColorTable) -> (&'static str, Color) {
-        match self {
-            Self::Strong => ("<", colors.up),
-            Self::Normal => ("~", colors.normal),
-            Self::Weak => (">", colors.down),
-        }
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct EffortItem {
-    // val: Decimal,
-    // ma: Decimal,
-    rate: Decimal,
-    strength: Strength,
-}
-
 #[derive(Clone, Copy)]
 pub struct Effort {
-    up: (EffortItem, usize),
-    down: (EffortItem, usize),
+    up: (Decimal, usize, bool),
+    down: (Decimal, usize, bool),
 }
 
 impl_builder!(BurstBuilder: BurstArgs => Burst);
@@ -167,9 +129,7 @@ pub struct Burst {
     up_ma: Sma,
     down_ma: Sma,
 
-    min_height: Decimal,
     shadow_weight: Decimal,
-    weak_threshold: Decimal,
     strong_threshold: Decimal,
 
     prev: Option<Effort>,
@@ -196,9 +156,17 @@ impl Burst {
             None => {}
         }
 
-        let up_effort = kctx.info.raw.quantity / up_height.max(self.min_height);
-        let down_effort =
-            kctx.info.raw.quantity / down_height.max(self.min_height);
+        let up_effort = if up_height.is_sign_positive() {
+            kctx.info.raw.quantity / up_height
+        } else {
+            Decimal::ZERO
+        };
+
+        let down_effort = if down_height.is_sign_positive() {
+            kctx.info.raw.quantity / down_height
+        } else {
+            Decimal::ZERO
+        };
 
         (down_effort, up_effort)
     }
@@ -208,10 +176,8 @@ impl Burst {
         let down_ma = self.down_ma.calc(down_effort)?;
         let up_ma = self.up_ma.calc(up_effort)?;
 
-        let down_effort_item = self.generate_effort_item(down_effort, down_ma);
-        let up_effort_item = self.generate_effort_item(up_effort, up_ma);
-
-        let effort = self.generate_effort(down_effort_item, up_effort_item);
+        let effort =
+            self.generate_effort((down_effort, down_ma), (up_effort, up_ma));
         Some(effort)
     }
 
@@ -220,11 +186,53 @@ impl Burst {
         let down_ma = self.down_ma.update(down_effort)?;
         let up_ma = self.up_ma.update(up_effort)?;
 
-        let down_effort_item = self.generate_effort_item(down_effort, down_ma);
-        let up_effort_item = self.generate_effort_item(up_effort, up_ma);
-
-        let effort = self.generate_effort(down_effort_item, up_effort_item);
+        let effort =
+            self.generate_effort((down_effort, down_ma), (up_effort, up_ma));
         Some(effort)
+    }
+
+    fn generate_effort(
+        &self,
+        (down_effort, down_ma): (Decimal, Decimal),
+        (up_effort, up_ma): (Decimal, Decimal),
+    ) -> Effort {
+        let down_effort_rate = if down_ma.is_sign_positive() {
+            down_effort / down_ma
+        } else {
+            Decimal::ZERO
+        };
+
+        let up_effort_rate = if up_ma.is_sign_positive() {
+            up_effort / up_ma
+        } else {
+            Decimal::ZERO
+        };
+
+        let down_burst = down_effort_rate > self.strong_threshold;
+        let up_burst = up_effort_rate > self.strong_threshold;
+
+        let (down_periods, up_periods) = if let Some(prev) = self.prev.as_ref()
+        {
+            (
+                if down_burst == prev.down.2 {
+                    prev.down.1 + 1
+                } else {
+                    1
+                },
+                if up_burst == prev.up.2 {
+                    prev.up.1 + 1
+                } else {
+                    1
+                },
+            )
+        } else {
+            (1, 1)
+        };
+
+        Effort {
+            up: (up_effort_rate, up_periods, up_burst),
+            down: (down_effort_rate, down_periods, down_burst),
+        }
     }
 
     fn generate_msg(
@@ -240,7 +248,7 @@ impl Burst {
             kctx,
             &mut normal,
             &mut tty,
-            "[⬆]",
+            true,
             &effort.up,
             for_alert,
         );
@@ -254,7 +262,7 @@ impl Burst {
             kctx,
             &mut normal,
             &mut tty,
-            "[⬇]",
+            false,
             &effort.down,
             for_alert,
         );
@@ -271,78 +279,27 @@ impl Burst {
         kctx: &KCtx,
         normal_msg: &mut String,
         tty_msg: &mut String,
-        prefix: &str,
-        (next, next_periods): &(EffortItem, usize),
+        direction: bool,
+        (rate, periods, is_busrt): &(Decimal, usize, bool),
         for_alert: bool,
     ) {
         // 常规情形，或持续时长不满足
-        if next.strength == Strength::Normal
-            || (for_alert && *next_periods != self.args.alert_periods)
-        {
+        if !is_busrt || (for_alert && *periods != self.args.alert_periods) {
             return;
         }
 
-        let rate = next.rate.round_dp(2);
-
-        let (flag, flag_color) = next.strength.flag(kctx.colors);
-
-        let info = format!("{flag}{rate}");
-
-        _ = write!(normal_msg, "{prefix}:{info}[{next_periods}]");
-        _ = write!(
-            tty_msg,
-            "{prefix}:{}[{next_periods}]",
-            info.with(flag_color),
-        );
-    }
-
-    fn generate_effort(
-        &self,
-        down_effort_item: EffortItem,
-        up_effort_item: EffortItem,
-    ) -> Effort {
-        let (down_periods, up_periods) = if let Some(prev) = self.prev.as_ref()
-        {
-            let down_periods =
-                if prev.down.0.strength == down_effort_item.strength {
-                    prev.down.1 + 1
-                } else {
-                    1
-                };
-
-            let up_periods = if prev.up.0.strength == up_effort_item.strength {
-                prev.up.1 + 1
-            } else {
-                1
-            };
-
-            (down_periods, up_periods)
+        let (direction_flag, direction_color) = if direction {
+            ("[⬆]", kctx.colors.up)
         } else {
-            (1, 1)
+            ("[⬇]", kctx.colors.down)
         };
 
-        Effort {
-            up: (up_effort_item, up_periods),
-            down: (down_effort_item, down_periods),
-        }
-    }
+        let rate = rate.round_dp(2);
 
-    fn generate_effort_item(&self, val: Decimal, ma: Decimal) -> EffortItem {
-        let rate = val / ma;
-        let strength = if rate > self.strong_threshold {
-            Strength::Strong
-        } else if rate < self.weak_threshold {
-            Strength::Weak
-        } else {
-            Strength::Normal
-        };
+        let info = format!("{direction_flag}:<<{rate}");
 
-        EffortItem {
-            // val,
-            // ma,
-            rate,
-            strength,
-        }
+        _ = write!(normal_msg, "{info}@{periods}");
+        _ = write!(tty_msg, "{}@{periods}", info.with(direction_color));
     }
 }
 
