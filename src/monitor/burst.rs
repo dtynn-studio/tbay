@@ -94,6 +94,11 @@ impl Args for BurstArgs {
         let strong_threshold = Decimal::from_f64(self.strong_threshold)
             .required("strong threshold")?;
 
+        let trend_single_threshold =
+            Decimal::from_f64(0.6).required("trend single threshold")?;
+        let trend_mixed_threshold =
+            Decimal::from_f64(0.7).required("trend mixed threshold")?;
+
         let up_ma = Sma::new(self.ma_period);
         let down_ma = Sma::new(self.ma_period);
 
@@ -105,6 +110,8 @@ impl Args for BurstArgs {
             is_perm,
             shadow_weight,
             strong_threshold,
+            trend_single_threshold,
+            trend_mixed_threshold,
             prev: None,
             prev_alert_t: None,
             state: Default::default(),
@@ -131,6 +138,9 @@ pub struct Burst {
 
     shadow_weight: Decimal,
     strong_threshold: Decimal,
+
+    trend_single_threshold: Decimal,
+    trend_mixed_threshold: Decimal,
 
     prev: Option<Effort>,
     prev_alert_t: Option<OffsetDateTime>,
@@ -248,7 +258,7 @@ impl Burst {
             kctx,
             &mut normal,
             &mut tty,
-            true,
+            false,
             &effort.up,
             for_alert,
         );
@@ -262,7 +272,7 @@ impl Burst {
             kctx,
             &mut normal,
             &mut tty,
-            false,
+            true,
             &effort.down,
             for_alert,
         );
@@ -289,17 +299,25 @@ impl Burst {
         }
 
         let (direction_flag, direction_color) = if direction {
-            ("[🚀⬆]", kctx.colors.up)
+            ("↗", kctx.colors.up)
         } else {
-            ("[🚀⬇]", kctx.colors.down)
+            ("↘", kctx.colors.down)
         };
 
         let rate = rate.round_dp(2);
 
-        let info = format!("{direction_flag}:<<{rate}");
+        let info = format!("{direction_flag}{rate}");
+        let trend = kctx
+            .info
+            .trend(self.trend_single_threshold, self.trend_mixed_threshold);
 
-        _ = write!(normal_msg, "{info}@{periods}");
-        _ = write!(tty_msg, "{}@{periods}", info.with(direction_color));
+        _ = write!(normal_msg, "🚀:{info}@{periods}[{}]", trend.as_str());
+        _ = write!(
+            tty_msg,
+            "🚀:{}@{periods}[{}]",
+            info.with(direction_color),
+            trend.as_str()
+        );
     }
 }
 
