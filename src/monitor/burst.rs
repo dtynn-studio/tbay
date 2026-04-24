@@ -16,7 +16,7 @@ use crate::{
         base::{BaseExtractorArgs, CalcKind, ExtractKind},
         ma::Sma,
     },
-    monitor::alert::AlertManager,
+    monitor::alert::{AlertManager, TempAlertChecker},
     prelude::*,
 };
 
@@ -133,9 +133,9 @@ impl Args for BurstArgs {
             trend_single_threshold,
             trend_mixed_threshold,
             prev: None,
-            prev_alert_t: None,
             state: Default::default(),
             alert: Default::default(),
+            temp_checker: Default::default(),
         })
     }
 }
@@ -166,10 +166,10 @@ pub struct Burst {
     trend_mixed_threshold: Decimal,
 
     prev: Option<Effort>,
-    prev_alert_t: Option<OffsetDateTime>,
 
     state: State,
     alert: AlertManager,
+    temp_checker: TempAlertChecker,
 }
 
 impl Burst {
@@ -371,21 +371,20 @@ impl Monitor for Burst {
 
         let t = kctx.info.t();
 
-        let (allow_alert, effort) = if kctx.info.raw.finalized {
-            (self.is_perm, self.update(kctx))
+        let allow_alert = self.is_perm == kctx.info.raw.finalized;
+
+        let effort = if kctx.info.raw.finalized {
+            self.update(kctx)
         } else {
-            (
-                !self.is_perm && self.prev_alert_t != Some(t),
-                self.calc(kctx),
-            )
+            self.calc(kctx)
         };
 
         if let Some(msg) = allow_alert.then_some(()).and_then(|_| {
             effort
                 .as_ref()
                 .and_then(|e| self.generate_msg(kctx, e, true))
-        }) {
-            self.prev_alert_t.replace(t);
+        }) && (self.is_perm || self.temp_checker.allow(kctx))
+        {
             self.alert.add(t, msg);
         }
 
