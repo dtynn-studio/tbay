@@ -81,7 +81,7 @@ impl Args for BurstArgs {
     }
 
     fn build(self) -> Result<Self::Target> {
-        let alert_for_perm = match self.alert_point.as_str() {
+        let is_perm = match self.alert_point.as_str() {
             ALERT_POINT_PERM => true,
             ALERT_POINT_TEMP => false,
             other => return Err(other.unexpected("alert point")),
@@ -102,7 +102,7 @@ impl Args for BurstArgs {
             key,
             up_ma,
             down_ma,
-            alert_for_perm,
+            is_perm,
             shadow_weight,
             strong_threshold,
             prev: None,
@@ -124,7 +124,7 @@ impl_builder!(BurstBuilder: BurstArgs => Burst);
 pub struct Burst {
     args: BurstArgs,
     key: String,
-    alert_for_perm: bool,
+    is_perm: bool,
 
     up_ma: Sma,
     down_ma: Sma,
@@ -316,10 +316,10 @@ impl Monitor for Burst {
         let t = kctx.info.t();
 
         let (allow_alert, effort) = if kctx.info.raw.finalized {
-            (self.alert_for_perm, self.update(kctx))
+            (self.is_perm, self.update(kctx))
         } else {
             (
-                !self.alert_for_perm && self.prev_alert_t != Some(t),
+                !self.is_perm && self.prev_alert_t != Some(t),
                 self.calc(kctx),
             )
         };
@@ -338,12 +338,17 @@ impl Monitor for Burst {
             .and_then(|e| self.generate_msg(kctx, e, false))
             .map(|m| (t, m));
 
-        if kctx.info.raw.finalized {
+        let dest = if kctx.info.raw.finalized {
             self.prev = effort;
-            self.state.perm = state_msg;
+            self.state.temp.take();
+            &mut self.state.perm
         } else {
-            self.state.temp = state_msg;
+            &mut self.state.temp
         };
+
+        if self.is_perm {
+            *dest = state_msg;
+        }
     }
 
     fn state(&self) -> &State {
