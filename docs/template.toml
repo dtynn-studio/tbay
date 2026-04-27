@@ -9,9 +9,9 @@ monitors = [
     "cross2:close,ema,5,20,60",
     "cross2:close,ema,20,80,240",
 
-    "hold2:ema,20,3",
-    "hold2:ema,60,3",
-    "hold2:ema,200,3",
+    "hold2:ema,20,3,state",
+    "hold2:ema,60,3,state",
+    "hold2:ema,200,3,state",
 
     "fbq:20,1,0.2/1.2,0.2/1.2,0.2/1.5",
 
@@ -34,11 +34,11 @@ monitors = [
     # "cross2:close,ema,20,80,240",
 
     "hold2:ema,20,3",
-    "hold2:ema,20,8",
+    "hold2:ema,20,8,state",
     "hold2:ema,60,3",
-    "hold2:ema,60,8",
+    "hold2:ema,60,8,state",
     "hold2:ema,200,3",
-    "hold2:ema,200,8",
+    "hold2:ema,200,8,state",
 
     "fbq:20,2,0.2/2.0,0.0/2.0,0.2/2.0",
 
