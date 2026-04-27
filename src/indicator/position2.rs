@@ -86,6 +86,16 @@ pub enum Pos {
 }
 
 impl Pos {
+    pub fn flag(self) -> &'static str {
+        match self {
+            Self::Above => "▲",
+            Self::Below => "▼",
+            Self::Chaos => "~",
+        }
+    }
+}
+
+impl Pos {
     fn detect(kctx: &KCtx, base: Decimal) -> Self {
         if kctx.info.body.low >= base && kctx.info.full.mid >= base {
             Self::Above
