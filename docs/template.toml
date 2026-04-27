@@ -9,8 +9,11 @@ monitors = [
     "cross2:close,ema,5,20,60",
     "cross2:close,ema,20,80,240",
 
+    "hold2:ema,20,1",
     "hold2:ema,20,3,state",
+    "hold2:ema,60,1",
     "hold2:ema,60,3,state",
+    "hold2:ema,200,1",
     "hold2:ema,200,3,state",
 
     "fbq:20,1,0.2/1.2,0.2/1.2,0.2/1.5",
@@ -54,43 +57,18 @@ name = "15m"
 
 [[pairs.intervals]]
 name = "1h"
-monitors = [
-    "hold2:ema,20,1",
-    "hold2:ema,60,1",
-    "hold2:ema,200,1",
-]
 
 [[pairs.intervals]]
 name = "4h"
-monitors = [
-    "hold2:ema,20,1",
-    "hold2:ema,60,1",
-    "hold2:ema,200,1",
-]
 
 [[pairs.intervals]]
 name = "1d"
-monitors = [
-    "hold2:ema,20,1",
-    "hold2:ema,60,1",
-    "hold2:ema,200,1",
-]
 
 [[pairs.intervals]]
 name = "3d"
-monitors = [
-    "hold2:ema,20,1",
-    "hold2:ema,60,1",
-    "hold2:ema,200,1",
-]
 
 [[pairs.intervals]]
 name = "1w"
-monitors = [
-    "hold2:ema,20,1",
-    "hold2:ema,60,1",
-    "hold2:ema,200,1",
-]
 
 # [[pairs]]
 # name = "ethusdt"
