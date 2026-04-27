@@ -19,7 +19,7 @@ pub struct Hold2Args {
     pub calc_kind: CalcKind,
     pub ma: usize,
     pub hold: usize,
-    pub for_state: bool,
+    pub for_alert: bool,
 }
 
 impl FromStr for Hold2Args {
@@ -29,20 +29,20 @@ impl FromStr for Hold2Args {
         let mut calc_kind_str = String::new();
         let mut ma = 0usize;
         let mut hold = 0usize;
-        let mut for_state = false;
+        let mut for_alert = false;
 
         if sscanf!(s, "hold2:{calc_kind_str},{ma},{hold}").is_err() {
             calc_kind_str.clear();
             ma = 0;
             hold = 0;
 
-            sscanf!(s, "hold2:{calc_kind_str},{ma},{hold},state")
+            sscanf!(s, "hold2:{calc_kind_str},{ma},{hold},alert")
                 .with_context(|_| ParseCtx {
                     raw: s.to_owned(),
                     usage: Cow::from("parse hold2 args"),
                 })?;
 
-            for_state = true;
+            for_alert = true;
         }
 
         let calc_kind = calc_kind_str.parse()?;
@@ -59,7 +59,7 @@ impl FromStr for Hold2Args {
             calc_kind,
             ma,
             hold,
-            for_state,
+            for_alert,
         })
     }
 }
@@ -73,15 +73,15 @@ impl Args for Hold2Args {
             calc_kind: args.0,
             ma: args.1,
             hold: args.2,
-            for_state: args.3,
+            for_alert: args.3,
         }
     }
 
     fn key(&self) -> String {
-        let state_flag = if self.for_state { ",state" } else { "" };
+        let alert_flag = if self.for_alert { ",alert" } else { "" };
 
         format!(
-            "hold2:{},{},{}{state_flag}",
+            "hold2:{},{},{}{alert_flag}",
             self.calc_kind.as_str(),
             self.ma,
             self.hold
@@ -185,12 +185,12 @@ impl Monitor for Hold2 {
                     self.alerts.add(t, msg.clone());
                 }
 
-                if self.args.for_state {
+                if !self.args.for_alert {
                     self.state.perm.replace((t, msg));
                 }
             }
         } else {
-            if self.args.for_state {
+            if !self.args.for_alert {
                 let msg_opt = self.calc(kctx).map(|m| (t, m));
                 self.state.temp = msg_opt;
             }
