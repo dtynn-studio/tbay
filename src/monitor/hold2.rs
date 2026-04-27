@@ -19,6 +19,7 @@ pub struct Hold2Args {
     pub calc_kind: CalcKind,
     pub ma: usize,
     pub hold: usize,
+    pub for_state: bool,
 }
 
 impl FromStr for Hold2Args {
@@ -28,13 +29,21 @@ impl FromStr for Hold2Args {
         let mut calc_kind_str = String::new();
         let mut ma = 0usize;
         let mut hold = 0usize;
+        let mut for_state = false;
 
-        sscanf!(s, "hold2:{calc_kind_str},{ma},{hold}").with_context(|_| {
-            ParseCtx {
-                raw: s.to_owned(),
-                usage: Cow::from("parse hold2 args"),
-            }
-        })?;
+        if sscanf!(s, "hold2:{calc_kind_str},{ma},{hold}").is_err() {
+            calc_kind_str.clear();
+            ma = 0;
+            hold = 0;
+
+            sscanf!(s, "hold2:{calc_kind_str},{ma},{hold},state")
+                .with_context(|_| ParseCtx {
+                    raw: s.to_owned(),
+                    usage: Cow::from("parse hold2 args"),
+                })?;
+
+            for_state = true;
+        };
 
         let calc_kind = calc_kind_str.parse()?;
 
@@ -50,12 +59,13 @@ impl FromStr for Hold2Args {
             calc_kind,
             ma,
             hold,
+            for_state,
         })
     }
 }
 
 impl Args for Hold2Args {
-    type Type = (CalcKind, usize, usize);
+    type Type = (CalcKind, usize, usize, bool);
     type Target = Hold2;
 
     fn new(args: Self::Type) -> Self {
@@ -63,12 +73,15 @@ impl Args for Hold2Args {
             calc_kind: args.0,
             ma: args.1,
             hold: args.2,
+            for_state: args.3,
         }
     }
 
     fn key(&self) -> String {
+        let st_flag = if self.for_state { ",state" } else { "" };
+
         format!(
-            "hold2:{},{},{}",
+            "hold2:{},{},{}{st_flag}",
             self.calc_kind.as_str(),
             self.ma,
             self.hold
@@ -130,18 +143,21 @@ impl Hold2 {
         Msg { normal, tty }
     }
 
-    fn calc(&self, kctx: &KCtx) -> Option<Msg> {
+    fn calc(&self, kctx: &KCtx) -> Option<(Msg, bool)> {
         let val = kctx
             .get_val::<<Position2 as Indicator>::Output>(&self.pos_key)
             .copied()?;
-        if val.periods != self.args.hold {
+        if val.pos == Pos::Chaos || val.periods > self.args.hold {
             return None;
         }
 
-        Some(self.event_msg(val, kctx.colors))
+        Some((
+            self.event_msg(val, kctx.colors),
+            val.periods == self.args.hold,
+        ))
     }
 
-    fn update(&mut self, kctx: &KCtx) -> Option<Msg> {
+    fn update(&mut self, kctx: &KCtx) -> Option<(Msg, bool)> {
         self.calc(kctx)
     }
 }
@@ -159,13 +175,20 @@ impl Monitor for Hold2 {
         let t = kctx.info.t();
         if kctx.info.raw.finalized {
             self.state.clear();
-            if let Some(msg) = self.update(kctx) {
-                self.alerts.add(t, msg.clone());
-                self.state.perm.replace((t, msg));
+            if let Some((msg, should_alert)) = self.update(kctx) {
+                if should_alert {
+                    self.alerts.add(t, msg.clone());
+                }
+
+                if self.args.for_state {
+                    self.state.perm.replace((t, msg));
+                }
             }
         } else {
-            let msg_opt = self.calc(kctx).map(|m| (t, m));
-            self.state.temp = msg_opt;
+            if self.args.for_state {
+                let msg_opt = self.calc(kctx).map(|(m, _)| (t, m));
+                self.state.temp = msg_opt;
+            }
         }
     }
 
