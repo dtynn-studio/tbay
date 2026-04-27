@@ -8,7 +8,7 @@ use crate::{
     impl_builder,
     indicator::{
         base::{CalcKind, ExtractKind},
-        position2::{Pos, Position2, Position2Args},
+        position2::{Pos, PosState, Position2, Position2Args},
     },
     monitor::{Msg, alert::AlertManager},
     prelude::*,
@@ -116,8 +116,8 @@ pub struct Hold2 {
 }
 
 impl Hold2 {
-    fn event_msg(&self, pos: Pos, colors: ColorTable) -> Msg {
-        let (pos_str, color) = match pos {
+    fn event_msg(&self, st: PosState, colors: ColorTable) -> Msg {
+        let (pos_str, color) = match st.pos {
             Pos::Above => ("[▲]", colors.up),
             Pos::Below => ("[▼]", colors.down),
             Pos::Chaos => ("[~]", colors.normal),
@@ -129,7 +129,7 @@ impl Hold2 {
             "{val_flag}/{}{}:{pos_str}{}",
             self.args.calc_kind.as_str_short(),
             self.args.ma,
-            self.args.hold
+            st.periods,
         );
 
         let tty = format!(
@@ -137,31 +137,33 @@ impl Hold2 {
             self.args.calc_kind.as_str_short(),
             self.args.ma,
             pos_str.with(color),
-            self.args.hold
+            st.periods,
         );
 
         Msg { normal, tty }
     }
 
     fn calc(&self, kctx: &KCtx) -> Option<Msg> {
-        let val =
-            kctx.get_val::<<Position2 as Indicator>::Output>(&self.pos_key)?;
+        let val = kctx
+            .get_val::<<Position2 as Indicator>::Output>(&self.pos_key)
+            .copied()?;
         if val.pos == Pos::Chaos || val.periods <= self.args.hold {
             return None;
         }
 
-        Some(self.event_msg(val.pos, kctx.colors))
+        Some(self.event_msg(val, kctx.colors))
     }
 
     fn update(&mut self, kctx: &KCtx) -> Option<(Msg, bool)> {
-        let val =
-            kctx.get_val::<<Position2 as Indicator>::Output>(&self.pos_key)?;
+        let val = kctx
+            .get_val::<<Position2 as Indicator>::Output>(&self.pos_key)
+            .copied()?;
         if val.pos == Pos::Chaos || val.periods <= self.args.hold {
             return None;
         }
 
         Some((
-            self.event_msg(val.pos, kctx.colors),
+            self.event_msg(val, kctx.colors),
             val.periods == self.args.hold,
         ))
     }
