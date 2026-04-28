@@ -57,18 +57,33 @@ name = "15m"
 
 [[pairs.intervals]]
 name = "1h"
+monitors = [
+    "touch:close,ema,20",
+]
 
 [[pairs.intervals]]
 name = "4h"
+monitors = [
+    "touch:close,ema,20",
+]
 
 [[pairs.intervals]]
 name = "1d"
+monitors = [
+    "touch:close,ema,20",
+]
 
 [[pairs.intervals]]
 name = "3d"
+monitors = [
+    "touch:close,ema,20",
+]
 
 [[pairs.intervals]]
 name = "1w"
+monitors = [
+    "touch:close,ema,20",
+]
 
 # [[pairs]]
 # name = "ethusdt"
