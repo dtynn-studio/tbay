@@ -9,81 +9,69 @@ monitors = [
     "cross2:close,ema,5,20,60",
     "cross2:close,ema,20,80,240",
 
+    "hold2:ema,5,5,state",
     "hold2:ema,20,1",
-    "hold2:ema,20,3,state",
+    "hold2:ema,20,5,state",
     "hold2:ema,60,1",
-    "hold2:ema,60,3,state",
+    "hold2:ema,60,5,state",
     "hold2:ema,200,1",
-    "hold2:ema,200,3,state",
+    "hold2:ema,200,5,state",
+
+    "hold2:ema,80,1",
+    "hold2:ema,80,3",
+    "hold2:ema,240,1",
+    "hold2:ema,240,3",
 
     "fbq:20,1,0.2/1.2,0.2/1.2,0.2/1.5",
 
     "macd:12,26,9",
 
     "shadow:0.6,0.4",
-
-    # "burst:13,0.8,1.8,1.2,temp@1",
-    # "burst:13,0.8,1.2,0.8,perm@3",
 ]
 reads = [5, 20, 60, 200]
 
-[[pairs.intervals]]
-name = "3m"
-monitors = [
-    # "cross:close,ema,5,60",
-    # "cross:close,ema,20,240",
+# [[pairs.intervals]]
+# name = "3m"
+# monitors = [
+#     # "cross:close,ema,5,60",
+#     # "cross:close,ema,20,240",
 
-    # "cross2:close,ema,5,20,60",
-    # "cross2:close,ema,20,80,240",
+#     # "cross2:close,ema,5,20,60",
+#     # "cross2:close,ema,20,80,240",
 
-    "hold2:ema,20,3",
-    "hold2:ema,20,8,state",
-    "hold2:ema,60,3",
-    "hold2:ema,60,8,state",
-    "hold2:ema,200,3",
-    "hold2:ema,200,8,state",
+#     "hold2:ema,20,3",
+#     "hold2:ema,20,8,state",
+#     "hold2:ema,60,3",
+#     "hold2:ema,60,8,state",
+#     "hold2:ema,200,3",
+#     "hold2:ema,200,8,state",
 
-    "fbq:20,2,0.2/2.0,0.0/2.0,0.2/2.0",
+#     "fbq:20,2,0.2/2.0,0.0/2.0,0.2/2.0",
 
-    "shadow:0.7,0.8",
-    # "burst:13,0.8,3.0,1.5,temp@1",
-    # "burst:13,0.8,2.0,1.0,perm@3",
-]
-reads = [5, 20, 60, 200]
-no_wildcard = true
+#     "shadow:0.7,0.8",
+#     # "burst:13,0.8,3.0,1.5,temp@1",
+#     # "burst:13,0.8,2.0,1.0,perm@3",
+# ]
+# reads = [5, 20, 60, 200]
+# no_wildcard = true
 
 [[pairs.intervals]]
 name = "15m"
 
 [[pairs.intervals]]
 name = "1h"
-monitors = [
-    "touch:close,ema,20",
-]
 
 [[pairs.intervals]]
 name = "4h"
-monitors = [
-    "touch:close,ema,20",
-]
 
 [[pairs.intervals]]
 name = "1d"
-monitors = [
-    "touch:close,ema,20",
-]
 
 [[pairs.intervals]]
 name = "3d"
-monitors = [
-    "touch:close,ema,20",
-]
 
 [[pairs.intervals]]
 name = "1w"
-monitors = [
-    "touch:close,ema,20",
-]
 
 # [[pairs]]
 # name = "ethusdt"
