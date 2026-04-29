@@ -12,21 +12,8 @@ use crate::{
 #[derive(Clone, Copy)]
 pub struct RsiValue {
     pub rsi: Decimal,
-    pub rs: Decimal,
     pub avg_gain: Decimal,
     pub avg_loss: Decimal,
-}
-
-pub struct Rsi {
-    _args: RsiArgs,
-    key: String,
-    period: Decimal,
-    smooth_mul: Decimal,
-    prev_close: Option<Decimal>,
-    gains: Sma,
-    losses: Sma,
-    prev_avg: Option<(Decimal, Decimal)>,
-    current: Option<RsiValue>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -82,6 +69,50 @@ impl Args for RsiArgs {
 
 impl_builder!(RsiBuilder: RsiArgs => Rsi);
 
+fn calculate_rsi(avg_gain: Decimal, avg_loss: Decimal) -> Decimal {
+    if avg_loss.is_zero() {
+        Decimal::from(100)
+    } else {
+        Decimal::from(100)
+            - (Decimal::from(100) / (Decimal::ONE + avg_gain / avg_loss))
+    }
+}
+
+pub struct Rsi {
+    _args: RsiArgs,
+    key: String,
+    period: Decimal,
+    smooth_mul: Decimal,
+    prev_close: Option<Decimal>,
+    gains: Sma,
+    losses: Sma,
+    prev_avg: Option<(Decimal, Decimal)>,
+    current: Option<RsiValue>,
+}
+
+impl Rsi {
+    fn calculate_rsi(
+        &self,
+        prev_gain: Decimal,
+        gain: Decimal,
+        prev_loss: Decimal,
+        loss: Decimal,
+    ) -> RsiValue {
+        let (new_avg_gain, new_avg_loss) = (
+            (prev_gain * self.smooth_mul + gain) / self.period,
+            (prev_loss * self.smooth_mul + loss) / self.period,
+        );
+
+        let rsi = calculate_rsi(new_avg_gain, new_avg_loss);
+
+        RsiValue {
+            rsi,
+            avg_gain: new_avg_gain,
+            avg_loss: new_avg_loss,
+        }
+    }
+}
+
 impl Indicator for Rsi {
     type Output = RsiValue;
 
@@ -93,26 +124,29 @@ impl Indicator for Rsi {
         vec![]
     }
 
-    fn calc(&self, _next: &KCtx) -> Option<Self::Output> {
-        // RSI can only be meaningfully calculated on finalized K-lines
-        // because the price change between consecutive K-lines is not
-        // known until both are finalized
-        self.current
+    fn calc(&self, next: &KCtx) -> Option<Self::Output> {
+        let prev_close = self.prev_close?;
+        let (prev_gain, prev_loss) = self.prev_avg?;
+
+        let price_close = next.info.raw.price_close;
+        let change = price_close - prev_close;
+
+        // Separate gain and loss
+        let (gain, loss) = if change >= Decimal::ZERO {
+            (change, Decimal::ZERO)
+        } else {
+            (Decimal::ZERO, -change)
+        };
+
+        Some(self.calculate_rsi(prev_gain, gain, prev_loss, loss))
     }
 
     fn update(&mut self, next: &KCtx) -> Option<Self::Output> {
         // Get current close and compute change from previous close
         let price_close = next.info.raw.price_close;
+        let prev_close = self.prev_close.replace(price_close)?;
 
-        let change = match self.prev_close {
-            Some(prev) => price_close - prev,
-            None => {
-                // First K-line - no previous close to compare
-                self.prev_close = Some(price_close);
-                return None;
-            }
-        };
-        self.prev_close = Some(price_close);
+        let change = price_close - prev_close;
 
         // Separate gain and loss
         let (gain, loss) = if change > Decimal::ZERO {
@@ -132,46 +166,9 @@ impl Indicator for Rsi {
             return None;
         };
 
-        // Compute or update smoothed averages using Wilder's method
-        let (new_avg_gain, new_avg_loss) = (
-            (prev_gain * self.smooth_mul + gain) / self.period,
-            (prev_loss * self.smooth_mul + loss) / self.period,
-        );
-
-        self.prev_avg.replace((new_avg_gain, new_avg_loss));
-
-        let (rsi, rs) = Self::calculate_rsi(new_avg_gain, new_avg_loss);
-
-        let value = RsiValue {
-            rsi,
-            rs,
-            avg_gain: new_avg_gain,
-            avg_loss: new_avg_loss,
-        };
-
-        self.current.replace(value);
-        Some(value)
-    }
-}
-
-impl Rsi {
-    fn calculate_rsi(
-        avg_gain: Decimal,
-        avg_loss: Decimal,
-    ) -> (Decimal, Decimal) {
-        let rs = if avg_loss.is_zero() {
-            // When avg_loss is zero, RSI = 100 (all gains, no losses)
-            Decimal::MAX
-        } else {
-            avg_gain / avg_loss
-        };
-
-        let rsi = if avg_loss.is_zero() {
-            Decimal::from(100)
-        } else {
-            Decimal::from(100) - (Decimal::from(100) / (Decimal::ONE + rs))
-        };
-
-        (rsi, rs)
+        let val = self.calculate_rsi(prev_gain, gain, prev_loss, loss);
+        self.prev_avg.replace((val.avg_gain, val.avg_loss));
+        self.current.replace(val);
+        Some(val)
     }
 }
