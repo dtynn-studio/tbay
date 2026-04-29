@@ -13,6 +13,7 @@ pub mod pdiff;
 pub mod rate;
 pub mod reach;
 pub mod read;
+pub mod rsi;
 pub mod shadow;
 pub mod touch;
 
