@@ -12,6 +12,7 @@ pub mod hl;
 pub mod ma;
 pub mod macd;
 pub mod position;
+pub mod position2;
 pub mod stddev;
 
 pub trait Calculator {

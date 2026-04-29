@@ -151,6 +151,10 @@ impl From<KRaw> for KInfo {
 }
 
 impl KInfo {
+    pub fn t(&self) -> OffsetDateTime {
+        self.raw.time_begin
+    }
+
     pub fn relative_position(&self, base: Decimal) -> RelativePosition {
         let body_rel_pos = self.body.center_relative_position(base);
         if body_rel_pos != RelativePosition::At {

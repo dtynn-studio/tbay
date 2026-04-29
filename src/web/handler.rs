@@ -47,3 +47,12 @@ pub async fn add_once_monitor(
     let res = resp_rx.await.context("recv resp from chan")?;
     res.map_err(CapturedError::msg)
 }
+
+#[server(ctx: Extension<AppCtx>)]
+pub async fn remove_once_monitors() -> Result<usize> {
+    let (resp_tx, resp_rx) = oneshot::channel();
+    let req = Request::RemoveOnce(resp_tx);
+    ctx.req_tx.send(req).context("send req via chan")?;
+    let count = resp_rx.await.context("recv resp from chan")?;
+    Ok(count)
+}

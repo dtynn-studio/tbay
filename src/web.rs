@@ -83,6 +83,26 @@ pub fn App() -> Element {
         }
     });
 
+    let mut remove_once_monitors_action =
+        use_action(handler::remove_once_monitors);
+
+    use_effect(move || {
+        let Some(res) = remove_once_monitors_action.value() else {
+            return;
+        };
+
+        match res {
+            Ok(count) => {
+                add_sheet_msg
+                    .set(Some((format!("已清除:{}", *count.read()), false)));
+            }
+
+            Err(e) => {
+                add_sheet_msg.set(Some((e.to_string(), true)));
+            }
+        }
+    });
+
     rsx! {
         Stylesheet { href: asset!("/assets/tailwind.css") }
         Stylesheet { href: asset!("/assets/dx-components-theme.css") }
@@ -138,10 +158,7 @@ pub fn App() -> Element {
 
                 button {
                     onclick: move |_| {
-                        let is_states = *load_states.read();
-                        if !is_states {
-                            *load_states.write() = true;
-                        }
+                        *load_states.write() = true;
                     },
                     class: "flex-1 text-center text-gray-700",
                     "状态"
@@ -149,10 +166,7 @@ pub fn App() -> Element {
 
                 button {
                     onclick: move |_| {
-                        let is_states = *load_states.read();
-                        if is_states {
-                            *load_states.write() = false;
-                        }
+                        *load_states.write() = false;
                     },
                     class: "flex-1 text-center text-gray-700",
                     "均线"
@@ -322,10 +336,10 @@ pub fn App() -> Element {
                 },
 
                 SheetFooter {
-                    class: "flex h-10 pb-4",
+                    class: "flex h-16 px-2 pb-4",
 
                     button {
-                        class: "flex-1 bg-blue-500 text-white disabled:bg-blue-300 disabled:text-white-400",
+                        class: "flex-1 bg-blue-500 text-white rounded-full mr-1 disabled:bg-blue-300 disabled:text-white-400",
                         disabled: !available_for_add_sheet(),
                         onclick: move |_| {
                             let Some(interval) = add_sheet_interval.read().as_ref().copied() else {
@@ -355,9 +369,17 @@ pub fn App() -> Element {
                         "提交"
                     }
 
+                    button {
+                        class: "flex-1 bg-red-500 text-white rounded-full mr-1",
+                        onclick: move |_| {
+                            remove_once_monitors_action.call();
+                        },
+                        "清除"
+                    }
+
                     SheetClose {
-                        class: "flex-1",
-                        "取消"
+                        class: "flex-1 rounded-full border border-gray-600",
+                        "关闭"
                     }
                 },
             },

@@ -70,6 +70,7 @@ impl Default for Hub {
         hub.register_indicator_builder(indicator::distance::DistanceBuilder);
         hub.register_indicator_builder(indicator::position::PositionBuilder);
         hub.register_indicator_builder(indicator::hl::HlBuilder);
+        hub.register_indicator_builder(indicator::position2::Position2Builder);
 
         // monitor builders
         hub.register_monitor_builder(monitor::cross::CrossBuilder);
@@ -83,6 +84,9 @@ impl Default for Hub {
         hub.register_monitor_builder(monitor::pdiff::DiffBuilder);
         hub.register_monitor_builder(monitor::fbq::FBQBuilder);
         hub.register_monitor_builder(monitor::reach::ReachBuilder);
+        hub.register_monitor_builder(monitor::cross2::Cross2Builer);
+        hub.register_monitor_builder(monitor::burst::BurstBuilder);
+        hub.register_monitor_builder(monitor::hold2::Hold2Builder);
 
         hub
     }
@@ -211,7 +215,7 @@ impl Hub {
 
                 for (t, msgs) in temp_combined {
                     temp_msgs.push(format!(
-                        "{indent}{}/{d}@{}: {}",
+                        "{indent}{}_{d}[{}] {}",
                         hstate.symbol,
                         compact_format(&t, d),
                         msgs.join("  ")
@@ -220,7 +224,7 @@ impl Hub {
 
                 for (t, msgs) in perm_combined {
                     perm_msgs.push(format!(
-                        "{indent}{}/{d}@{}: {}",
+                        "{indent}{}_{d}[{}] {}",
                         hstate.symbol,
                         compact_format(&t, d),
                         msgs.join("  ")
@@ -254,7 +258,7 @@ impl Hub {
                 let content = if is_tty { &msg.tty } else { &msg.normal };
 
                 read_msgs.push(format!(
-                    "{indent}{}/{d}@{}:{content}",
+                    "{indent}{}_{d}[{}] {content}",
                     item.symbol,
                     compact_format(t, *d),
                 ));
@@ -320,7 +324,7 @@ impl Hub {
 
                 for (t, amsgs) in normal_alerts {
                     normal_formatted_alerts.push(format!(
-                        "@{}:{}",
+                        "[{}] {}",
                         compact_format(&t, *d),
                         amsgs.join(" ")
                     ));
@@ -328,7 +332,7 @@ impl Hub {
 
                 if !normal_formatted_alerts.is_empty() {
                     normal_lines.push(format!(
-                        "{indent}{}/{d}: {}",
+                        "{indent}{}_{d}: {}",
                         item.symbol,
                         normal_formatted_alerts.join("  ")
                     ));
@@ -339,7 +343,7 @@ impl Hub {
 
                     for (t, amsgs) in tty_alerts {
                         tty_formatted_alerts.push(format!(
-                            "@{}:{}",
+                            "[{}] {}",
                             compact_format(&t, *d),
                             amsgs.join(" ")
                         ));
@@ -347,7 +351,7 @@ impl Hub {
 
                     if !tty_formatted_alerts.is_empty() {
                         print_lines.push(format!(
-                            "{indent}{}/{d}: {}",
+                            "{indent}{}_{d}: {}",
                             item.symbol,
                             tty_formatted_alerts.join("  ")
                         ));
@@ -378,6 +382,21 @@ impl Hub {
                 monitors.retain(|m| !m.terminated());
             }
         }
+    }
+
+    pub fn remove_once_monitors(&mut self) -> usize {
+        let mut removed = 0;
+        for item in self.items.iter_mut() {
+            for monitors in item.monitors.values_mut() {
+                let before = monitors.len();
+                monitors.retain(|m| !m.is_once());
+                let after = monitors.len();
+
+                removed += before - after;
+            }
+        }
+
+        removed
     }
 
     fn has_indicator(

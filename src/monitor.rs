@@ -2,9 +2,12 @@ use crate::prelude::*;
 
 pub mod alert;
 pub mod bb;
+pub mod burst;
 pub mod cross;
+pub mod cross2;
 pub mod fbq;
 pub mod hold;
+pub mod hold2;
 pub mod macd;
 pub mod pdiff;
 pub mod rate;
@@ -23,6 +26,13 @@ pub struct Msg {
 pub struct State {
     pub temp: Option<(OffsetDateTime, Msg)>,
     pub perm: Option<(OffsetDateTime, Msg)>,
+}
+
+impl State {
+    pub fn clear(&mut self) {
+        self.temp.take();
+        self.perm.take();
+    }
 }
 
 pub trait Monitor {

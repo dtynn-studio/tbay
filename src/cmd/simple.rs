@@ -45,6 +45,7 @@ impl SimpleArgs {
         })
         .context(SignalCtx)?;
 
+        info!("start loop");
         while let Some(evt) = event_rx.recv().await {
             match evt {
                 Event::K(k) => {

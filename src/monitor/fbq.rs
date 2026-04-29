@@ -113,7 +113,7 @@ impl Args for FBQArgs {
         let full_thres = Threshold {
             key: BaseExtractorArgs::new((
                 ExtractKind::PriceFull,
-                CalcKind::Ema,
+                CalcKind::Sma,
                 self.period,
             ))
             .key(),
@@ -126,7 +126,7 @@ impl Args for FBQArgs {
         let body_thres = Threshold {
             key: BaseExtractorArgs::new((
                 ExtractKind::PriceBody,
-                CalcKind::Ema,
+                CalcKind::Sma,
                 self.period,
             ))
             .key(),
@@ -139,7 +139,7 @@ impl Args for FBQArgs {
         let qty_thres = Threshold {
             key: BaseExtractorArgs::new((
                 ExtractKind::Qty,
-                CalcKind::Ema,
+                CalcKind::Sma,
                 self.period,
             ))
             .key(),

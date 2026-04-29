@@ -64,6 +64,9 @@ pub struct WatchArgs {
 
     #[arg(long, default_value_t = false)]
     pub enable_server: bool,
+
+    #[arg(long, default_value_t = false)]
+    pub disable_states_output: bool,
 }
 
 impl WatchArgs {
@@ -126,41 +129,46 @@ impl WatchArgs {
         let mut state_lines = 0usize;
         let mut first_watch_tick = true;
         let mut lines = Vec::new();
+        let mut ticks = 0usize;
 
         loop {
             tokio::select! {
                 evt = stream.recv() => {
                     let Some(evt) = evt else {
+                        info!("event stream terminated");
                         break;
                     };
 
                     match evt {
                         Event::K(k) => {
+                            ticks += 1;
                             let current = k.raw.price_close;
                             latest_price.insert(k.symbol.clone(), current);
                             hub.apply_k(k);
                         },
 
                         Event::Disconnect(reason) => {
-                            debug!(reason, "event stream disconnected");
+                            info!(reason, "event disconnected");
                             break;
                         },
 
                         Event::Broken(reason) => {
-                            debug!(reason, "event stream broken");
+                            info!(reason, "event broken");
+                            break
                         },
                     }
                 },
 
                 req = req_rx.recv() => {
                     let Some(req) = req else {
+                        info!("request stream terminated");
                         break;
                     };
 
                     match req {
                         Request::States(load_states, resp_tx) => {
                             let mut state_lines = Vec::new();
-                            collect_now_lines(&mut state_lines);
+                            collect_now_lines(&mut state_lines, ticks);
                             collect_latest_price_lines(&mut state_lines, &latest_price, false);
                             if load_states {
                                 hub.collect_state_msgs(&mut state_lines, false);
@@ -174,6 +182,11 @@ impl WatchArgs {
                             let res = hub.register_monitor(&symbol, d.into(), &key, true);
                             _ = resp_tx.send(res.map_err(|e| e.to_string()));
                         },
+
+                        Request::RemoveOnce(resp_tx) => {
+                            let count = hub.remove_once_monitors();
+                            _ = resp_tx.send(count);
+                        }
                     };
                 }
 
@@ -186,7 +199,7 @@ impl WatchArgs {
                     }
 
 
-                    collect_now_lines(&mut lines);
+                    collect_now_lines(&mut lines, ticks);
                     collect_latest_price_lines(&mut lines, &latest_price, is_tty);
                     hub.collect_state_msgs(&mut lines, is_tty);
                     if self.enable_state_reads {
@@ -194,8 +207,11 @@ impl WatchArgs {
                     }
                     hub.collect_alert_msgs(&mut lines, is_tty, is_first);
 
-                    println!("{}", lines.join("\n"));
-                    state_lines = lines.len();
+                    if !self.disable_states_output {
+                        println!("{}", lines.join("\n"));
+                        state_lines = lines.len();
+                    }
+
                     lines.clear();
 
                     hub.clear_terminated_monitors();
@@ -210,7 +226,7 @@ impl WatchArgs {
                 }
 
                 _ = signal::ctrl_c() => {
-                    debug!("signal captured");
+                    info!("stop signal captured");
                     break;
                 },
 
@@ -223,11 +239,11 @@ impl WatchArgs {
     }
 }
 
-fn collect_now_lines(lines: &mut Vec<String>) {
+fn collect_now_lines(lines: &mut Vec<String>, ticks: usize) {
     if let Ok(t) = OffsetDateTime::now_local()
         && let Ok(f) = t.format(&TIME_FMT)
     {
-        lines.push(format!("TIME: {f}"));
+        lines.push(format!("TIME: {f}; TICKS: {ticks}"));
     }
 }
 

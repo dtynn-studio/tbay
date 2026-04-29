@@ -69,7 +69,7 @@ impl Args for ShadowArgs {
         let checker = if self.full_thres > 0.0 {
             let val_kind = ExtractKind::PriceFull;
             let key =
-                BaseExtractorArgs::new((val_kind, CalcKind::Ema, 20)).key();
+                BaseExtractorArgs::new((val_kind, CalcKind::Sma, 20)).key();
             let thres = Decimal::from_f64(self.full_thres)
                 .required("full threshold")?;
             Some(StrengthChecker::new(val_kind, key, thres))

@@ -64,19 +64,35 @@ impl MacdMonitor {
     fn cross_event(&self, kctx: &KCtx) -> Option<(bool, Msg)> {
         let val = kctx.get_val::<MacdValue>(&self.macd_key)?;
         let direction = val.cross.clone()?.cross?;
-        Some((direction, self.cross_event_msg(direction, kctx.colors)))
+        let pos = !val.dif.is_sign_negative();
+        Some((direction, self.cross_event_msg(direction, pos, kctx.colors)))
     }
 
-    fn cross_event_msg(&self, direction: bool, colors: ColorTable) -> Msg {
-        let (dir_flag, color) = if direction {
+    fn cross_event_msg(
+        &self,
+        direction: bool,
+        pos: bool,
+        colors: ColorTable,
+    ) -> Msg {
+        let (dir_flag, dir_color) = if direction {
             ("[↗]", colors.up)
         } else {
             ("[↘]", colors.down)
         };
 
-        let normal = format!("macd:{}", dir_flag);
+        let (pos, pos_color) = if pos {
+            ("▲", colors.up)
+        } else {
+            ("▼", colors.down)
+        };
 
-        let tty = format!("macd:{}", dir_flag.with(color),);
+        let normal = format!("macd:{}{}", pos, dir_flag);
+
+        let tty = format!(
+            "macd:{}{}",
+            pos.with(pos_color),
+            dir_flag.with(dir_color),
+        );
 
         Msg { normal, tty }
     }
