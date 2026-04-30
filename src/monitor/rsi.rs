@@ -95,8 +95,8 @@ impl Rsi {
         };
 
         let rsi = val.rsi.round_dp(1);
-        let normal = format!("R:{flag}{rsi}");
-        let tty = format!("R:{}{rsi}", flag.with(flag_color));
+        let normal = format!("🪜:{flag}{rsi}");
+        let tty = format!("🪜:{}{rsi}", flag.with(flag_color));
 
         Some(Msg { normal, tty })
     }
