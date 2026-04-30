@@ -58,6 +58,19 @@ src/
 - ✅ `src/indicator/cross.rs`
 - ❌ `src/indicator/cross/mod.rs`
 
+### 测试文件规范
+
+单元测试必须放在独立的测试文件中，使用 `#[cfg(test)] mod tests;` 声明：
+
+- ✅ `src/util/tests.rs` - 包含 util 模块及其子模块的测试
+- ✅ `src/indicator/tests.rs` - 包含 indicator 模块及其子模块的测试
+- ❌ 在业务代码文件中直接编写 `#[cfg(test)] mod tests { ... }`
+
+独立测试文件的优势：
+- 保持业务代码简洁，专注于实现逻辑
+- 测试代码与业务代码分离，便于维护
+- 符合 Rust 社区最佳实践
+
 ## 核心概念
 
 ### 数据结构
