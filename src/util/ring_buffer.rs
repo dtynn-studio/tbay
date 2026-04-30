@@ -34,13 +34,15 @@ impl<T: Copy> RingBuffer<T> {
             return None;
         }
 
-        let slot = if self.added <= self.capacity {
+        Some(self.slot_inner(i))
+    }
+
+    fn slot_inner(&self, i: usize) -> usize {
+        if self.added <= self.capacity {
             i
         } else {
             (self.added - self.capacity + i) % self.capacity
-        };
-
-        Some(slot)
+        }
     }
 
     pub fn get(&self, index: usize) -> Option<T> {
@@ -64,6 +66,14 @@ impl<T: Copy> RingBuffer<T> {
             self.capacity
         }
     }
+
+    pub fn all(&self) -> impl Iterator<Item = &T> {
+        let last = self.added.min(self.capacity);
+        let items = &self.inner[..last];
+        let idx0 = self.slot_inner(0);
+        let (left, right) = items.split_at(idx0);
+        right.iter().chain(left)
+    }
 }
 
 impl<T: Copy> Deref for RingBuffer<T> {
@@ -77,3 +87,6 @@ impl<T: Copy> Deref for RingBuffer<T> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;
