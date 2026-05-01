@@ -10,6 +10,7 @@ use crate::{
     k::Trend,
     monitor::{Msg, alert::AlertManager},
     prelude::*,
+    util::dec::format_decimal,
 };
 
 #[derive(Debug, Clone)]
@@ -207,8 +208,8 @@ impl FBQ {
             .into_iter()
             .zip(SHORTS)
             .enumerate()
-            .filter_map(|(n, (s_opt, (short, show_val)))| {
-                s_opt.map(|s| (n, s, short, show_val))
+            .filter_map(|(n, (s_opt, (short, use_normal)))| {
+                s_opt.map(|s| (n, s, short, use_normal))
             })
             .collect::<Vec<_>>();
 
@@ -228,7 +229,8 @@ impl FBQ {
 
         let mut strong_flags = 0;
         let mut weak_flags = 0;
-        for (n, (abs, ratio, strength), short, show_val) in items.into_iter() {
+        for (n, (abs, ratio, strength), short, use_normal) in items.into_iter()
+        {
             normal.push('|');
             tty.push('|');
 
@@ -250,11 +252,11 @@ impl FBQ {
             };
 
             let ratio_rounded = ratio.round_dp(1);
-            let abs_desc = if show_val {
+            let abs_desc = if use_normal {
                 let abs_rounded = abs.round_dp(2);
                 format!("({abs_rounded})")
             } else {
-                "".to_owned()
+                format!("({})", format_decimal(abs, 1))
             };
 
             normal.push_str(&format!("{short}{flag}{ratio_rounded}{abs_desc}"));
