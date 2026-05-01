@@ -11,7 +11,7 @@ const UNITS: &[(Result<Decimal>, &str)] = &[
 
 pub fn format_decimal(val: Decimal, digits: u32) -> String {
     let mut unit = "";
-    let mut num = val;
+    let mut num = val.round_dp(digits);
     for (res, u) in UNITS {
         if let Ok(base) = res
             && val >= *base
