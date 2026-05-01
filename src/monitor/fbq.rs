@@ -309,7 +309,9 @@ impl Monitor for FBQ {
 
         self.state.temp.take();
 
-        if let Some((msg, event_count, strong_flags, weak_flags)) = msg_opt {
+        if let Some((msg, event_count, strong_flags, weak_flags)) = msg_opt
+            && event_count > 0
+        {
             // let alert_flags = (t, strong_flags, weak_flags);
             // if self.prev_temp_alert_strong_flags != Some(alert_flags)
             //     && (kctx.info.raw.finalized || strong_flags > 0)
@@ -317,9 +319,6 @@ impl Monitor for FBQ {
             //     self.prev_temp_alert_strong_flags.replace(alert_flags);
             //     self.alerts.add(t, msg.clone());
             // }
-            if event_count == 0 {
-                return;
-            }
 
             let allow_alert = event_count >= self.args.alert_threshold;
             let mut alert_msg = None;
