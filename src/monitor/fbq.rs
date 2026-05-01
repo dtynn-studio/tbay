@@ -24,19 +24,22 @@ impl Threshold {
         &self,
         next: Decimal,
         ma: Decimal,
-    ) -> Option<(Decimal, Decimal, bool)> {
+    ) -> Option<(Decimal, Decimal, Option<bool>)> {
         if ma.is_zero() {
             return None;
         }
 
         let ratio = next / ma;
-        if ratio > self.strong {
-            Some((next, ratio, true))
+
+        let strength = if ratio > self.strong {
+            Some(true)
         } else if ratio < self.weak {
-            Some((next, ratio, false))
+            Some(false)
         } else {
             None
-        }
+        };
+
+        Some((next, ratio, strength))
     }
 }
 
@@ -195,7 +198,7 @@ impl FBQ {
     fn generate_msg(
         &self,
         trend: Trend,
-        strengths: [Option<(Decimal, Decimal, bool)>; 3],
+        strengths: [Option<(Decimal, Decimal, Option<bool>)>; 3],
         colors: ColorTable,
     ) -> Option<(Msg, usize, u8, u8)> {
         const SHORTS: [(&str, bool); 3] =
@@ -209,11 +212,7 @@ impl FBQ {
             })
             .collect::<Vec<_>>();
 
-        if items.is_empty() {
-            return None;
-        }
-
-        let event_count = items.len();
+        let mut event_count = 0;
         let mut normal = String::new();
         let mut tty = String::new();
 
@@ -229,28 +228,33 @@ impl FBQ {
 
         let mut strong_flags = 0;
         let mut weak_flags = 0;
-        for (n, (abs, ratio, strong), short, show_val) in items.into_iter() {
+        for (n, (abs, ratio, strength), short, show_val) in items.into_iter() {
             normal.push('|');
             tty.push('|');
 
             let shift = 2 - n;
-            if strong {
-                strong_flags |= 1 << shift
-            } else {
-                weak_flags |= 1 << shift
-            }
+            let (flag, color) = match strength {
+                Some(true) => {
+                    event_count += 1;
+                    strong_flags |= 1 << shift;
+                    ("<", colors.up)
+                }
 
-            let ratio_rounded = ratio.round_dp(2);
-            let abs_desc = if show_val && strong {
+                Some(false) => {
+                    event_count += 1;
+                    weak_flags |= 1 << shift;
+                    (">", colors.down)
+                }
+
+                None => ("", colors.normal),
+            };
+
+            let ratio_rounded = ratio.round_dp(1);
+            let abs_desc = if show_val {
                 let abs_rounded = abs.round_dp(2);
                 format!("({abs_rounded})")
             } else {
                 "".to_owned()
-            };
-            let (flag, color) = if strong {
-                ("<", colors.up)
-            } else {
-                (">", colors.down)
             };
 
             normal.push_str(&format!("{short}{flag}{ratio_rounded}{abs_desc}"));
@@ -311,6 +315,9 @@ impl Monitor for FBQ {
             //     self.prev_temp_alert_strong_flags.replace(alert_flags);
             //     self.alerts.add(t, msg.clone());
             // }
+            if event_count == 0 {
+                return;
+            }
 
             let allow_alert = event_count >= self.args.alert_threshold;
             let mut alert_msg = None;
