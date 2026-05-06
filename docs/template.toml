@@ -11,11 +11,11 @@ monitors = [
 
     "hold2:ema,5,3",
     "hold2:ema,20,1",
-    "hold2:ema,20,3",
+    "hold2:ema,20,3,state",
     "hold2:ema,60,1",
-    "hold2:ema,60,3",
+    "hold2:ema,60,3,state",
     "hold2:ema,200,1",
-    "hold2:ema,200,3",
+    "hold2:ema,200,3,state",
 
     # "hold2:ema,80,1",
     # "hold2:ema,80,3",
