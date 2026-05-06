@@ -4,31 +4,31 @@ name = "*"
 [[pairs.intervals]]
 monitors = [
     "cross:close,ema,5,60",
-    "cross:close,ema,20,240",
+    # "cross:close,ema,20,240",
 
     "cross2:close,ema,5,20,60",
-    "cross2:close,ema,20,80,240",
+    # "cross2:close,ema,20,80,240",
 
-    "hold2:ema,5,5",
+    "hold2:ema,5,3",
     "hold2:ema,20,1",
-    "hold2:ema,20,5",
+    "hold2:ema,20,3",
     "hold2:ema,60,1",
-    "hold2:ema,60,5",
+    "hold2:ema,60,3",
     "hold2:ema,200,1",
-    "hold2:ema,200,5",
+    "hold2:ema,200,3",
 
-    "hold2:ema,80,1",
-    "hold2:ema,80,3",
-    "hold2:ema,240,1",
-    "hold2:ema,240,3",
+    # "hold2:ema,80,1",
+    # "hold2:ema,80,3",
+    # "hold2:ema,240,1",
+    # "hold2:ema,240,3",
 
-    "fbq:20,1,0.2/1.2,0.2/1.2,0.2/1.8",
+    "fbq:20,1,0.2/1.5,0.2/1.5,0.2/1.8",
 
     "macd:12,26,9",
 
     "shadow:0.6,0.4",
 
-    "rsi:20,35,60",
+    # "rsi:20,35,60",
 ]
 reads = [5, 20, 60, 200]
 
@@ -52,7 +52,7 @@ monitors = [
 
     "shadow:0.7,0.8",
 
-    "rsi:20,30,65",
+    # "rsi:20,30,65",
     # "burst:13,0.8,3.0,1.5,temp@1",
     # "burst:13,0.8,2.0,1.0,perm@3",
 ]
