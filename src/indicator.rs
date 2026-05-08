@@ -14,6 +14,7 @@ pub mod macd;
 pub mod position;
 pub mod position2;
 pub mod rsi;
+pub mod shadow;
 pub mod stddev;
 
 pub trait Calculator {
