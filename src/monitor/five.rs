@@ -478,7 +478,7 @@ impl Five {
         if let Some(qty_burst) = k_state.qty_burst {
             let ratio = qty_burst.ratio.round_dp(2);
             let abs = qty_burst.abs.round_dp(2);
-            let msg = format!("q<{ratio}({abs})");
+            let msg = format!("<{ratio}({abs})");
             normal_pieces.push(msg.clone());
             tty_pieces.push(msg.with(kctx.colors.up).to_string());
         }
@@ -486,7 +486,7 @@ impl Five {
         if let Some(d) = k_state.qty_continuous
             && d >= self.args.qty.continuous_duration
         {
-            let msg = format!("q={d}");
+            let msg = format!("={d}");
             normal_pieces.push(msg.clone());
             tty_pieces.push(msg);
         }
@@ -520,10 +520,10 @@ impl Five {
             return None;
         }
 
-        Some(Msg {
-            normal: normal_pieces.join("|"),
-            tty: tty_pieces.join("|"),
-        })
+        let normal = format!("V:{}", normal_pieces.join("|"));
+        let tty = format!("V:{}", tty_pieces.join("|"));
+
+        Some(Msg { normal, tty })
     }
 }
 
@@ -564,22 +564,26 @@ impl Monitor for Five {
         let merged_state_msg =
             self.gen_k_state_msg(kctx, &merged_state).map(|m| (t, m));
 
-        let state_bits = self.gen_k_state_bits(&merged_state);
         if kctx.info.raw.finalized {
-            if state_bits.count_zeros() >= 3
-                && let Some((t, m)) = merged_state_msg.as_ref()
-                && state_bits != self.prev_state_bits
-            {
-                self.prev_state_bits = state_bits;
-                self.alert.add(*t, m.clone());
-                self.lookback_states.reset();
-            }
-
-            self.state.temp.take();
             self.lookback_states.update(latest_state);
-            self.state.perm = merged_state_msg;
-        } else {
-            self.state.temp = merged_state_msg;
+        }
+
+        self.state.clear();
+        let state_bits = self.gen_k_state_bits(&merged_state);
+        if state_bits.count_ones() >= 3 {
+            if kctx.info.raw.finalized {
+                if state_bits != self.prev_state_bits
+                    && let Some((t, m)) = merged_state_msg.as_ref()
+                {
+                    self.prev_state_bits = state_bits;
+                    self.alert.add(*t, m.clone());
+                    self.lookback_states.reset();
+                }
+
+                self.state.perm = merged_state_msg;
+            } else {
+                self.state.temp = merged_state_msg;
+            }
         }
     }
 
