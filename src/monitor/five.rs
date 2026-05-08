@@ -570,14 +570,16 @@ impl Monitor for Five {
 
         self.state.clear();
         let state_bits = self.gen_k_state_bits(&merged_state);
-        if state_bits.count_ones() >= 3 {
+        let state_count = state_bits.count_ones();
+        if state_count >= 2 {
             if kctx.info.raw.finalized {
-                if state_bits != self.prev_state_bits
+                if state_count >= 3
+                    && state_bits != self.prev_state_bits
                     && let Some((t, m)) = merged_state_msg.as_ref()
                 {
                     self.prev_state_bits = state_bits;
                     self.alert.add(*t, m.clone());
-                    self.lookback_states.reset();
+                    // self.lookback_states.reset();
                 }
 
                 self.state.perm = merged_state_msg;
