@@ -283,6 +283,7 @@ impl Args for FiveArgs {
             qty_burst_threshold,
             qty_continuous_threshold,
             lookback_states: RingBuffer::new(self.lookback),
+            prev_state_bits: 0,
             state: Default::default(),
             alert: Default::default(),
         })
@@ -361,6 +362,7 @@ pub struct Five {
 
     // k states
     lookback_states: RingBuffer<KState>,
+    prev_state_bits: u8,
 
     // mgr
     state: State,
@@ -562,10 +564,13 @@ impl Monitor for Five {
         let merged_state_msg =
             self.gen_k_state_msg(kctx, &merged_state).map(|m| (t, m));
 
+        let state_bits = self.gen_k_state_bits(&merged_state);
         if kctx.info.raw.finalized {
-            if self.gen_k_state_bits(&merged_state).count_ones() >= 3
+            if state_bits.count_zeros() >= 3
                 && let Some((t, m)) = merged_state_msg.as_ref()
+                && state_bits != self.prev_state_bits
             {
+                self.prev_state_bits = state_bits;
                 self.alert.add(*t, m.clone());
                 self.lookback_states.reset();
             }
