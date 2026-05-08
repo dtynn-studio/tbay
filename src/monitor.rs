@@ -6,6 +6,7 @@ pub mod burst;
 pub mod cross;
 pub mod cross2;
 pub mod fbq;
+pub mod five;
 pub mod hold;
 pub mod hold2;
 pub mod macd;
