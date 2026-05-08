@@ -13,7 +13,7 @@ use crate::{
     },
     monitor::{Msg, State, alert::AlertManager},
     prelude::*,
-    util::ring_buffer::RingBuffer,
+    util::{dec::format_decimal, ring_buffer::RingBuffer},
 };
 
 // format: s:{threshold}
@@ -283,7 +283,6 @@ impl Args for FiveArgs {
             qty_burst_threshold,
             qty_continuous_threshold,
             lookback_states: RingBuffer::new(self.lookback),
-            prev_state_bits: 0,
             state: Default::default(),
             alert: Default::default(),
         })
@@ -319,19 +318,9 @@ impl KState {
             self.qty_burst.replace(b);
         }
 
-        // 交易量持续时间越长越优先
+        // 越近的交易量持续时间越优先
         if let Some(other_d) = other.qty_continuous {
-            match self.qty_continuous {
-                None => {
-                    self.qty_continuous.replace(other_d);
-                }
-
-                Some(prev_d) => {
-                    if other_d > prev_d {
-                        self.qty_continuous.replace(other_d);
-                    }
-                }
-            }
+            self.qty_continuous.replace(other_d);
         }
 
         // 越近的均线交叉越优先
@@ -362,7 +351,6 @@ pub struct Five {
 
     // k states
     lookback_states: RingBuffer<KState>,
-    prev_state_bits: u8,
 
     // mgr
     state: State,
@@ -468,7 +456,7 @@ impl Five {
             };
 
             let ratio = s.ratio.round_dp(2);
-            let abs = s.abs.round_dp(2);
+            let abs = format_decimal(s.abs, 1);
 
             normal_pieces.push(format!("{flag}{ratio}({abs})"));
             tty_pieces
@@ -477,7 +465,7 @@ impl Five {
 
         if let Some(qty_burst) = k_state.qty_burst {
             let ratio = qty_burst.ratio.round_dp(2);
-            let abs = qty_burst.abs.round_dp(2);
+            let abs = format_decimal(qty_burst.abs, 1);
             let msg = format!("<{ratio}({abs})");
             normal_pieces.push(msg.clone());
             tty_pieces.push(msg.with(kctx.colors.up).to_string());
@@ -574,12 +562,12 @@ impl Monitor for Five {
         if state_count >= 2 {
             if kctx.info.raw.finalized {
                 if state_count >= 3
-                    && state_bits != self.prev_state_bits
+                    // && state_bits != self.prev_state_bits
                     && let Some((t, m)) = merged_state_msg.as_ref()
                 {
-                    self.prev_state_bits = state_bits;
+                    // self.prev_state_bits = state_bits;
                     self.alert.add(*t, m.clone());
-                    // self.lookback_states.reset();
+                    self.lookback_states.reset();
                 }
 
                 self.state.perm = merged_state_msg;
