@@ -74,6 +74,14 @@ impl<T: Copy> RingBuffer<T> {
         let (left, right) = items.split_at(idx0);
         right.iter().chain(left)
     }
+
+    pub fn last(&self) -> Option<&T> {
+        if self.added <= self.capacity {
+            self.inner.last()
+        } else {
+            Some(&self.inner[self.slot_inner(self.capacity - 1)])
+        }
+    }
 }
 
 impl<T: Copy> Deref for RingBuffer<T> {
