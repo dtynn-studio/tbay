@@ -97,9 +97,9 @@ impl Pos {
 
 impl Pos {
     fn detect(kctx: &KCtx, base: Decimal) -> Self {
-        if kctx.info.body.low >= base && kctx.info.full.mid >= base {
+        if kctx.info.body.mid >= base && kctx.info.full.mid >= base {
             Self::Above
-        } else if kctx.info.body.high <= base && kctx.info.full.mid <= base {
+        } else if kctx.info.body.mid < base && kctx.info.full.mid < base {
             Self::Below
         } else {
             Self::Chaos
