@@ -82,6 +82,11 @@ impl<T: Copy> RingBuffer<T> {
             Some(&self.inner[self.slot_inner(self.capacity - 1)])
         }
     }
+
+    pub fn reset(&mut self) {
+        self.inner.clear();
+        self.added = 0;
+    }
 }
 
 impl<T: Copy> Deref for RingBuffer<T> {
