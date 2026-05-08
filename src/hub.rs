@@ -90,6 +90,7 @@ impl Default for Hub {
         hub.register_monitor_builder(monitor::burst::BurstBuilder);
         hub.register_monitor_builder(monitor::hold2::Hold2Builder);
         hub.register_monitor_builder(monitor::rsi::RsiBuilder);
+        hub.register_monitor_builder(monitor::five::FiveBuilder);
 
         hub
     }
