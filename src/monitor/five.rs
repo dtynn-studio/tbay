@@ -567,6 +567,7 @@ impl Monitor for Five {
                 && let Some((t, m)) = merged_state_msg.as_ref()
             {
                 self.alert.add(*t, m.clone());
+                self.lookback_states.reset();
             }
 
             self.state.temp.take();
