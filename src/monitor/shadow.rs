@@ -15,7 +15,7 @@ use crate::{
 #[derive(Debug, Clone, Copy)]
 pub struct ShadowArgs {
     threshold: f64,
-    full_thres: f64,
+    qty_thres: f64,
 }
 
 impl FromStr for ShadowArgs {
@@ -23,10 +23,13 @@ impl FromStr for ShadowArgs {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut threshold = 0.0f64;
-        let mut full_thres = 0.0f64;
+        let mut qty_thres = 0.0f64;
 
         if sscanf!(s, "shadow:{threshold}").is_err() {
-            sscanf!(s, "shadow:{threshold},{full_thres}").with_context(
+            threshold = 0.0;
+            qty_thres = 0.0;
+
+            sscanf!(s, "shadow:{threshold},{qty_thres}").with_context(
                 |_| ParseCtx {
                     raw: s.to_owned(),
                     usage: Cow::from("parse shadow args"),
@@ -36,7 +39,7 @@ impl FromStr for ShadowArgs {
 
         Ok(Self {
             threshold,
-            full_thres,
+            qty_thres,
         })
     }
 }
@@ -48,13 +51,13 @@ impl Args for ShadowArgs {
     fn new(args: Self::Type) -> Self {
         Self {
             threshold: args.0,
-            full_thres: args.1,
+            qty_thres: args.1,
         }
     }
 
     fn key(&self) -> String {
-        if self.full_thres > 0.0 {
-            format!("shadow:{},{}", self.threshold, self.full_thres)
+        if self.qty_thres > 0.0 {
+            format!("shadow:{},{}", self.threshold, self.qty_thres)
         } else {
             format!("shadow:{}", self.threshold)
         }
@@ -66,12 +69,12 @@ impl Args for ShadowArgs {
 
         let key = self.key();
 
-        let checker = if self.full_thres > 0.0 {
-            let val_kind = ExtractKind::PriceFull;
+        let checker = if self.qty_thres > 0.0 {
+            let val_kind = ExtractKind::Qty;
             let key =
                 BaseExtractorArgs::new((val_kind, CalcKind::Sma, 20)).key();
-            let thres = Decimal::from_f64(self.full_thres)
-                .required("full threshold")?;
+            let thres =
+                Decimal::from_f64(self.qty_thres).required("qty threshold")?;
             Some(StrengthChecker::new(val_kind, key, thres))
         } else {
             None
@@ -108,6 +111,7 @@ impl Shadow {
 
         let above = kctx.info.shadow.above;
         let below = kctx.info.shadow.below;
+
         let is_above = above >= below;
         let shadow_len = if is_above { above } else { below };
 
