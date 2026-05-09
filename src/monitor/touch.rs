@@ -276,7 +276,11 @@ impl Monitor for Touch {
             let msg_opt = self.calc(kctx);
             // 有新状态，力度确认，且上一个告警没有发生在近期
             if let Some(msg) = msg_opt.as_ref()
-                && self.checker.as_ref().map(|c| c.check(kctx)).unwrap_or(true)
+                && self
+                    .checker
+                    .as_ref()
+                    .map(|c| c.check(kctx).0)
+                    .unwrap_or(true)
                 && !self
                     .prev_alert_time
                     .map(|pat| self.ticks.is_recent(pat))

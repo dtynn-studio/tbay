@@ -265,16 +265,17 @@ impl StrengthChecker {
         }
     }
 
-    pub fn check(&self, kctx: &KCtx) -> bool {
+    pub fn check(&self, kctx: &KCtx) -> (bool, Decimal) {
         let Some(ma) = kctx.get_val::<Decimal>(&self.key) else {
-            return false;
+            return (false, Decimal::ZERO);
         };
 
         if ma.is_zero() {
-            return false;
+            return (false, Decimal::ZERO);
         }
 
         let next = self.val_kind.extractor()(&kctx.info);
-        (next / ma) > self.thres
+        let ratio = next / ma;
+        (ratio > self.thres, ratio)
     }
 }

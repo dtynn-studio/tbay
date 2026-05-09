@@ -128,16 +128,27 @@ impl Shadow {
         &self,
         val: Decimal,
         ratio: Decimal,
+        strength: Decimal,
         is_above: bool,
         colors: ColorTable,
     ) -> Msg {
         let val_rounded = val.round_dp(2);
         let ratio_rounded = ratio.round_dp(2);
-        let (shadow_desc, shadow_color) = if is_above {
-            (format!("┴{ratio_rounded}({val_rounded})"), colors.down)
+        let strength_rounded = strength.round_dp(2);
+
+        let body = if strength > Decimal::ZERO {
+            format!("{ratio_rounded}({val_rounded}/{strength_rounded})")
         } else {
-            (format!("┬{ratio_rounded}({val_rounded})"), colors.up)
+            format!("{ratio_rounded}({val_rounded})")
         };
+
+        let (shadow_flag, shadow_color) = if is_above {
+            ("┴", colors.down)
+        } else {
+            ("┬", colors.up)
+        };
+
+        let shadow_desc = format!("{shadow_flag}{body}");
 
         let normal = shadow_desc.clone();
 
@@ -161,8 +172,11 @@ impl Monitor for Shadow {
     }
 
     fn apply(&mut self, kctx: &KCtx) {
-        let checked =
-            self.checker.as_ref().map(|c| c.check(kctx)).unwrap_or(true);
+        let (checked, strength) = self
+            .checker
+            .as_ref()
+            .map(|c| c.check(kctx))
+            .unwrap_or((true, Decimal::ZERO));
 
         let msg_opt = self.check_ratio(kctx).map(|(ratio, is_above)| {
             (
@@ -170,6 +184,7 @@ impl Monitor for Shadow {
                 self.event_msg(
                     kctx.info.full.height,
                     ratio,
+                    strength,
                     is_above,
                     kctx.colors,
                 ),
