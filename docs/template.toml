@@ -50,9 +50,9 @@ monitors = [
     # "hold2:ema,200,3",
     # "hold2:ema,200,8,state",
 
-    "fbq:20,2,0.2/2.0,0.0/2.0,0.2/2.5",
+    "fbq:20,2,0.2/2.0,0.0/2.0,0.2/3.0",
 
-    "shadow:0.7,0.8",
+    "shadow:0.7,1.0",
 
     # "five:20/s:0.7/q:sma,20,3.0,0.8,5/p:ema,5,20,20,5",
 
@@ -66,8 +66,15 @@ no_wildcard = true
 [[pairs.intervals]]
 name = "15m"
 monitors = [
-    "hold2:ema,80,12",
+    "hold2:ema,20,5",
+    "hold2:ema,60,5,state",
+    "hold2:ema,200,5,state",
+
+    "fbq:20,1,0.2/1.8,0.2/1.8,0.2/2.0",
+
+    "shadow:0.6,0.8",
 ]
+no_wildcard = true
 
 [[pairs.intervals]]
 name = "1h"
