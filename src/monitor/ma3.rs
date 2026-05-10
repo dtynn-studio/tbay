@@ -156,10 +156,14 @@ impl Ma3 {
             ("▼", kctx.colors.down)
         };
 
-        let (fast, slow, trend) =
-            (self.args.fast, self.args.slow, self.args.trend);
+        let (fast, slow, trend, duration) = (
+            self.args.fast,
+            self.args.slow,
+            self.args.trend,
+            record.duration,
+        );
 
-        let body = format!("{fast}{flag}{slow}{flag}{trend}");
+        let body = format!("[{fast}{flag}{slow}{flag}{trend}]@{duration}");
 
         Some(Msg {
             normal: body.clone(),
