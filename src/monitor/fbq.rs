@@ -198,6 +198,7 @@ pub struct FBQ {
 impl FBQ {
     fn generate_msg(
         &self,
+        ratios: Option<[Decimal; 3]>,
         trend: Trend,
         strengths: [Option<(Decimal, Decimal, Option<bool>)>; 3],
         colors: ColorTable,
@@ -223,7 +224,13 @@ impl FBQ {
             Trend::Unknown => colors.normal,
         };
 
-        let trend_desc = format!("[{}]", trend.as_str());
+        let ratios_desc = if let Some(r) = ratios {
+            format!("({}/{}/{})", r[0], r[1], r[2])
+        } else {
+            "".to_string()
+        };
+
+        let trend_desc = format!("[{}{ratios_desc}]", trend.as_str());
         normal.push_str(&trend_desc);
         tty.push_str(&trend_desc.with(trend_color).to_string());
 
@@ -305,7 +312,12 @@ impl Monitor for FBQ {
             .info
             .trend(self.trend_single_threshold, self.trend_mixed_threshold);
 
-        let msg_opt = self.generate_msg(trend, strengths, kctx.colors);
+        let msg_opt = self.generate_msg(
+            kctx.info.part_ratios(),
+            trend,
+            strengths,
+            kctx.colors,
+        );
 
         self.state.temp.take();
 
