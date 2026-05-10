@@ -9,6 +9,7 @@ pub mod fbq;
 pub mod five;
 pub mod hold;
 pub mod hold2;
+pub mod ma3;
 pub mod macd;
 pub mod pdiff;
 pub mod rate;
