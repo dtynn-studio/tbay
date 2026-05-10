@@ -31,12 +31,16 @@ monitors = [
     "fbq:20,2,0.2/2.0,0.0/2.0,0.2/3.0",
 
     "shadow:0.7,1.0",
+
+    "ma3:ema,20,60,200/5",
 ]
 no_wildcard = true
 
 [[pairs.intervals]]
 name = "15m"
 monitors = [
+    "ma3:ema,5,20,60/5",
+
     "hold2:ema,20,5",
     "hold2:ema,60,3",
     "hold2:ema,60,5",
