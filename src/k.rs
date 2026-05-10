@@ -214,6 +214,24 @@ impl KInfo {
             }
         }
     }
+
+    pub fn part_ratios(&self) -> Option<[Decimal; 3]> {
+        if self.full.height.is_zero() {
+            return None;
+        }
+
+        const TEN: Decimal = Decimal::TEN;
+
+        let below_ratio = self.shadow.below / self.full.height;
+        let body_ratio = self.body.height / self.full.height;
+        let above_ratio = self.shadow.above / self.full.height;
+
+        Some([
+            (below_ratio * TEN).round(),
+            (body_ratio * TEN).round(),
+            (above_ratio * TEN).round(),
+        ])
+    }
 }
 
 pub struct KCtx {
