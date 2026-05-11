@@ -1,6 +1,6 @@
 use std::{
     any::{Any, TypeId},
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
 };
 
 use tracing::{debug, warn_span};
@@ -179,6 +179,34 @@ impl Hub {
         }
 
         states
+    }
+
+    pub fn collect_pairs(&self) -> (Vec<String>, Vec<std::time::Duration>) {
+        let mut symbols = Vec::new();
+        let mut intervals = BTreeSet::new();
+        for item in self.items.iter() {
+            symbols.push(item.symbol.clone());
+            for interval in item.monitors.keys() {
+                intervals.insert(*interval);
+            }
+        }
+
+        (symbols, intervals.into_iter().map(From::from).collect())
+    }
+
+    pub fn collect_monitors(&self, lines: &mut Vec<String>, is_tty: bool) {
+        let indent = line_indent(is_tty);
+        for item in self.items.iter() {
+            lines.push(item.symbol.clone());
+
+            for (d, monitors) in item.monitors.iter() {
+                for m in monitors.iter() {
+                    let once_flag = if m.is_once() { "⏰ " } else { "" };
+
+                    lines.push(format!("{indent}{d} {once_flag}{}", m.key()));
+                }
+            }
+        }
     }
 
     pub fn collect_state_msgs(&self, lines: &mut Vec<String>, is_tty: bool) {

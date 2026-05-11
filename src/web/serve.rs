@@ -13,7 +13,7 @@ use tokio::{
     sync::{mpsc, oneshot},
 };
 
-use super::App;
+use super::{App, types::StatesKind};
 
 #[derive(Clone)]
 pub struct AppCtx {
@@ -21,7 +21,8 @@ pub struct AppCtx {
 }
 
 pub enum Request {
-    States(bool, oneshot::Sender<Vec<String>>),
+    States(StatesKind, oneshot::Sender<Vec<String>>),
+    Pairs(oneshot::Sender<(Vec<String>, Vec<Duration>)>),
     OnceMonitor(
         String,
         Duration,

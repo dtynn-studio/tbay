@@ -21,7 +21,10 @@ use crate::{
     hub::{Hub, line_indent},
     prelude::*,
     util::term::clean_up_rows,
-    web::serve::{Request, serve},
+    web::{
+        serve::{Request, serve},
+        types::StatesKind,
+    },
 };
 
 const TIME_CFG: EncodedConfig = Iso8601Config::DEFAULT
@@ -166,17 +169,33 @@ impl WatchArgs {
                     };
 
                     match req {
-                        Request::States(load_states, resp_tx) => {
+                        Request::States(kind, resp_tx) => {
                             let mut state_lines = Vec::new();
-                            collect_now_lines(&mut state_lines, ticks);
-                            collect_latest_price_lines(&mut state_lines, &latest_price, false);
-                            if load_states {
-                                hub.collect_state_msgs(&mut state_lines, false);
-                            } else {
-                                hub.collect_read_msgs(&mut state_lines, false);
+                            match kind {
+                                StatesKind::States => {
+                                    collect_now_lines(&mut state_lines, ticks);
+                                    collect_latest_price_lines(&mut state_lines, &latest_price, false);
+                                    hub.collect_state_msgs(&mut state_lines, false);
+                                },
+
+                                StatesKind::Reads => {
+                                    collect_now_lines(&mut state_lines, ticks);
+                                    collect_latest_price_lines(&mut state_lines, &latest_price, false);
+                                    hub.collect_read_msgs(&mut state_lines, false);
+                                },
+
+                                StatesKind::Monitors => {
+                                    hub.collect_monitors(&mut state_lines, false);
+                                },
                             }
+
                             _ = resp_tx.send(state_lines);
                         },
+
+                        Request::Pairs(resp_tx) => {
+                            let pairs = hub.collect_pairs();
+                            _ = resp_tx.send(pairs);
+                        }
 
                         Request::OnceMonitor(symbol, d, key, resp_tx) => {
                             let res = hub.register_monitor(&symbol, d.into(), &key, true);

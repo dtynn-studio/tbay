@@ -8,31 +8,29 @@ use {
     tokio::sync::oneshot,
 };
 
-const SYMBOL_BTCUSDT: &str = "btcusdt";
-const SYMBOL_ETHUSDT: &str = "ethusdt";
+use crate::web::types::StatesKind;
+
+// const SYMBOL_BTCUSDT: &str = "btcusdt";
+// const SYMBOL_ETHUSDT: &str = "ethusdt";
 
 #[server(ctx: Extension<AppCtx>)]
-pub async fn get_states(load_states: bool) -> Result<Vec<String>> {
+pub async fn get_states(kind: StatesKind) -> Result<Vec<String>> {
     let (resp_tx, resp_rx) = oneshot::channel();
     ctx.req_tx
-        .send(Request::States(load_states, resp_tx))
+        .send(Request::States(kind, resp_tx))
         .context("send req via chan")?;
     let lines = resp_rx.await.context("recv resp from chan")?;
     Ok(lines)
 }
 
-pub async fn get_pairs() -> Result<(Vec<&'static str>, Vec<Duration>)> {
-    let symbols = vec![SYMBOL_ETHUSDT, SYMBOL_BTCUSDT];
-
-    let intervals = vec![
-        Duration::from_mins(3),
-        Duration::from_mins(15),
-        Duration::from_hours(1),
-        Duration::from_hours(4),
-        Duration::from_days(1),
-    ];
-
-    Ok((symbols, intervals))
+#[server(ctx: Extension<AppCtx>)]
+pub async fn get_pairs() -> Result<(Vec<String>, Vec<Duration>)> {
+    let (resp_tx, resp_rx) = oneshot::channel();
+    ctx.req_tx
+        .send(Request::Pairs(resp_tx))
+        .context("send req via chan")?;
+    let pairs = resp_rx.await.context("recv resp from chan")?;
+    Ok(pairs)
 }
 
 #[server(ctx: Extension<AppCtx>)]

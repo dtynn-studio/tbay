@@ -6,6 +6,7 @@ pub mod components;
 pub mod handler;
 #[cfg(feature = "server")]
 pub mod serve;
+pub mod types;
 
 use components::{
     dropdown_menu::{
@@ -23,10 +24,10 @@ const REACH_DIRECTIONS: [(Option<bool>, &str); 3] =
 
 #[component]
 pub fn App() -> Element {
-    let mut load_states = use_signal(|| true);
+    let mut states_kind = use_signal(|| types::StatesKind::States);
     let state_resource = use_resource(move || async move {
-        let is_states = *load_states.read();
-        handler::get_states(is_states).await
+        let kind = *states_kind.read();
+        handler::get_states(kind).await
     });
 
     let mut add_sheet_show = use_signal(|| false);
@@ -158,7 +159,7 @@ pub fn App() -> Element {
 
                 button {
                     onclick: move |_| {
-                        *load_states.write() = true;
+                        *states_kind.write() = types::StatesKind::States;
                     },
                     class: "flex-1 text-center text-gray-700",
                     "状态"
@@ -166,10 +167,18 @@ pub fn App() -> Element {
 
                 button {
                     onclick: move |_| {
-                        *load_states.write() = false;
+                        *states_kind.write() = types::StatesKind::Reads;
                     },
                     class: "flex-1 text-center text-gray-700",
                     "均线"
+                }
+
+                button {
+                    onclick: move |_| {
+                        *states_kind.write() = types::StatesKind::Monitors;
+                    },
+                    class: "flex-1 text-center text-gray-700",
+                    "监控"
                 }
 
                 button {
