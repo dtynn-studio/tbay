@@ -36,15 +36,13 @@ monitors = [
 
     "shadow:0.7,1.0",
 
-    "ma3:ema,20,60,200/5",
+    "ma3:ema,20,60,200/5@20",
 ]
 no_wildcard = true
 
 [[pairs.intervals]]
 name = "15m"
 monitors = [
-    "ma3:ema,5,20,60/5",
-
     "hold2:ema,20,5",
     "hold2:ema,60,3",
     "hold2:ema,60,5",
@@ -54,12 +52,17 @@ monitors = [
     "fbq:20,1,0.2/1.8,0.2/1.8,0.2/2.0",
 
     "shadow:0.6,0.8",
+
+    "ma3:ema,5,20,60/4@8",
 ]
 no_wildcard = true
 reads = [5, 20, 60, 200]
 
 [[pairs.intervals]]
 name = "1h"
+monitors = [
+    "ma3:ema,5,20,60/4@4",
+]
 
 [[pairs.intervals]]
 name = "4h"

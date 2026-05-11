@@ -16,7 +16,8 @@ pub struct Ma3Args {
     fast: usize,
     slow: usize,
     trend: usize,
-    alert_duration: usize,
+    first_alert_duration: usize,
+    alert_period_duration: usize,
 }
 
 impl FromStr for Ma3Args {
@@ -27,11 +28,12 @@ impl FromStr for Ma3Args {
         let mut fast = 0;
         let mut slow = 0;
         let mut trend = 0;
-        let mut alert_duration = 0;
+        let mut first_alert_duration = 0;
+        let mut alert_period_duration = 0;
 
         sscanf!(
             s,
-            "ma3:{calc_kind_str},{fast},{slow},{trend}/{alert_duration}"
+            "ma3:{calc_kind_str},{fast},{slow},{trend}/{first_alert_duration}@{alert_period_duration}"
         )
         .with_context(|_| ParseCtx {
             raw: s.to_owned(),
@@ -45,33 +47,36 @@ impl FromStr for Ma3Args {
             fast,
             slow,
             trend,
-            alert_duration,
+            first_alert_duration,
+            alert_period_duration,
         })
     }
 }
 
 impl Args for Ma3Args {
-    type Type = (CalcKind, usize, usize, usize, usize);
+    type Type = (CalcKind, (usize, usize, usize), (usize, usize));
     type Target = Ma3;
 
     fn new(args: Self::Type) -> Self {
         Self {
             calc_kind: args.0,
-            fast: args.1,
-            slow: args.2,
-            trend: args.3,
-            alert_duration: args.4,
+            fast: args.1.0,
+            slow: args.1.1,
+            trend: args.1.2,
+            first_alert_duration: args.2.0,
+            alert_period_duration: args.2.1,
         }
     }
 
     fn key(&self) -> String {
         format!(
-            "ma3:{},{},{},{}/{}",
+            "ma3:{},{},{},{}/{}@{}",
             self.calc_kind.as_str(),
             self.fast,
             self.slow,
             self.trend,
-            self.alert_duration,
+            self.first_alert_duration,
+            self.alert_period_duration,
         )
     }
 
@@ -148,12 +153,11 @@ impl Ma3 {
         }
     }
 
-    fn gen_msg(&self, kctx: &KCtx, record: Ma3Record) -> Option<Msg> {
-        let trend_dir = record.trend?;
-        let (flag, color) = if trend_dir {
-            ("▲", kctx.colors.up)
-        } else {
-            ("▼", kctx.colors.down)
+    fn gen_msg(&self, kctx: &KCtx, record: Ma3Record) -> Msg {
+        let (flag, color) = match record.trend {
+            Some(true) => ("▲", kctx.colors.up),
+            Some(false) => ("▼", kctx.colors.down),
+            None => ("~", kctx.colors.normal),
         };
 
         let (fast, slow, trend, duration) = (
@@ -165,10 +169,10 @@ impl Ma3 {
 
         let body = format!("[{fast}{flag}{slow}{flag}{trend}]@{duration}");
 
-        Some(Msg {
+        Msg {
             normal: body.clone(),
             tty: body.with(color).to_string(),
-        })
+        }
     }
 }
 
@@ -182,7 +186,10 @@ impl Monitor for Ma3 {
     }
 
     fn apply(&mut self, kctx: &KCtx) {
-        self.state.clear();
+        if !kctx.info.raw.finalized {
+            return;
+        }
+
         let trend = self.get_trend(kctx);
 
         let record = if let Some(mut prev) = self.prev
@@ -195,22 +202,22 @@ impl Monitor for Ma3 {
         };
 
         let t = kctx.info.t();
-        let msg_opt = self.gen_msg(kctx, record);
+        let msg = self.gen_msg(kctx, record);
 
-        if kctx.info.raw.finalized {
-            self.prev.replace(record);
+        self.prev.replace(record);
 
-            if trend.is_some()
-                && record.duration == self.args.alert_duration
-                && let Some(m) = msg_opt.as_ref()
-            {
-                self.alert.add(t, m.clone());
-            }
+        let is_first_alert = record.duration == self.args.first_alert_duration;
+        let is_period_alert = self.args.alert_period_duration > 0
+            && record.duration > self.args.first_alert_duration
+            && (record.duration - self.args.first_alert_duration)
+                .is_multiple_of(self.args.alert_period_duration);
 
-            self.state.perm = msg_opt.map(|m| (t, m))
-        } else {
-            self.state.temp = msg_opt.map(|m| (t, m))
+        let should_alert = is_first_alert || is_period_alert;
+        if should_alert {
+            self.alert.add(t, msg.clone());
         }
+
+        self.state.perm = Some((t, msg))
     }
 
     fn state(&self) -> &State {
