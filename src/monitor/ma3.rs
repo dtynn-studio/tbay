@@ -109,6 +109,8 @@ impl Args for Ma3Args {
             fast_key,
             slow_key,
             trend_key,
+            strong_order: [self.fast, self.slow, self.trend],
+            weak_order: [self.trend, self.slow, self.fast],
             prev: None,
             state: Default::default(),
             alert: Default::default(),
@@ -120,7 +122,7 @@ impl_builder!(Ma3Builder: Ma3Args => Ma3);
 
 #[derive(Clone, Copy)]
 struct Ma3Record {
-    trend: Option<bool>,
+    order: [usize; 3],
     duration: usize,
 }
 
@@ -132,42 +134,44 @@ pub struct Ma3 {
     slow_key: String,
     trend_key: String,
 
+    strong_order: [usize; 3],
+    weak_order: [usize; 3],
+
     prev: Option<Ma3Record>,
     state: State,
     alert: AlertManager,
 }
 
 impl Ma3 {
-    fn get_trend(&self, kctx: &KCtx) -> Option<bool> {
+    fn gen_order(&self, kctx: &KCtx) -> Option<[usize; 3]> {
         let fast = kctx.get_val::<Decimal>(&self.fast_key).copied()?;
         let slow = kctx.get_val::<Decimal>(&self.slow_key).copied()?;
         let trend = kctx.get_val::<Decimal>(&self.trend_key).copied()?;
 
-        let fast_above = fast >= slow;
-        let slow_above = slow >= trend;
+        let mut order_with_price = [
+            (self.args.fast, fast),
+            (self.args.slow, slow),
+            (self.args.trend, trend),
+        ];
 
-        if fast_above == slow_above {
-            Some(fast_above)
-        } else {
-            None
-        }
+        order_with_price.sort_by(|(_, left), (_, right)| right.cmp(left));
+
+        Some(std::array::from_fn(|i| order_with_price[i].0))
     }
 
     fn gen_msg(&self, kctx: &KCtx, record: Ma3Record) -> Msg {
-        let (flag, color) = match record.trend {
-            Some(true) => ("▲", kctx.colors.up),
-            Some(false) => ("▼", kctx.colors.down),
-            None => ("~", kctx.colors.normal),
+        let (flag, color) = if record.order == self.strong_order {
+            ("▲", kctx.colors.up)
+        } else if record.order == self.weak_order {
+            ("▼", kctx.colors.down)
+        } else {
+            ("~", kctx.colors.normal)
         };
 
-        let (fast, slow, trend, duration) = (
-            self.args.fast,
-            self.args.slow,
-            self.args.trend,
-            record.duration,
+        let body = format!(
+            "[{}{flag}{}{flag}{}]@{}",
+            record.order[0], record.order[1], record.order[2], record.duration
         );
-
-        let body = format!("[{fast}{flag}{slow}{flag}{trend}]@{duration}");
 
         Msg {
             normal: body.clone(),
@@ -190,15 +194,17 @@ impl Monitor for Ma3 {
             return;
         }
 
-        let trend = self.get_trend(kctx);
+        let Some(order) = self.gen_order(kctx) else {
+            return;
+        };
 
         let record = if let Some(mut prev) = self.prev
-            && prev.trend == trend
+            && prev.order == order
         {
             prev.duration += 1;
             prev
         } else {
-            Ma3Record { trend, duration: 1 }
+            Ma3Record { order, duration: 1 }
         };
 
         let t = kctx.info.t();
