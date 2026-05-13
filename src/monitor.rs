@@ -10,6 +10,7 @@ pub mod five;
 pub mod hold;
 pub mod hold2;
 pub mod ma3;
+pub mod ma_seq;
 pub mod macd;
 pub mod pdiff;
 pub mod rate;
