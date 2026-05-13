@@ -180,17 +180,16 @@ impl MaSeq {
             ('~', kctx.colors.normal)
         };
 
-        let mut body = String::new();
+        let mut order = String::new();
         for period in record.order.iter() {
-            if !body.is_empty() {
-                body.push(flag);
+            if !order.is_empty() {
+                order.push(flag);
             }
 
-            body.push_str(&period.to_string());
+            order.push_str(&period.to_string());
         }
 
-        body.push('@');
-        body.push_str(&record.duration.to_string());
+        let body = format!("[{order}]@{}", record.duration);
 
         Msg {
             normal: body.clone(),
