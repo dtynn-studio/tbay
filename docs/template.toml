@@ -21,7 +21,7 @@ monitors = [
 
     "macd:12,26,9",
 
-    "shadow:0.6,0.4",
+    "shadow:0.6,0.5",
 ]
 reads = [5, 20, 60, 200]
 
@@ -34,8 +34,9 @@ monitors = [
 
     "fbq:20,2,0.2/2.0,0.0/2.0,0.2/3.0",
 
-    "shadow:0.7,1.0",
+    "shadow:0.7,1.2",
 
+    "ma-seq:ema,[5,20,60]/5@20,false",
     "ma-seq:ema,[20,60,200]/5@20,true",
 ]
 no_wildcard = true
