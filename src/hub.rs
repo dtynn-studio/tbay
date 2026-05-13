@@ -92,6 +92,7 @@ impl Default for Hub {
         hub.register_monitor_builder(monitor::rsi::RsiBuilder);
         hub.register_monitor_builder(monitor::five::FiveBuilder);
         hub.register_monitor_builder(monitor::ma3::Ma3Builder);
+        hub.register_monitor_builder(monitor::ma_seq::MaSeqBuilder);
 
         hub
     }
