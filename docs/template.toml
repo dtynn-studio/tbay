@@ -3,8 +3,8 @@ name = "*"
 
 [[pairs.intervals]]
 monitors = [
-    "cross:close,ema,5,60",
     "cross2:close,ema,5,20,60",
+    "cross2:close,ema,5,60,200",
 
     "hold2:ema,5,5",
     "hold2:ema,20,1",
