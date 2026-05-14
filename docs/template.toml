@@ -26,6 +26,13 @@ monitors = [
 reads = [5, 20, 60, 200]
 
 [[pairs.intervals]]
+name = "1m"
+monitors = [
+    "ma-seq:ema,[20,60,200]/15@60,false",
+]
+no_wildcard = true
+
+[[pairs.intervals]]
 name = "3m"
 monitors = [
     "hold2:ema,20,5",
