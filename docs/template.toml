@@ -7,15 +7,9 @@ monitors = [
     "cross2:close,ema,5,60,200",
 
     "hold2:ema,5,5",
-    "hold2:ema,20,1",
     "hold2:ema,20,3",
-    "hold2:ema,20,5",
-    "hold2:ema,60,1",
     "hold2:ema,60,3",
-    "hold2:ema,60,5,state",
-    "hold2:ema,200,1",
     "hold2:ema,200,3",
-    "hold2:ema,200,5,state",
 
     "fbq:20,1,0.2/1.5,0.2/1.5,0.2/1.8",
 
@@ -52,9 +46,7 @@ no_wildcard = true
 name = "15m"
 monitors = [
     "hold2:ema,20,5",
-    "hold2:ema,60,3",
     "hold2:ema,60,5",
-    "hold2:ema,200,3",
     "hold2:ema,200,5",
 
     "fbq:20,1,0.2/1.8,0.2/1.8,0.2/2.0",
