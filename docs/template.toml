@@ -29,10 +29,8 @@ monitors = [
     "hold2:ema,60,5",
     "hold2:ema,200,5",
 
-    "fbq:20,2,0.2/2.0,0.0/2.0,0.2/3.0",
-
-    "ma-seq:ema,[5,20,60]/10@0,false",
-    "ma-seq:ema,[20,60,200]/5@20,true",
+    "ma-seq:ema,[5,20,60]/20@0,false",
+    "ma-seq:ema,[20,60,200]/10@40,true",
 ]
 no_wildcard = true
 
