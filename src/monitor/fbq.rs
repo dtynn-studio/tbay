@@ -170,7 +170,7 @@ impl Args for FBQArgs {
 
             state: Default::default(),
             alerts: Default::default(),
-            prev_temp_alert_strong_flags: None,
+            // prev_temp_alert_strong_flags: None,
         })
     }
 }
@@ -192,7 +192,7 @@ pub struct FBQ {
 
     state: State,
     alerts: AlertManager,
-    prev_temp_alert_strong_flags: Option<(OffsetDateTime, u8, u8)>,
+    // prev_temp_alert_strong_flags: Option<(OffsetDateTime, u8, u8)>,
 }
 
 impl FBQ {
@@ -321,7 +321,7 @@ impl Monitor for FBQ {
 
         self.state.temp.take();
 
-        if let Some((msg, event_count, strong_flags, weak_flags)) = msg_opt
+        if let Some((msg, event_count, strong_flags, _weak_flags)) = msg_opt
             && event_count > 0
         {
             // let alert_flags = (t, strong_flags, weak_flags);
@@ -338,8 +338,8 @@ impl Monitor for FBQ {
             if kctx.info.raw.finalized {
                 // 信息flag和之前不一样，则需要告警
                 if allow_alert
-                    && self.prev_temp_alert_strong_flags
-                        != Some((t, strong_flags, weak_flags))
+                // && self.prev_temp_alert_strong_flags
+                //     != Some((t, strong_flags, weak_flags))
                 {
                     alert_msg.replace(msg.clone());
                 }
@@ -347,27 +347,27 @@ impl Monitor for FBQ {
                 self.state.perm.replace((t, msg));
             } else {
                 // 只看能确认的部分
-                const TEMP_FLAGS_MASK: u8 = 0b101;
-                let masked_flags = strong_flags & TEMP_FLAGS_MASK;
-                let prev_masked_flags = self
-                    .prev_temp_alert_strong_flags
-                    .map(|(t, sf, _wf)| (t, sf & TEMP_FLAGS_MASK));
+                // const TEMP_FLAGS_MASK: u8 = 0b101;
+                // let masked_flags = strong_flags & TEMP_FLAGS_MASK;
+                // let prev_masked_flags = self
+                //     .prev_temp_alert_strong_flags
+                //     .map(|(t, sf, _wf)| (t, sf & TEMP_FLAGS_MASK));
 
                 if allow_alert && strong_flags > 0 {
-                    if prev_masked_flags != Some((t, masked_flags)) {
-                        alert_msg.replace(msg.clone());
-                    }
+                    // if prev_masked_flags != Some((t, masked_flags)) {
+                    //     alert_msg.replace(msg.clone());
+                    // }
 
                     self.state.temp.replace((t, msg));
                 }
             }
 
             if let Some(msg) = alert_msg {
-                self.prev_temp_alert_strong_flags.replace((
-                    t,
-                    strong_flags,
-                    weak_flags,
-                ));
+                // self.prev_temp_alert_strong_flags.replace((
+                //     t,
+                //     strong_flags,
+                //     weak_flags,
+                // ));
                 self.alerts.add(t, msg);
             }
         } else {
