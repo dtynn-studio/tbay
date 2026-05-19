@@ -6,16 +6,12 @@ monitors = [
     "cross2:close,ema,5,20,60",
     "cross2:close,ema,5,60,200",
 
-    "hold2:ema,5,5",
-    "hold2:ema,20,3",
     "hold2:ema,60,3",
     "hold2:ema,200,3",
 
     "fbq:20,1,0.2/1.5,0.2/1.5,0.2/1.8",
 
     "macd:12,26,9",
-
-    # "shadow:0.6,0.5",
 ]
 reads = [5, 20, 60, 200]
 
@@ -30,13 +26,10 @@ no_wildcard = true
 [[pairs.intervals]]
 name = "3m"
 monitors = [
-    "hold2:ema,20,5",
     "hold2:ema,60,5",
     "hold2:ema,200,5",
 
     "fbq:20,2,0.2/2.0,0.0/2.0,0.2/3.0",
-
-    # "shadow:0.7,1.2",
 
     "ma-seq:ema,[5,20,60]/10@0,false",
     "ma-seq:ema,[20,60,200]/5@20,true",
@@ -46,13 +39,10 @@ no_wildcard = true
 [[pairs.intervals]]
 name = "15m"
 monitors = [
-    "hold2:ema,20,5",
     "hold2:ema,60,5",
     "hold2:ema,200,5",
 
     "fbq:20,1,0.2/1.8,0.2/1.8,0.2/2.0",
-
-    # "shadow:0.6,0.8",
 
     "ma-seq:ema,[5,20,60]/4@8,true",
 ]
