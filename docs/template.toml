@@ -29,10 +29,10 @@ monitors = [
     "hold2:ema,60,5",
     "hold2:ema,200,5",
 
-    "fbq:20,1,0.0/3.0,0.0/3.0,0.0/4.0",
+    # "fbq:20,1,0.0/3.0,0.0/3.0,0.0/4.0",
 
     "ma-seq:ema,[5,20,60]/10@0,false",
-    "ma-seq:ema,[20,60,200]/10@0,true",
+    "ma-seq:ema,[20,60,200]/10@40,true",
 ]
 no_wildcard = true
 
@@ -42,9 +42,11 @@ monitors = [
     "hold2:ema,60,5",
     "hold2:ema,200,5",
 
-    "fbq:20,1,0.0/2.0,0.1/2.0,0.0/2.0",
+    "cross2:close,ema,5,60,200",
 
-    "ma-seq:ema,[5,20,60]/4@0,true",
+    # "fbq:20,1,0.0/2.0,0.1/2.0,0.0/2.0",
+
+    "ma-seq:ema,[5,20,60]/4@16,true",
 ]
 no_wildcard = true
 reads = [5, 20, 60, 200]
@@ -52,13 +54,13 @@ reads = [5, 20, 60, 200]
 [[pairs.intervals]]
 name = "1h"
 monitors = [
-    "ma-seq:ema,[5,20,60]/4@0,true",
+    "ma-seq:ema,[5,20,60]/4@8,true",
 ]
 
 [[pairs.intervals]]
 name = "4h"
 monitors = [
-    "ma-seq:ema,[5,20,60]/4@0,true",
+    "ma-seq:ema,[5,20,60]/4@8,true",
 ]
 
 [[pairs.intervals]]
