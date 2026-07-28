@@ -61,11 +61,55 @@ pub struct MacdMonitor {
 }
 
 impl MacdMonitor {
-    fn cross_event(&self, kctx: &KCtx) -> Option<(bool, Msg)> {
-        let val = kctx.get_val::<MacdValue>(&self.macd_key)?;
-        let direction = val.cross.clone()?.cross?;
-        let pos = !val.dif.is_sign_negative();
-        Some((direction, self.cross_event_msg(direction, pos, kctx.colors)))
+    fn cross_event(&self, kctx: &KCtx, val: &MacdValue) -> Option<Msg> {
+        if let Some(direction) = val.cross.as_ref().and_then(|c| c.cross) {
+            let pos = !val.dif.is_sign_negative();
+            return Some(self.cross_event_msg(direction, pos, kctx.colors));
+        };
+
+        let prev = self.current.as_ref()?;
+        let prev_dif_positive = prev.dif.is_sign_positive();
+        let prev_dea_positive = prev.dea.is_sign_positive();
+        let dif_diff = prev_dea_positive != val.dif.is_sign_positive();
+        let dea_diff = prev_dea_positive != val.dea.is_sign_positive();
+        if dif_diff || dea_diff {
+            Some(self.cross_zero_msg(
+                kctx,
+                dif_diff.then_some(prev_dif_positive),
+                dea_diff.then_some(prev_dea_positive),
+            ))
+        } else {
+            None
+        }
+    }
+
+    fn cross_zero_msg(
+        &self,
+        kctx: &KCtx,
+        dif_positive: Option<bool>,
+        dea_positive: Option<bool>,
+    ) -> Msg {
+        let (fast, fast_color) = match dif_positive {
+            Some(true) => ("F[↓]", kctx.colors.down),
+            Some(false) => ("F[↑]", kctx.colors.up),
+            None => ("", kctx.colors.normal),
+        };
+
+        let (slow, slow_color) = match dea_positive {
+            Some(true) => ("S[↓]", kctx.colors.down),
+            Some(false) => ("S[↑]", kctx.colors.up),
+            None => ("", kctx.colors.normal),
+        };
+
+        let normal = format!("macd:0:{}{}", fast, slow);
+
+        let tty = format!(
+            "macd:0:{}{}",
+            fast.with(fast_color),
+            slow.with(slow_color),
+        );
+
+        Msg { normal, tty }
     }
 
     fn cross_event_msg(
@@ -98,14 +142,15 @@ impl MacdMonitor {
     }
 
     fn calc(&self, kctx: &KCtx) -> Option<Msg> {
-        self.cross_event(kctx).map(|(_, msg)| msg)
+        let val = kctx.get_val::<MacdValue>(&self.macd_key)?;
+        self.cross_event(kctx, val)
     }
 
     fn update(&mut self, kctx: &KCtx) -> Option<Msg> {
-        let (_direction, msg) = self.cross_event(kctx)?;
         let val = kctx.get_val::<MacdValue>(&self.macd_key)?.clone();
+        let msg = self.cross_event(kctx, &val);
         self.current.replace(val);
-        Some(msg)
+        msg
     }
 }
 
