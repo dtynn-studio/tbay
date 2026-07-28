@@ -25,7 +25,7 @@ const REACH_DIRECTIONS: [(Option<bool>, &str); 3] =
 #[component]
 pub fn App() -> Element {
     let mut states_kind = use_signal(|| types::StatesKind::States);
-    let state_resource = use_resource(move || async move {
+    let mut state_resource = use_resource(move || async move {
         let kind = *states_kind.read();
         handler::get_states(kind).await
     });
@@ -202,6 +202,7 @@ pub fn App() -> Element {
                 if !v {
                     reset_add_sheet_infos();
                     add_sheet_msg.write().take();
+                    state_resource.restart();
                 }
 
             },
