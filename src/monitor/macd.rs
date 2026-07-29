@@ -70,7 +70,7 @@ impl MacdMonitor {
         let prev = self.current.as_ref()?;
         let prev_dif_positive = prev.dif.is_sign_positive();
         let prev_dea_positive = prev.dea.is_sign_positive();
-        let dif_diff = prev_dea_positive != val.dif.is_sign_positive();
+        let dif_diff = prev_dif_positive != val.dif.is_sign_positive();
         let dea_diff = prev_dea_positive != val.dea.is_sign_positive();
         if dif_diff || dea_diff {
             Some(self.cross_zero_msg(
